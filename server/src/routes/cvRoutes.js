@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import CvUpload from "../models/CvUpload.js";
 import { protect } from "../middleware/auth.js";
-import { uploadCv } from "../middleware/upload.js";
+import { uploadCv, uploadDir } from "../middleware/upload.js";
 import { requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
@@ -56,8 +56,8 @@ router.get("/:id/download", protect, async (req, res, next) => {
   try {
     const cv = await CvUpload.findById(req.params.id);
     if (!cv?.cv?.filename) return res.status(404).json({ message: "CV not found" });
-    const cvPath = path.resolve("uploads", "cvs", cv.cv.filename);
-    const legacyPath = path.resolve("uploads", cv.cv.filename);
+    const cvPath = path.resolve(uploadDir, "cvs", cv.cv.filename);
+    const legacyPath = path.resolve(uploadDir, cv.cv.filename);
     res.download(fs.existsSync(cvPath) ? cvPath : legacyPath, cv.cv.originalName);
   } catch (error) {
     next(error);

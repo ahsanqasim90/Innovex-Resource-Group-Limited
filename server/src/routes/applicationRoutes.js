@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import Application from "../models/Application.js";
 import { protect } from "../middleware/auth.js";
+import { uploadDir } from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -34,8 +35,8 @@ router.get("/:id/download", async (req, res, next) => {
   try {
     const application = await Application.findById(req.params.id);
     if (!application?.cv?.filename) return res.status(404).json({ message: "CV not found" });
-    const cvPath = path.resolve("uploads", "cvs", application.cv.filename);
-    const legacyPath = path.resolve("uploads", application.cv.filename);
+    const cvPath = path.resolve(uploadDir, "cvs", application.cv.filename);
+    const legacyPath = path.resolve(uploadDir, application.cv.filename);
     res.download(fs.existsSync(cvPath) ? cvPath : legacyPath, application.cv.originalName);
   } catch (error) {
     next(error);

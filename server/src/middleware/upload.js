@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import multer from "multer";
 
-const uploadDir = path.resolve("uploads");
+export const uploadDir = path.resolve(process.env.UPLOAD_DIR || "uploads");
 const cvUploadDir = path.join(uploadDir, "cvs");
 const logoUploadDir = path.join(uploadDir, "logos");
 fs.mkdirSync(cvUploadDir, { recursive: true });
