@@ -321,9 +321,13 @@ main { min-height: 70vh; }
 .ghost { border: 0; background: transparent; color: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
 .actions, .card-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
 .compact-actions {
+  display: flex;
   flex-wrap: nowrap;
   gap: 8px;
   margin-top: 0;
+}
+.action-cell {
+  min-width: 260px;
 }
 .compact-actions .button.small {
   min-width: 0;
@@ -337,20 +341,19 @@ main { min-height: 70vh; }
 }
 .rating-stars {
   display: inline-flex;
-  gap: 3px;
+  gap: 4px;
   width: fit-content;
   margin-bottom: 14px;
-  padding: 8px 12px;
+  padding: 7px 10px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(255,248,226,.95), rgba(255,255,255,.95));
-  border: 1px solid rgba(244,185,66,.35);
-  box-shadow: 0 10px 24px rgba(244,185,66,.12);
+  background: linear-gradient(135deg, rgba(255,248,226,.9), rgba(255,255,255,.55));
+  box-shadow: 0 10px 24px rgba(244,185,66,.09);
   color: #c7d2d6;
   line-height: 1;
 }
 .rating-stars span {
   color: #c7d2d6;
-  font-size: 1rem;
+  font-size: 1.22rem;
   text-shadow: none;
 }
 .rating-stars span.filled {
