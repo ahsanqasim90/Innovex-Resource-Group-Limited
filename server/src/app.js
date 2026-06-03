@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-import path from "path";
 import rateLimit from "express-rate-limit";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -14,7 +13,6 @@ import jobRoutes from "./routes/jobRoutes.js";
 import partnerRoutes from "./routes/partnerRoutes.js";
 import testimonialRoutes from "./routes/testimonialRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
-import { uploadDir } from "./middleware/upload.js";
 
 dotenv.config();
 
@@ -26,7 +24,6 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false }));
-app.use("/uploads/logos", express.static(path.resolve(uploadDir, "logos")));
 
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "Innovex API" }));
 app.use("/api/auth", authRoutes);

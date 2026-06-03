@@ -11,7 +11,7 @@ const partnerSchema = new mongoose.Schema(
       originalName: String,
       mimetype: String,
       size: Number,
-      url: String
+      data: Buffer
     },
     isActive: { type: Boolean, default: true }
   },

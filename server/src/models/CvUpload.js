@@ -13,7 +13,8 @@ const cvUploadSchema = new mongoose.Schema(
       filename: { type: String, required: true },
       originalName: String,
       mimetype: String,
-      size: Number
+      size: Number,
+      data: Buffer
     }
   },
   { timestamps: true }

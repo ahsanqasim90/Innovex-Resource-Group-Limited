@@ -12,7 +12,8 @@ const applicationSchema = new mongoose.Schema(
       filename: String,
       originalName: String,
       mimetype: String,
-      size: Number
+      size: Number,
+      data: Buffer
     }
   },
   { timestamps: true }

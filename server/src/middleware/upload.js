@@ -1,12 +1,4 @@
-import fs from "fs";
-import path from "path";
 import multer from "multer";
-
-export const uploadDir = path.resolve(process.env.UPLOAD_DIR || "uploads");
-const cvUploadDir = path.join(uploadDir, "cvs");
-const logoUploadDir = path.join(uploadDir, "logos");
-fs.mkdirSync(cvUploadDir, { recursive: true });
-fs.mkdirSync(logoUploadDir, { recursive: true });
 
 const allowedCvMimeTypes = new Set([
   "application/pdf",
@@ -16,21 +8,14 @@ const allowedCvMimeTypes = new Set([
 
 const allowedImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
 
-function makeStorage(destination) {
-  return multer.diskStorage({
-    destination: (req, file, cb) => cb(null, destination),
-    filename: (req, file, cb) => {
-      const safeName = file.originalname.replace(/[^a-z0-9.\-_]/gi, "-").toLowerCase();
-      cb(null, `${Date.now()}-${safeName}`);
-    }
-  });
+function safeFilename(originalName) {
+  return `${Date.now()}-${originalName.replace(/[^a-z0-9.\-_]/gi, "-").toLowerCase()}`;
 }
 
-const cvStorage = makeStorage(cvUploadDir);
-const logoStorage = makeStorage(logoUploadDir);
+const memoryStorage = multer.memoryStorage();
 
 export const uploadCv = multer({
-  storage: cvStorage,
+  storage: memoryStorage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (allowedCvMimeTypes.has(file.mimetype)) {
@@ -42,7 +27,7 @@ export const uploadCv = multer({
 });
 
 export const uploadPartnerLogo = multer({
-  storage: logoStorage,
+  storage: memoryStorage,
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (allowedImageMimeTypes.has(file.mimetype)) {
@@ -52,3 +37,14 @@ export const uploadPartnerLogo = multer({
     cb(new Error("Logo must be a JPG, PNG, WEBP, or SVG image"));
   }
 });
+
+export function fileMeta(file) {
+  if (!file) return undefined;
+  return {
+    filename: safeFilename(file.originalname),
+    originalName: file.originalname,
+    mimetype: file.mimetype,
+    size: file.size,
+    data: file.buffer
+  };
+}

@@ -2,7 +2,7 @@ import express from "express";
 import Job from "../models/Job.js";
 import Application from "../models/Application.js";
 import { protect } from "../middleware/auth.js";
-import { uploadCv } from "../middleware/upload.js";
+import { fileMeta, uploadCv } from "../middleware/upload.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
@@ -82,14 +82,7 @@ router.post("/:id/apply", uploadCv.single("cv"), async (req, res, next) => {
       email: req.body.email,
       phone: req.body.phone,
       coverMessage: req.body.coverMessage,
-      cv: req.file
-        ? {
-            filename: req.file.filename,
-            originalName: req.file.originalname,
-            mimetype: req.file.mimetype,
-            size: req.file.size
-          }
-        : undefined
+      cv: fileMeta(req.file)
     });
     res.status(201).json(application);
   } catch (error) {
@@ -99,7 +92,7 @@ router.post("/:id/apply", uploadCv.single("cv"), async (req, res, next) => {
 
 router.get("/:id/applications", protect, async (req, res, next) => {
   try {
-    const applications = await Application.find({ job: req.params.id }).populate("job").sort({ createdAt: -1 });
+    const applications = await Application.find({ job: req.params.id }).select("-cv.data").populate("job").sort({ createdAt: -1 });
     res.json(applications);
   } catch (error) {
     next(error);
