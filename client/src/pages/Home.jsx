@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import JobCard from "../components/JobCard.jsx";
+import RatingStars from "../components/RatingStars.jsx";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import { services } from "../data/content.js";
@@ -78,7 +79,7 @@ export default function Home() {
 
       <section className="section alt">
         <SectionHeading eyebrow="Testimonials" title="Trusted by providers and candidates" />
-        <div className="card-grid">{testimonials.map((item) => <article className="card" key={item._id}><div className="badge">★★★★★</div><p>{item.message}</p><h3>{item.name}</h3><p className="muted">{item.role}{item.company ? `, ${item.company}` : ""}</p></article>)}</div>
+        <div className="card-grid">{testimonials.map((item) => <article className="card testimonial-card" key={item._id}><RatingStars rating={item.rating} /><p>{item.message}</p><h3>{item.name}</h3><p className="muted">{item.role}{item.company ? `, ${item.company}` : ""}</p></article>)}</div>
       </section>
     </>
   );

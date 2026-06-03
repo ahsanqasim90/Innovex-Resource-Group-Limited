@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import RatingStars from "../components/RatingStars.jsx";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
@@ -35,7 +36,7 @@ export default function Testimonials() {
         <div className="card"><strong>98%</strong><p>Positive feedback</p></div>
       </div>
       <div className="card-grid" style={{ marginTop: 24 }}>
-        {items.map((item) => <article className="card" key={item._id}><div className="badge">{"★".repeat(item.rating)}</div><p>{item.message}</p><h3>{item.name}</h3><p className="muted">{item.role}</p></article>)}
+        {items.map((item) => <article className="card testimonial-card" key={item._id}><RatingStars rating={item.rating} /><p>{item.message}</p><h3>{item.name}</h3><p className="muted">{item.role}</p></article>)}
       </div>
       <div className="card" style={{ marginTop: 24 }}>
         <h2>Submit a review</h2>

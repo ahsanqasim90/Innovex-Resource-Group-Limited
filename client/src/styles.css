@@ -320,6 +320,43 @@ main { min-height: 70vh; }
 .button.small { padding: 9px 14px; }
 .ghost { border: 0; background: transparent; color: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
 .actions, .card-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+.compact-actions {
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-top: 0;
+}
+.compact-actions .button.small {
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: .88rem;
+}
+.testimonial-card {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(244,185,66,.11), transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #fbfefe 100%);
+}
+.rating-stars {
+  display: inline-flex;
+  gap: 3px;
+  width: fit-content;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255,248,226,.95), rgba(255,255,255,.95));
+  border: 1px solid rgba(244,185,66,.35);
+  box-shadow: 0 10px 24px rgba(244,185,66,.12);
+  color: #c7d2d6;
+  line-height: 1;
+}
+.rating-stars span {
+  color: #c7d2d6;
+  font-size: 1rem;
+  text-shadow: none;
+}
+.rating-stars span.filled {
+  color: #f4b942;
+  text-shadow: 0 1px 0 rgba(80,52,0,.14);
+}
 
 .form, .filters { display: grid; gap: 14px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
