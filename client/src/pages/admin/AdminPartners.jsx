@@ -61,7 +61,7 @@ export default function AdminPartners() {
           <input placeholder="Contact email" value={form.contactEmail || ""} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} />
           <label><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} /> Active</label>
         </div>
-        <FileUpload name="logo" label="Partner logo" prompt="Choose or drag partner logo here" helper="JPG, PNG, WEBP, or SVG up to 2MB" />
+        <FileUpload name="logo" label="Partner logo" prompt="Choose or drag partner logo here" helper="JPG, PNG, WEBP, or SVG up to 2MB" accept=".jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml" />
         <button className="button">{editing ? "Update Partner" : "Add Partner"}</button>
       </form>
       <div className="table-wrap" style={{ marginTop: 24 }}><table><thead><tr><th>Logo</th><th>Name</th><th>Service</th><th>Location</th><th>Status</th><th>Actions</th></tr></thead><tbody>
