@@ -2,21 +2,26 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SEO from "../../components/SEO.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
+import SubmitButton from "../../components/SubmitButton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [status, setStatus] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   async function submit(event) {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
+    setSubmitting(true);
     try {
       await login(data.email, data.password);
       navigate("/admin/dashboard");
     } catch (error) {
       setStatus({ type: "error", message: error.message });
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -30,7 +35,7 @@ export default function Login() {
         <form className="form" onSubmit={submit}>
           <input name="email" type="email" placeholder="Email" required />
           <input name="password" type="password" placeholder="Password" required />
-          <button className="button">Login</button>
+          <SubmitButton loading={submitting} loadingText="Logging in...">Login</SubmitButton>
         </form>
       </section>
     </main>

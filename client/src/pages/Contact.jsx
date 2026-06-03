@@ -4,15 +4,18 @@ import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import SocialLinks from "../components/SocialLinks.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
+import SubmitButton from "../components/SubmitButton.jsx";
 import { company, contact } from "../data/content.js";
 import { useState } from "react";
 
 export default function Contact() {
   const [status, setStatus] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   async function submit(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form));
+    setSubmitting(true);
     try {
       const response = await api("/contact", { method: "POST", body: data });
       setStatus({
@@ -23,6 +26,8 @@ export default function Contact() {
       form.reset();
     } catch (error) {
       setStatus({ type: "error", message: error.message });
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -43,7 +48,7 @@ export default function Contact() {
         <form className="form" onSubmit={submit}>
           <div className="form-grid"><input name="name" placeholder="Name" required /><input name="email" type="email" placeholder="Email" required /><input name="phone" placeholder="Phone" /><input name="subject" placeholder="Subject" required /></div>
           <textarea name="message" placeholder="How can we help?" required />
-          <button className="button">Send Message</button>
+          <SubmitButton loading={submitting} loadingText="Sending message...">Send Message</SubmitButton>
         </form>
       </div>
       <div className="card-grid" style={{ marginTop: 24 }}>

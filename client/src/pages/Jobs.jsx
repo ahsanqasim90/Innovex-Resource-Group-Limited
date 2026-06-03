@@ -6,6 +6,7 @@ import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import FileUpload from "../components/FileUpload.jsx";
+import SubmitButton from "../components/SubmitButton.jsx";
 
 export default function Jobs() {
   const [searchParams] = useSearchParams();
@@ -15,6 +16,7 @@ export default function Jobs() {
   const [filters, setFilters] = useState({ search: "", location: "", type: "" });
   const [selected, setSelected] = useState(null);
   const [status, setStatus] = useState(null);
+  const [applying, setApplying] = useState(false);
 
   function loadJobs() {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
@@ -45,12 +47,15 @@ export default function Jobs() {
   async function apply(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    setApplying(true);
     try {
       await api(`/jobs/${selected._id}/apply`, { method: "POST", body: form });
       setStatus({ message: "Application submitted successfully." });
       setSelected(null);
     } catch (error) {
       setStatus({ type: "error", message: error.message });
+    } finally {
+      setApplying(false);
     }
   }
 
@@ -103,7 +108,7 @@ export default function Jobs() {
             <div className="form-grid"><input name="name" placeholder="Full name" required /><input name="email" type="email" placeholder="Email" required /><input name="phone" placeholder="Phone" required /></div>
             <FileUpload label="Attach CV" helper="Optional: PDF, DOC, or DOCX up to 5MB" />
             <textarea name="coverMessage" placeholder="Cover message" />
-            <button className="button">Submit Application</button>
+            <SubmitButton loading={applying} loadingText="Submitting application...">Submit Application</SubmitButton>
           </form>
         </div>
       )}

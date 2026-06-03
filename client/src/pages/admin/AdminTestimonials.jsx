@@ -22,8 +22,8 @@ export default function AdminTestimonials() {
   return (
     <>
       <div className="admin-top"><h1>Admin Testimonials</h1></div>
-      <div className="table-wrap"><table><thead><tr><th>Name</th><th>Review</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-        {items.map((item) => <tr key={item._id}><td>{item.name}<br /><span className="muted">{item.role}</span></td><td>{item.message}</td><td>{item.rating}</td><td>{item.status}</td><td className="action-cell"><div className="compact-actions"><button className="button small" onClick={() => update(item, "Approved")}>Approve</button><button className="button secondary small" onClick={() => update(item, "Rejected")}>Reject</button><button className="button small" onClick={() => remove(item._id)}>Delete</button></div></td></tr>)}
+      <div className="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Review</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        {items.map((item) => <tr key={item._id}><td>{item.name}<br /><span className="muted">{item.role}</span></td><td>{item.reviewType || "Candidate"}</td><td>{item.message}</td><td>{item.rating}</td><td>{item.status}</td><td className="action-cell"><div className="compact-actions"><button className="button small" onClick={() => update(item, "Approved")}>Approve</button><button className="button secondary small" onClick={() => update(item, "Rejected")}>Reject</button><button className="button small" onClick={() => remove(item._id)}>Delete</button></div></td></tr>)}
       </tbody></table></div>
     </>
   );

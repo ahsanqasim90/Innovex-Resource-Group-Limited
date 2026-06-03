@@ -4,7 +4,7 @@ import { protect } from "../middleware/auth.js";
 import { pick, requireFields } from "../utils.js";
 
 const router = express.Router();
-const fields = ["name", "role", "company", "rating", "message", "status"];
+const fields = ["name", "reviewType", "role", "company", "rating", "message", "status"];
 
 function protectAdminQuery(req, res, next) {
   if (req.query.admin) return protect(req, res, next);

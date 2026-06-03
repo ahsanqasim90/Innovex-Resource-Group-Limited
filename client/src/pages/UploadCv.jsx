@@ -4,13 +4,16 @@ import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import FileUpload from "../components/FileUpload.jsx";
+import SubmitButton from "../components/SubmitButton.jsx";
 
 export default function UploadCv() {
   const [status, setStatus] = useState(null);
   const [uploadKey, setUploadKey] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   async function submit(event) {
     event.preventDefault();
     const form = event.currentTarget;
+    setSubmitting(true);
     try {
       await api("/cv-uploads", { method: "POST", body: new FormData(form) });
       setStatus({ message: "CV uploaded successfully. Our recruitment team will review it." });
@@ -18,6 +21,8 @@ export default function UploadCv() {
       setUploadKey((key) => key + 1);
     } catch (error) {
       setStatus({ type: "error", message: error.message });
+    } finally {
+      setSubmitting(false);
     }
   }
   return (
@@ -36,7 +41,7 @@ export default function UploadCv() {
             <input name="experience" placeholder="Experience" required />
           </div>
           <FileUpload key={uploadKey} required />
-          <button className="button">Upload CV</button>
+          <SubmitButton loading={submitting} loadingText="Uploading CV...">Upload CV</SubmitButton>
         </form>
       </div>
     </section>
