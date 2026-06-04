@@ -1,6 +1,5 @@
 import SubmitButton from "../../../components/SubmitButton.jsx";
 import InterviewStatusUpdate from "./InterviewStatusUpdate.jsx";
-import PlacementRevenueCalculator from "./PlacementRevenueCalculator.jsx";
 
 export const emptyInterview = {
   candidateName: "",
@@ -41,8 +40,6 @@ export function toInterviewForm(interview = {}) {
 }
 
 export default function InterviewForm({ form, setForm, editing, saving, onSubmit, onCancel }) {
-  const selected = form.candidateSelected === "Yes";
-  const rejected = form.candidateSelected === "No";
   const reminderText = `Reminder: ${form.candidateName || "[Candidate Name]"} has an interview today for ${form.jobTitle || "[Job Title]"} at ${form.interviewTime || "[Interview Time]"} with ${form.clientName || "[Client Name]"}.`;
 
   return (
@@ -50,7 +47,7 @@ export default function InterviewForm({ form, setForm, editing, saving, onSubmit
       <div className="admin-form-title">
         <div>
           <span className="eyebrow">Interview tracker</span>
-          <h2>{editing ? "Edit interview" : "Add interview"}</h2>
+          <h2>{editing ? "Edit interview booking" : "Book interview"}</h2>
         </div>
         {editing && <button type="button" className="button secondary small" onClick={onCancel}>Cancel edit</button>}
       </div>
@@ -80,29 +77,7 @@ export default function InterviewForm({ form, setForm, editing, saving, onSubmit
         <p>{reminderText}</p>
         <small>Subject: Interview reminder</small>
       </div>
-
-      <div className="placement-section">
-        <h3>Outcome tracking</h3>
-        {rejected && <textarea placeholder="Feedback if not selected" value={form.feedback} onChange={(e) => setForm({ ...form, feedback: e.target.value })} />}
-        {selected && (
-          <>
-            <div className="form-grid">
-              <input type="number" min="0" step="0.01" placeholder="Selected pay rate / salary" value={form.selectedPayRate} onChange={(e) => setForm({ ...form, selectedPayRate: e.target.value })} />
-              <input type="number" min="0" step="0.01" placeholder="Hours per week" value={form.hoursPerWeek} onChange={(e) => setForm({ ...form, hoursPerWeek: e.target.value })} />
-              <input placeholder="Shift type" value={form.shiftType} onChange={(e) => setForm({ ...form, shiftType: e.target.value })} />
-              <input type="date" value={form.placementDate} onChange={(e) => setForm({ ...form, placementDate: e.target.value })} />
-              <select value={form.placementType} onChange={(e) => setForm({ ...form, placementType: e.target.value })}><option>Flat Fee</option><option>Percentage of Annual Salary</option></select>
-              {form.placementType === "Flat Fee" ? (
-                <input type="number" min="0" step="0.01" placeholder="Flat fee amount" value={form.flatFeeAmount} onChange={(e) => setForm({ ...form, flatFeeAmount: e.target.value })} />
-              ) : (
-                <input type="number" min="0" max="100" step="0.01" placeholder="Percentage" value={form.percentage} onChange={(e) => setForm({ ...form, percentage: e.target.value })} />
-              )}
-            </div>
-            <PlacementRevenueCalculator form={form} />
-          </>
-        )}
-      </div>
-      <SubmitButton loading={saving} loadingText="Saving interview...">{editing ? "Update Interview" : "Create Interview"}</SubmitButton>
+      <SubmitButton loading={saving} loadingText="Saving booking...">{editing ? "Update Booking" : "Create Interview"}</SubmitButton>
     </form>
   );
 }

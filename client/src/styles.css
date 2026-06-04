@@ -752,8 +752,21 @@ th { color: var(--teal); background: #f0f7f8; }
     radial-gradient(circle at 100% 0%, rgba(11,95,117,.1), transparent 30%),
     linear-gradient(180deg, #ffffff, #f8fcfd);
 }
+.outcome-panel {
+  margin-top: 22px;
+  border-color: rgba(244,185,66,.4);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.18), transparent 34%),
+    linear-gradient(180deg, #fffdf8, #ffffff);
+}
+.outcome-panel .button {
+  width: 100%;
+}
 .placement-section h3 {
   margin: 0;
+}
+.placement-section.outcome-panel h3 {
+  margin: 4px 0 0;
 }
 .placement-calculator {
   display: grid;

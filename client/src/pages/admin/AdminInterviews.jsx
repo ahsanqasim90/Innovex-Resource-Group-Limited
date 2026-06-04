@@ -13,6 +13,7 @@ export default function AdminInterviews() {
   const [selected, setSelected] = useState(null);
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [outcomeSaving, setOutcomeSaving] = useState(false);
 
   function load() {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
@@ -52,6 +53,21 @@ export default function AdminInterviews() {
     }
   }
 
+  async function saveOutcome(outcome) {
+    if (!selected) return;
+    setOutcomeSaving(true);
+    try {
+      const updated = await api(`/interviews/${selected._id}`, { method: "PUT", body: { ...selected, ...outcome } });
+      setSelected(updated);
+      setStatus({ message: "Interview outcome saved." });
+      load();
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    } finally {
+      setOutcomeSaving(false);
+    }
+  }
+
   function edit(interview) {
     setEditing(interview._id);
     setForm(toInterviewForm(interview));
@@ -64,7 +80,7 @@ export default function AdminInterviews() {
       <StatusMessage status={status} />
       <div className="interview-admin-grid">
         <InterviewForm form={form} setForm={setForm} editing={editing} saving={saving} onSubmit={save} onCancel={() => { setEditing(null); setForm(emptyInterview); }} />
-        <InterviewDetails interview={selected} />
+        <InterviewDetails interview={selected} outcomeSaving={outcomeSaving} onOutcomeSave={saveOutcome} />
       </div>
       <div className="card filters" style={{ marginTop: 24 }}>
         <div className="form-grid">
