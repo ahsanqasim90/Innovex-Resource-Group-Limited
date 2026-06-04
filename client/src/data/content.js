@@ -39,7 +39,7 @@ export const values = ["Compliance first", "Care-led recruitment", "Reliable com
 
 export const company = {
   name: "Innovex Resource Group Limited",
-  siteUrl: "https://innovexresourcegroup.co.uk",
+  siteUrl: "https://www.innovexresourcegroup.co.uk",
   compliance: [
     "Registered with Companies House",
     "Registered with the ICO for data protection"

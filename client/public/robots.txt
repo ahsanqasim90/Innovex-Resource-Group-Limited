@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 
-Sitemap: https://innovexresourcegroup.co.uk/sitemap.xml
+Sitemap: https://www.innovexresourcegroup.co.uk/api/sitemap.xml

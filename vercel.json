@@ -3,6 +3,19 @@
   "installCommand": "npm install && npm install --prefix client",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "client/dist",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "innovexresourcegroup.co.uk"
+        }
+      ],
+      "destination": "https://www.innovexresourcegroup.co.uk/$1",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",

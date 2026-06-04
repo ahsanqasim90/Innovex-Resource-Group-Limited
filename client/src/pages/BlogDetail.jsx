@@ -51,22 +51,33 @@ export default function BlogDetail() {
         title={blog.metaTitle || blog.title}
         path={`/blogs/${blog.slug}`}
         description={description}
-        jsonLd={{
-          "@context": "https://schema.org",
-          "@type": "BlogPosting",
-          headline: blog.title,
-          description,
-          image: imageUrl,
-          datePublished: blog.publishedAt || blog.createdAt,
-          dateModified: blog.updatedAt,
-          author: { "@type": "Organization", name: blog.author || company.name },
-          publisher: {
-            "@type": "Organization",
-            name: company.name,
-            logo: { "@type": "ImageObject", url: `${company.siteUrl}/Logo.png` }
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            headline: blog.title,
+            description,
+            image: imageUrl,
+            datePublished: blog.publishedAt || blog.createdAt,
+            dateModified: blog.updatedAt,
+            author: { "@type": "Organization", name: blog.author || company.name },
+            publisher: {
+              "@type": "Organization",
+              name: company.name,
+              logo: { "@type": "ImageObject", url: `${company.siteUrl}/Logo.png` }
+            },
+            mainEntityOfPage: articleUrl
           },
-          mainEntityOfPage: articleUrl
-        }}
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: company.siteUrl },
+              { "@type": "ListItem", position: 2, name: "Insights", item: `${company.siteUrl}/blogs` },
+              { "@type": "ListItem", position: 3, name: blog.title, item: articleUrl }
+            ]
+          }
+        ]}
       />
       <Link className="text-link back-link" to="/blogs"><ArrowLeft size={16} /> Back to insights</Link>
       <header className="blog-detail-hero">

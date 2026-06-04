@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Code2, Globe2, LineChart, Megaphone, MonitorSmartphone, Search } from "lucide-react";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
-import { digitalServices, services } from "../data/content.js";
+import { company, digitalServices, services } from "../data/content.js";
 
 const digitalIcons = [MonitorSmartphone, Search, Megaphone, Globe2];
 
@@ -10,7 +10,27 @@ export default function Services() {
   return (
     <>
       <section className="section">
-        <SEO title="Services" path="/services" description="Explore Innovex services including healthcare recruitment, care home staffing, nurse placement, website design, SEO, branding, and digital support across all sectors." />
+        <SEO
+          title="Services"
+          path="/services"
+          description="Explore Innovex services including healthcare recruitment, care home staffing, nurse placement, website design, SEO, branding, and digital support across all sectors."
+          jsonLd={{
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: "Innovex Resource Group Limited services",
+            itemListElement: [...services, ...digitalServices].map((service, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              item: {
+                "@type": "Service",
+                name: service.title,
+                description: service.description,
+                provider: { "@type": "Organization", name: company.name, url: company.siteUrl },
+                areaServed: "United Kingdom"
+              }
+            }))
+          }}
+        />
         <SectionHeading eyebrow="Services" title="Healthcare staffing services for care providers" />
         <div className="card-grid">
           {services.map((service) => (

@@ -83,7 +83,7 @@ export default function SEO({ title, description, path, noIndex = false, jsonLd 
 
     const articleElement = document.getElementById("innovex-page-schema");
     if (jsonLd) {
-      upsertJsonLd("innovex-page-schema", jsonLd);
+      upsertJsonLd("innovex-page-schema", Array.isArray(jsonLd) ? jsonLd : jsonLd);
     } else if (articleElement) {
       articleElement.remove();
     }

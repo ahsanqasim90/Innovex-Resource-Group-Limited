@@ -13,6 +13,7 @@ import dashboardRoutes from "./routes/dashboardRoutes.js";
 import interviewRoutes from "./routes/interviewRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import partnerRoutes from "./routes/partnerRoutes.js";
+import seoRoutes from "./routes/seoRoutes.js";
 import testimonialRoutes from "./routes/testimonialRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
@@ -28,6 +29,7 @@ app.use(morgan("dev"));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false }));
 
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "Innovex API" }));
+app.use("/api", seoRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/jobs", jobRoutes);

@@ -66,8 +66,8 @@ Backend: `http://localhost:5000/api/health`
 ## SEO & Deployment Checklist
 
 - Deploy frontend with SPA fallback enabled. Netlify-style `_redirects` is included in `client/public`.
-- Confirm the live domain is `https://innovexresourcegroup.co.uk`; if it changes, update `company.siteUrl` in `client/src/data/content.js`, `client/public/sitemap.xml`, and `client/public/robots.txt`.
-- Submit `https://innovexresourcegroup.co.uk/sitemap.xml` in Google Search Console after deployment.
+- Confirm the live domain is `https://www.innovexresourcegroup.co.uk`; if it changes, update `company.siteUrl` in `client/src/data/content.js`, `client/public/sitemap.xml`, and `client/public/robots.txt`.
+- Submit `https://www.innovexresourcegroup.co.uk/api/sitemap.xml` in Google Search Console after deployment.
 - Keep `/admin/` blocked from indexing via `robots.txt` and admin meta `noindex`.
 - Use HTTPS, enable gzip/Brotli at the host, and cache static assets using the included `_headers` file where supported.
 - Ranking is not instant: add real partner logos/content, job posts, testimonials, and local Cardiff/UK service copy over time for stronger search performance.
