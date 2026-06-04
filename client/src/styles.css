@@ -666,6 +666,17 @@ th { color: var(--teal); background: #f0f7f8; }
   gap: 22px;
   align-items: start;
 }
+.interview-form {
+  position: relative;
+  overflow: hidden;
+}
+.interview-form::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  background: linear-gradient(90deg, var(--gold), #76cfd6, var(--blue));
+}
 .admin-form-title {
   display: flex;
   align-items: center;
@@ -673,7 +684,54 @@ th { color: var(--teal); background: #f0f7f8; }
   gap: 14px;
 }
 .admin-form-title h2 {
+  margin: 4px 0 0;
+  color: var(--teal);
+}
+.interview-form-section {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #d7e9ed;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff, #f8fcfd);
+}
+.interview-form-section h3 {
   margin: 0;
+}
+.status-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.status-choice-grid label {
+  padding: 14px;
+  border: 1px solid #d7e9ed;
+  border-radius: 18px;
+  background: white;
+}
+.status-choice-grid label > span {
+  color: var(--teal);
+  font-size: .9rem;
+  font-weight: 900;
+}
+.reminder-preview {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(244,185,66,.36);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(244,185,66,.2), transparent 34%),
+    linear-gradient(135deg, #fffaf0, #ffffff);
+}
+.reminder-preview p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.55;
+}
+.reminder-preview small {
+  color: var(--muted);
+  font-weight: 800;
 }
 .checkbox-line {
   display: inline-flex;
@@ -688,9 +746,11 @@ th { color: var(--teal); background: #f0f7f8; }
   display: grid;
   gap: 14px;
   padding: 18px;
-  border: 1px solid var(--line);
+  border: 1px solid #d7e9ed;
   border-radius: 20px;
-  background: linear-gradient(180deg, #ffffff, #f8fcfd);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(11,95,117,.1), transparent 30%),
+    linear-gradient(180deg, #ffffff, #f8fcfd);
 }
 .placement-section h3 {
   margin: 0;
@@ -722,6 +782,10 @@ th { color: var(--teal); background: #f0f7f8; }
 .interview-detail {
   position: sticky;
   top: 24px;
+  border-color: #cbe4e8;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.14), transparent 32%),
+    linear-gradient(180deg, #ffffff, #f8fcfd);
 }
 .interview-detail h2 {
   margin: 0 0 6px;
@@ -729,6 +793,9 @@ th { color: var(--teal); background: #f0f7f8; }
 }
 .interview-detail-empty {
   min-height: 240px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
 }
 .detail-list {
   display: grid;

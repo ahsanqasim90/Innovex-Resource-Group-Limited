@@ -69,10 +69,10 @@ export default function AdminInterviews() {
       <div className="card filters" style={{ marginTop: 24 }}>
         <div className="form-grid">
           <input placeholder="Search candidate, client, or job" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
-          <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">All interview statuses</option><option>Pending</option><option>Completed</option><option>Cancelled</option></select>
+          <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">All interview stages</option><option value="Pending">Pending interview</option><option value="Completed">Interview completed</option><option value="Cancelled">Interview cancelled</option></select>
           <input type="date" value={filters.date} onChange={(e) => setFilters({ ...filters, date: e.target.value })} />
           <input placeholder="Filter by job title" value={filters.jobTitle} onChange={(e) => setFilters({ ...filters, jobTitle: e.target.value })} />
-          <select value={filters.selected} onChange={(e) => setFilters({ ...filters, selected: e.target.value })}><option value="">All outcomes</option><option>Pending</option><option>Yes</option><option>No</option></select>
+          <select value={filters.selected} onChange={(e) => setFilters({ ...filters, selected: e.target.value })}><option value="">All outcomes</option><option value="Pending">Awaiting outcome</option><option value="Yes">Selected</option><option value="No">Not selected</option></select>
           <button className="button" onClick={load}>Apply Filters</button>
         </div>
       </div>
