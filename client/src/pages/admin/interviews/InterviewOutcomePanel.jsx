@@ -50,15 +50,15 @@ export default function InterviewOutcomePanel({ interview, saving, onSave }) {
       {selected && (
         <>
           <div className="form-grid">
-            <input type="number" min="0" step="0.01" placeholder="Selected pay rate / salary" value={form.selectedPayRate} onChange={(e) => setForm({ ...form, selectedPayRate: e.target.value })} />
-            <input type="number" min="0" step="0.01" placeholder="Hours per week" value={form.hoursPerWeek} onChange={(e) => setForm({ ...form, hoursPerWeek: e.target.value })} />
-            <input placeholder="Shift type" value={form.shiftType} onChange={(e) => setForm({ ...form, shiftType: e.target.value })} />
-            <input type="date" value={form.placementDate} onChange={(e) => setForm({ ...form, placementDate: e.target.value })} />
-            <select value={form.placementType} onChange={(e) => setForm({ ...form, placementType: e.target.value })}><option>Flat Fee</option><option>Percentage of Annual Salary</option></select>
+            <label><span>Pay rate / salary</span><input type="number" min="0" step="0.01" placeholder="e.g. 17" value={form.selectedPayRate} onChange={(e) => setForm({ ...form, selectedPayRate: e.target.value })} /></label>
+            <label><span>Hours per week</span><input type="number" min="0" step="0.01" placeholder="e.g. 40" value={form.hoursPerWeek} onChange={(e) => setForm({ ...form, hoursPerWeek: e.target.value })} /></label>
+            <label><span>Shift type</span><input placeholder="e.g. Days" value={form.shiftType} onChange={(e) => setForm({ ...form, shiftType: e.target.value })} /></label>
+            <label><span>Placement date</span><input type="date" value={form.placementDate} onChange={(e) => setForm({ ...form, placementDate: e.target.value })} /></label>
+            <label><span>Placement type</span><select value={form.placementType} onChange={(e) => setForm({ ...form, placementType: e.target.value })}><option>Flat Fee</option><option>Percentage of Annual Salary</option></select></label>
             {form.placementType === "Flat Fee" ? (
-              <input type="number" min="0" step="0.01" placeholder="Flat fee amount" value={form.flatFeeAmount} onChange={(e) => setForm({ ...form, flatFeeAmount: e.target.value })} />
+              <label><span>Flat fee amount</span><input type="number" min="0" step="0.01" placeholder="e.g. 800" value={form.flatFeeAmount} onChange={(e) => setForm({ ...form, flatFeeAmount: e.target.value })} /></label>
             ) : (
-              <input type="number" min="0" max="100" step="0.01" placeholder="Percentage" value={form.percentage} onChange={(e) => setForm({ ...form, percentage: e.target.value })} />
+              <label><span>Percentage</span><input type="number" min="0" max="100" step="0.01" placeholder="e.g. 8" value={form.percentage} onChange={(e) => setForm({ ...form, percentage: e.target.value })} /></label>
             )}
           </div>
           <PlacementRevenueCalculator form={form} />

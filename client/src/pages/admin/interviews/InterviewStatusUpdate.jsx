@@ -9,14 +9,6 @@ export default function InterviewStatusUpdate({ form, setForm }) {
           <option value="Cancelled">Interview cancelled</option>
         </select>
       </label>
-      <label>
-        <span>Candidate outcome</span>
-        <select value={form.candidateSelected} onChange={(e) => setForm({ ...form, candidateSelected: e.target.value })}>
-          <option value="Pending">Awaiting outcome</option>
-          <option value="Yes">Selected</option>
-          <option value="No">Not selected</option>
-        </select>
-      </label>
     </div>
   );
 }

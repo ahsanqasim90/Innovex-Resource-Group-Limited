@@ -660,15 +660,61 @@ th { color: var(--teal); background: #f0f7f8; }
   background: white;
   padding: 5px;
 }
+.interview-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0 0 24px;
+}
+.interview-summary-card {
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+  border: 1px solid #d7e9ed;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(118,207,214,.18), transparent 34%),
+    linear-gradient(180deg, #ffffff, #f8fcfd);
+  box-shadow: 0 18px 40px rgba(6,63,79,.07);
+}
+.interview-summary-card::after {
+  content: "";
+  position: absolute;
+  right: -24px;
+  bottom: -24px;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: rgba(6,63,79,.06);
+}
+.interview-summary-card span {
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 900;
+}
+.interview-summary-card strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--teal);
+  font-size: 1.85rem;
+}
+.interview-summary-card.highlight {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.32), transparent 38%),
+    linear-gradient(135deg, #fffaf0, #ffffff);
+  border-color: rgba(244,185,66,.42);
+}
 .interview-admin-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(320px, .75fr);
-  gap: 22px;
+  grid-template-columns: minmax(0, 1.75fr) minmax(360px, .9fr);
+  gap: 26px;
   align-items: start;
 }
 .interview-form {
   position: relative;
   overflow: hidden;
+  border-color: #c7e4e8;
+  box-shadow: 0 26px 70px rgba(6,63,79,.1);
 }
 .interview-form::before {
   content: "";
@@ -690,24 +736,27 @@ th { color: var(--teal); background: #f0f7f8; }
 .interview-form-section {
   display: grid;
   gap: 14px;
-  padding: 18px;
+  padding: 20px;
   border: 1px solid #d7e9ed;
-  border-radius: 20px;
-  background: linear-gradient(180deg, #ffffff, #f8fcfd);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(118,207,214,.12), transparent 32%),
+    linear-gradient(180deg, #ffffff, #f8fcfd);
 }
 .interview-form-section h3 {
   margin: 0;
 }
 .status-choice-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 .status-choice-grid label {
-  padding: 14px;
+  padding: 16px;
   border: 1px solid #d7e9ed;
-  border-radius: 18px;
-  background: white;
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(230,247,244,.9), rgba(255,255,255,.9));
 }
 .status-choice-grid label > span {
   color: var(--teal);
@@ -717,7 +766,7 @@ th { color: var(--teal); background: #f0f7f8; }
 .reminder-preview {
   display: grid;
   gap: 10px;
-  padding: 16px;
+  padding: 18px;
   border-radius: 20px;
   border: 1px solid rgba(244,185,66,.36);
   background:
@@ -745,22 +794,33 @@ th { color: var(--teal); background: #f0f7f8; }
 .placement-section {
   display: grid;
   gap: 14px;
-  padding: 18px;
+  padding: 20px;
   border: 1px solid #d7e9ed;
-  border-radius: 20px;
+  border-radius: 22px;
   background:
     radial-gradient(circle at 100% 0%, rgba(11,95,117,.1), transparent 30%),
     linear-gradient(180deg, #ffffff, #f8fcfd);
 }
 .outcome-panel {
   margin-top: 22px;
-  border-color: rgba(244,185,66,.4);
+  border-color: rgba(244,185,66,.5);
   background:
-    radial-gradient(circle at 100% 0%, rgba(244,185,66,.18), transparent 34%),
-    linear-gradient(180deg, #fffdf8, #ffffff);
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.24), transparent 38%),
+    linear-gradient(180deg, #fffdf7, #ffffff);
+  box-shadow: 0 18px 40px rgba(244,185,66,.12);
 }
 .outcome-panel .button {
   width: 100%;
+}
+.outcome-panel label span {
+  color: var(--teal);
+  font-size: .82rem;
+  font-weight: 900;
+  display: inline-block;
+  margin: 0 0 6px 2px;
+}
+.outcome-panel textarea {
+  min-height: 110px;
 }
 .placement-section h3 {
   margin: 0;
@@ -772,9 +832,12 @@ th { color: var(--teal); background: #f0f7f8; }
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  background: var(--mint);
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(11,95,117,.1);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.18), transparent 35%),
+    linear-gradient(135deg, #e6f7f4, #fff8e2);
 }
 .placement-calculator div {
   display: grid;
@@ -795,20 +858,149 @@ th { color: var(--teal); background: #f0f7f8; }
 .interview-detail {
   position: sticky;
   top: 24px;
-  border-color: #cbe4e8;
+  overflow: hidden;
+  border-color: #b9dfe5;
   background:
-    radial-gradient(circle at 100% 0%, rgba(244,185,66,.14), transparent 32%),
-    linear-gradient(180deg, #ffffff, #f8fcfd);
+    radial-gradient(circle at 92% 0%, rgba(244,185,66,.25), transparent 30%),
+    radial-gradient(circle at 0% 14%, rgba(118,207,214,.24), transparent 26%),
+    linear-gradient(180deg, #ffffff, #f7fcfd);
+  box-shadow: 0 30px 80px rgba(6,63,79,.13);
 }
-.interview-detail h2 {
-  margin: 0 0 6px;
+.interview-detail::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, var(--blue), #76cfd6, var(--gold));
+}
+.interview-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+}
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  color: white;
+  font-weight: 900;
+  letter-spacing: .04em;
+  box-shadow: 0 14px 30px rgba(6,63,79,.18);
+}
+.profile-avatar.empty {
+  background: var(--mint);
   color: var(--teal);
+}
+.interview-profile h2 {
+  margin: 0 0 4px;
+  color: var(--teal);
+}
+.interview-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  gap: 6px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: #dff5f1;
+  color: var(--blue);
+  font-size: .78rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.status-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.status-chip.gold {
+  background: #fff3cf;
+  color: #8a5b05;
+}
+.status-chip.soft {
+  background: #eff8fb;
+  color: var(--teal);
+}
+.status-chip.table-chip {
+  font-size: .76rem;
+  white-space: nowrap;
+}
+.interview-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.interview-mini-grid div {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #d7e9ed;
+  border-radius: 18px;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 10px 24px rgba(6,63,79,.05);
+}
+.interview-mini-grid span,
+.contact-strip span {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 800;
+}
+.interview-mini-grid strong {
+  color: var(--teal);
+  font-size: .95rem;
+  overflow-wrap: anywhere;
+}
+.contact-strip {
+  display: grid;
+  gap: 9px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(230,247,244,.66);
+  border: 1px solid rgba(11,95,117,.08);
+}
+.contact-strip a,
+.contact-strip span {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 13px;
+  background: rgba(255,255,255,.66);
+  color: var(--teal);
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.feedback-note {
+  padding: 14px;
+  border: 1px solid #f1d79b;
+  border-radius: 18px;
+  background: #fff9ec;
+}
+.feedback-note p {
+  margin: 6px 0 0;
+  color: var(--muted);
 }
 .interview-detail-empty {
   min-height: 240px;
   display: grid;
   align-content: start;
   gap: 8px;
+  border-style: dashed;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(118,207,214,.18), transparent 32%),
+    linear-gradient(180deg, #ffffff, #f8fcfd);
 }
 .detail-list {
   display: grid;
@@ -824,10 +1016,37 @@ th { color: var(--teal); background: #f0f7f8; }
   color: var(--ink);
 }
 .selected-row td {
-  background: #f7fcfb;
+  background: #f2fbfa;
 }
 .interview-table table {
   min-width: 1120px;
+}
+.interview-table tbody tr {
+  transition: background .18s ease, transform .18s ease;
+}
+.interview-table tbody tr:hover td {
+  background: #f8fcfd;
+}
+.interview-table .compact-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.interview-filters {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(118,207,214,.16), transparent 28%),
+    linear-gradient(180deg, #ffffff, #f8fcfd);
+}
+.filter-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.filter-heading h3 {
+  margin: 4px 0 0;
 }
 .login-page { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: linear-gradient(135deg, var(--teal), var(--blue)); }
 .login-card { width: min(440px, 100%); }
@@ -841,7 +1060,7 @@ th { color: var(--teal); background: #f0f7f8; }
   .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase { grid-template-columns: 1fr; }
   .interview-admin-grid { grid-template-columns: 1fr; }
   .interview-detail { position: static; }
-  .stats-grid, .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats-grid, .card-grid, .interview-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .digital-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .menu-button { display: block; }
   .nav { position: absolute; top: 78px; left: 20px; right: 20px; display: none; flex-direction: column; align-items: stretch; padding: 20px; border-radius: 22px; background: white; box-shadow: 0 20px 50px rgba(0,0,0,.14); }
@@ -850,7 +1069,7 @@ th { color: var(--teal); background: #f0f7f8; }
 }
 
 @media (max-width: 620px) {
-  .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options { grid-template-columns: 1fr; }
+  .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator { grid-template-columns: 1fr; }
   .hero { padding-top: 44px; }
   .site-header { padding: 14px 18px; }
   .brand span:last-child { display: none; }

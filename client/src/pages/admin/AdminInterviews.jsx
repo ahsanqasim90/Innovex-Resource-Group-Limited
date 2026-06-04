@@ -14,6 +14,12 @@ export default function AdminInterviews() {
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
   const [outcomeSaving, setOutcomeSaving] = useState(false);
+  const summary = {
+    total: interviews.length,
+    pending: interviews.filter((item) => item.interviewStatus === "Pending").length,
+    completed: interviews.filter((item) => item.interviewStatus === "Completed").length,
+    revenue: interviews.reduce((sum, item) => sum + Number(item.revenue || 0), 0)
+  };
 
   function load() {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
@@ -78,11 +84,23 @@ export default function AdminInterviews() {
     <>
       <div className="admin-top"><h1>Interviews</h1></div>
       <StatusMessage status={status} />
+      <div className="interview-summary-grid">
+        <div className="interview-summary-card"><span>Total bookings</span><strong>{summary.total}</strong></div>
+        <div className="interview-summary-card"><span>Pending interviews</span><strong>{summary.pending}</strong></div>
+        <div className="interview-summary-card"><span>Completed</span><strong>{summary.completed}</strong></div>
+        <div className="interview-summary-card highlight"><span>Revenue</span><strong>£{summary.revenue.toLocaleString()}</strong></div>
+      </div>
       <div className="interview-admin-grid">
         <InterviewForm form={form} setForm={setForm} editing={editing} saving={saving} onSubmit={save} onCancel={() => { setEditing(null); setForm(emptyInterview); }} />
         <InterviewDetails interview={selected} outcomeSaving={outcomeSaving} onOutcomeSave={saveOutcome} />
       </div>
-      <div className="card filters" style={{ marginTop: 24 }}>
+      <div className="card filters interview-filters" style={{ marginTop: 24 }}>
+        <div className="filter-heading">
+          <div>
+            <span className="eyebrow">Search records</span>
+            <h3>Find an interview</h3>
+          </div>
+        </div>
         <div className="form-grid">
           <input placeholder="Search candidate, client, or job" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
           <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">All interview stages</option><option value="Pending">Pending interview</option><option value="Completed">Interview completed</option><option value="Cancelled">Interview cancelled</option></select>
