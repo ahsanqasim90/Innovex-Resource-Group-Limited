@@ -112,7 +112,7 @@ export default function AdminBlogs() {
           <label><span>Publish date</span><input type="date" value={form.publishedAt} onChange={(e) => setForm({ ...form, publishedAt: e.target.value })} /></label>
           <label className="checkbox-line"><input type="checkbox" checked={form.isPublished} onChange={(e) => setForm({ ...form, isPublished: e.target.checked })} /> Published</label>
         </div>
-        <FileUpload name="featuredImage" label="Featured image" prompt="Choose or drag blog image here" helper="JPG, PNG, WEBP, or SVG up to 3MB" accept=".jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml" />
+        <FileUpload name="featuredImage" label="Featured image" prompt="Choose or drag blog image here" helper="Recommended 1200 x 675px, JPG/PNG/WEBP/SVG up to 3MB" accept=".jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml" />
         <SubmitButton loading={saving} loadingText="Saving blog...">{editing ? "Update Blog" : "Create Blog"}</SubmitButton>
       </form>
 
