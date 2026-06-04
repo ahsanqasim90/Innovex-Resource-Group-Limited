@@ -9,6 +9,7 @@ import authRoutes from "./routes/authRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import cvRoutes from "./routes/cvRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import interviewRoutes from "./routes/interviewRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import partnerRoutes from "./routes/partnerRoutes.js";
 import testimonialRoutes from "./routes/testimonialRoutes.js";
@@ -34,6 +35,7 @@ app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/partners", partnerRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/interviews", interviewRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

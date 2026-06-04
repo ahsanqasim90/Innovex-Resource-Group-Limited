@@ -23,5 +23,11 @@
         }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/interviews/reminders/run",
+      "schedule": "0 8 * * *"
+    }
   ]
 }

@@ -1,4 +1,4 @@
-import { Briefcase, Building2, FileText, LayoutDashboard, LogOut, MessageSquare, Upload } from "lucide-react";
+import { Briefcase, Building2, CalendarCheck, FileText, LayoutDashboard, LogOut, MessageSquare, Upload } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -7,6 +7,7 @@ const links = [
   ["/admin/jobs", "Jobs", Briefcase],
   ["/admin/applications", "Applications", FileText],
   ["/admin/cv-uploads", "CV Uploads", Upload],
+  ["/admin/interviews", "Interviews", CalendarCheck],
   ["/admin/testimonials", "Testimonials", MessageSquare],
   ["/admin/partners", "Partners", Building2]
 ];

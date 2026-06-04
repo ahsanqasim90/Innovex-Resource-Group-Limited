@@ -58,3 +58,31 @@ export async function sendContactEmail(message) {
 
   return { sent: true };
 }
+
+export async function sendInterviewReminderEmail(interview) {
+  if (!hasSmtpConfig()) {
+    return { sent: false, reason: "SMTP is not configured" };
+  }
+
+  const transporter = makeTransporter();
+  const subject = `Interview reminder: ${interview.candidateName} - ${interview.jobTitle}`;
+  const text = `Reminder: ${interview.candidateName} has an interview today for ${interview.jobTitle} at ${interview.interviewTime} with ${interview.clientName}.`;
+  const html = `
+    <h2>Interview reminder</h2>
+    <p><strong>Reminder:</strong> ${interview.candidateName} has an interview today for ${interview.jobTitle} at ${interview.interviewTime} with ${interview.clientName}.</p>
+    <p><strong>Candidate email:</strong> <a href="mailto:${interview.candidateEmail}">${interview.candidateEmail}</a></p>
+    <p><strong>Candidate phone:</strong> ${interview.candidatePhone}</p>
+    <p><strong>Interview type:</strong> ${interview.interviewType}</p>
+    ${interview.notes ? `<p><strong>Notes:</strong> ${String(interview.notes).replace(/\n/g, "<br />")}</p>` : ""}
+  `;
+
+  await transporter.sendMail({
+    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    to: recipient,
+    subject,
+    text,
+    html
+  });
+
+  return { sent: true };
+}

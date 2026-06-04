@@ -17,6 +17,7 @@ import Dashboard from "./pages/admin/Dashboard.jsx";
 import AdminJobs from "./pages/admin/AdminJobs.jsx";
 import AdminApplications from "./pages/admin/AdminApplications.jsx";
 import AdminCvs from "./pages/admin/AdminCvs.jsx";
+import AdminInterviews from "./pages/admin/AdminInterviews.jsx";
 import AdminTestimonials from "./pages/admin/AdminTestimonials.jsx";
 import AdminPartners from "./pages/admin/AdminPartners.jsx";
 import "./styles.css";
@@ -55,6 +56,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="jobs" element={<AdminJobs />} />
             <Route path="applications" element={<AdminApplications />} />
             <Route path="cv-uploads" element={<AdminCvs />} />
+            <Route path="interviews" element={<AdminInterviews />} />
             <Route path="testimonials" element={<AdminTestimonials />} />
             <Route path="partners" element={<AdminPartners />} />
           </Route>
