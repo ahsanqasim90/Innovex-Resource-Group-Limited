@@ -38,6 +38,18 @@ export const uploadPartnerLogo = multer({
   }
 });
 
+export const uploadBlogImage = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (allowedImageMimeTypes.has(file.mimetype)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("Featured image must be a JPG, PNG, WEBP, or SVG image"));
+  }
+});
+
 export function fileMeta(file) {
   if (!file) return undefined;
   return {

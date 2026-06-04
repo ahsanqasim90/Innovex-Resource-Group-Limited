@@ -5,6 +5,8 @@ import AppLayout from "./layouts/AppLayout.jsx";
 import AdminLayout from "./layouts/AdminLayout.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import About from "./pages/About.jsx";
+import BlogDetail from "./pages/BlogDetail.jsx";
+import Blogs from "./pages/Blogs.jsx";
 import Contact from "./pages/Contact.jsx";
 import Home from "./pages/Home.jsx";
 import Jobs from "./pages/Jobs.jsx";
@@ -14,6 +16,7 @@ import Testimonials from "./pages/Testimonials.jsx";
 import UploadCv from "./pages/UploadCv.jsx";
 import Login from "./pages/admin/Login.jsx";
 import Dashboard from "./pages/admin/Dashboard.jsx";
+import AdminBlogs from "./pages/admin/AdminBlogs.jsx";
 import AdminJobs from "./pages/admin/AdminJobs.jsx";
 import AdminApplications from "./pages/admin/AdminApplications.jsx";
 import AdminCvs from "./pages/admin/AdminCvs.jsx";
@@ -37,6 +40,8 @@ createRoot(document.getElementById("root")).render(
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
             <Route path="/jobs" element={<Jobs />} />
+            <Route path="/blogs" element={<Blogs />} />
+            <Route path="/blogs/:slug" element={<BlogDetail />} />
             <Route path="/testimonials" element={<Testimonials />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/contact" element={<Contact />} />
@@ -57,6 +62,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="applications" element={<AdminApplications />} />
             <Route path="cv-uploads" element={<AdminCvs />} />
             <Route path="interviews" element={<AdminInterviews />} />
+            <Route path="blogs" element={<AdminBlogs />} />
             <Route path="testimonials" element={<AdminTestimonials />} />
             <Route path="partners" element={<AdminPartners />} />
           </Route>

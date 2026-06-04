@@ -31,7 +31,7 @@ function upsertJsonLd(id, data) {
   element.textContent = JSON.stringify(data);
 }
 
-export default function SEO({ title, description, path, noIndex = false }) {
+export default function SEO({ title, description, path, noIndex = false, jsonLd }) {
   useEffect(() => {
     const pageTitle = `${title} | ${company.name}`;
     const canonicalPath = path || window.location.pathname;
@@ -80,7 +80,14 @@ export default function SEO({ title, description, path, noIndex = false }) {
         "query-input": "required name=search_term_string"
       }
     });
-  }, [title, description, path, noIndex]);
+
+    const articleElement = document.getElementById("innovex-page-schema");
+    if (jsonLd) {
+      upsertJsonLd("innovex-page-schema", jsonLd);
+    } else if (articleElement) {
+      articleElement.remove();
+    }
+  }, [title, description, path, noIndex, jsonLd]);
 
   return null;
 }

@@ -6,6 +6,7 @@ import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import blogRoutes from "./routes/blogRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import cvRoutes from "./routes/cvRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
@@ -28,6 +29,7 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true,
 
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "Innovex API" }));
 app.use("/api/auth", authRoutes);
+app.use("/api/blogs", blogRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/cv-uploads", cvRoutes);

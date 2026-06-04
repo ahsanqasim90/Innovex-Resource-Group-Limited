@@ -2,6 +2,7 @@ import { ArrowRight, ShieldCheck, Users, HeartHandshake, MonitorSmartphone, Sear
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
+import BlogCard from "../components/BlogCard.jsx";
 import JobCard from "../components/JobCard.jsx";
 import RatingStars from "../components/RatingStars.jsx";
 import SEO from "../components/SEO.jsx";
@@ -11,10 +12,12 @@ import { services } from "../data/content.js";
 export default function Home() {
   const [jobs, setJobs] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
+  const [blogs, setBlogs] = useState([]);
 
   useEffect(() => {
     api("/jobs").then((data) => setJobs(data.slice(0, 3))).catch(() => {});
     api("/testimonials").then((data) => setTestimonials(data.slice(0, 3))).catch(() => {});
+    api("/blogs").then((data) => setBlogs(data.slice(0, 3))).catch(() => {});
   }, []);
 
   return (
@@ -76,6 +79,14 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {blogs.length > 0 && (
+        <section className="section alt">
+          <SectionHeading eyebrow="Insights" title="Latest recruitment and SEO advice">Fresh articles from Innovex for care providers, candidates, and businesses improving their online visibility.</SectionHeading>
+          <div className="blog-grid home-blog-grid">{blogs.map((blog) => <BlogCard key={blog._id} blog={blog} />)}</div>
+          <div className="actions"><Link className="button secondary" to="/blogs">View All Insights</Link></div>
+        </section>
+      )}
 
       <section className="section alt">
         <SectionHeading eyebrow="Testimonials" title="Trusted by providers and candidates" />
