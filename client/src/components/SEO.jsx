@@ -45,7 +45,7 @@ export default function SEO({ title, description, path, noIndex = false, jsonLd 
     upsertMeta('meta[property="og:title"]', { property: "og:title", content: pageTitle });
     upsertMeta('meta[property="og:description"]', { property: "og:description", content: description });
     upsertMeta('meta[property="og:url"]', { property: "og:url", content: canonical });
-    upsertMeta('meta[property="og:image"]', { property: "og:image", content: `${company.siteUrl}/Logo.png` });
+    upsertMeta('meta[property="og:image"]', { property: "og:image", content: `${company.siteUrl}/icon-512.png` });
     upsertMeta('meta[name="twitter:title"]', { name: "twitter:title", content: pageTitle });
     upsertMeta('meta[name="twitter:description"]', { name: "twitter:description", content: description });
 
@@ -54,7 +54,7 @@ export default function SEO({ title, description, path, noIndex = false, jsonLd 
       "@type": ["Organization", "LocalBusiness", "EmploymentAgency"],
       name: company.name,
       url: company.siteUrl,
-      logo: `${company.siteUrl}/Logo.png`,
+      logo: `${company.siteUrl}/icon-512.png`,
       email: contact.email,
       telephone: contact.phoneDisplay,
       address: {

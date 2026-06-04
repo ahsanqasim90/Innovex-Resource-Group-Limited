@@ -22,7 +22,7 @@ export default function Home() {
 
   return (
     <>
-      <SEO title="Healthcare Recruitment, Websites & SEO" path="/" description="Innovex Resource Group Limited provides UK healthcare recruitment, care home staffing, website design, SEO, and digital growth services from Cardiff." />
+      <SEO title="UK Recruitment, Web Development & SEO" path="/" description="Innovex Resource Group Limited provides UK recruitment services, healthcare staffing, web development, SEO services, and digital growth support from Cardiff." />
       <section className="hero">
         <div>
           <span className="eyebrow">Recruitment, websites & SEO</span>

@@ -41,7 +41,7 @@ export default function BlogDetail() {
     );
   }
 
-  const imageUrl = blog.featuredImage?.url ? publicAssetUrl(blog.featuredImage.url) : `${company.siteUrl}/Logo.png`;
+  const imageUrl = blog.featuredImage?.url ? publicAssetUrl(blog.featuredImage.url) : `${company.siteUrl}/icon-512.png`;
   const articleUrl = `${company.siteUrl}/blogs/${blog.slug}`;
   const description = blog.metaDescription || blog.excerpt;
 
@@ -64,7 +64,7 @@ export default function BlogDetail() {
             publisher: {
               "@type": "Organization",
               name: company.name,
-              logo: { "@type": "ImageObject", url: `${company.siteUrl}/Logo.png` }
+              logo: { "@type": "ImageObject", url: `${company.siteUrl}/icon-512.png` }
             },
             mainEntityOfPage: articleUrl
           },
