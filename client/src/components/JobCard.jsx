@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { previewJobText } from "../utils/jobText.js";
 
 export default function JobCard({ job, onApply }) {
   return (
@@ -8,8 +9,8 @@ export default function JobCard({ job, onApply }) {
         <span>{job.shift}</span>
       </div>
       <h3>{job.title}</h3>
-      <p className="muted">{job.location} · {job.salary}</p>
-      <p>{job.description}</p>
+      <p className="muted">{job.location} - {job.salary}</p>
+      <p className="job-card-description">{previewJobText(job.description)}</p>
       <div className="card-actions">
         <Link className="button secondary" to={`/jobs?job=${job._id}`}>View Details</Link>
         <button className="button" onClick={() => onApply?.(job)}>Apply</button>

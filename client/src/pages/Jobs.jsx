@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client.js";
+import JobDescription from "../components/JobDescription.jsx";
 import JobCard from "../components/JobCard.jsx";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
@@ -82,7 +83,7 @@ export default function Jobs() {
             </div>
             <h2>{detailJob.title}</h2>
             <p className="muted">{detailJob.salary}</p>
-            <p>{detailJob.description}</p>
+            <JobDescription text={detailJob.description} />
             {detailJob.requirements?.length > 0 && (
               <>
                 <h3>Requirements</h3>
