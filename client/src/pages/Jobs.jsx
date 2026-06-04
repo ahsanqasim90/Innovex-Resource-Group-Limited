@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client.js";
 import JobDescription from "../components/JobDescription.jsx";
@@ -18,6 +18,7 @@ export default function Jobs() {
   const [selected, setSelected] = useState(null);
   const [status, setStatus] = useState(null);
   const [applying, setApplying] = useState(false);
+  const applicationRef = useRef(null);
 
   function loadJobs() {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
@@ -27,6 +28,13 @@ export default function Jobs() {
   useEffect(() => {
     loadJobs();
   }, []);
+
+  useEffect(() => {
+    if (!selected) return;
+    requestAnimationFrame(() => {
+      applicationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [selected]);
 
   useEffect(() => {
     if (!selectedJobId) {
@@ -58,6 +66,11 @@ export default function Jobs() {
     } finally {
       setApplying(false);
     }
+  }
+
+  function startApplication(job) {
+    setSelected(job);
+    setStatus(null);
   }
 
   return (
@@ -96,14 +109,14 @@ export default function Jobs() {
           <aside className="job-detail-aside">
             <h3>Interested in this role?</h3>
             <p>Send your details and CV to the Innovex recruitment team.</p>
-            <button className="button" onClick={() => setSelected(detailJob)}>Apply Now</button>
+            <button className="button" onClick={() => startApplication(detailJob)}>Apply Now</button>
             <Link className="button secondary" to="/jobs">Back to Jobs</Link>
           </aside>
         </article>
       )}
-      <div className="card-grid" style={{ marginTop: 24 }}>{jobs.map((job) => <JobCard key={job._id} job={job} onApply={setSelected} />)}</div>
+      <div className="card-grid" style={{ marginTop: 24 }}>{jobs.map((job) => <JobCard key={job._id} job={job} onApply={startApplication} />)}</div>
       {selected && (
-        <div className="card" style={{ marginTop: 24 }}>
+        <div className="card" id="job-application-form" ref={applicationRef} style={{ marginTop: 24, scrollMarginTop: 110 }}>
           <h2>Apply for {selected.title}</h2>
           <form className="form" onSubmit={apply}>
             <div className="form-grid"><input name="name" placeholder="Full name" required /><input name="email" type="email" placeholder="Email" required /><input name="phone" placeholder="Phone" required /></div>
