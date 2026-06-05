@@ -38,7 +38,7 @@ export default function TestimonialSlider({ testimonials = [] }) {
       <div className="testimonial-share-cta">
         <div>
           <MessageCircle size={24} />
-          <strong>Apna experience share karna chahtay hain?</strong>
+          <strong>Would you like to share your experience?</strong>
           <span>Tell us how Innovex supported your recruitment, job search, website, or SEO journey.</span>
         </div>
         <Link className="button" to="/testimonials#submit-review">Share Feedback</Link>
