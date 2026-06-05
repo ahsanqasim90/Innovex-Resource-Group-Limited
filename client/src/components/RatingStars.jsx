@@ -4,7 +4,7 @@ export default function RatingStars({ rating = 5 }) {
   return (
     <div className="rating-stars" aria-label={`${value} out of 5 rating`}>
       {Array.from({ length: 5 }, (_, index) => (
-        <span key={index} className={index < value ? "filled" : ""} aria-hidden="true">★</span>
+        <span key={index} className={index < value ? "filled" : ""} aria-hidden="true">{"\u2605"}</span>
       ))}
     </div>
   );

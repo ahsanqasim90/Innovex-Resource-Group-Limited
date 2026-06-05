@@ -42,7 +42,7 @@ export default function Contact() {
         <article className="card"><h3>Office hours</h3><p>{contact.hours}</p></article>
         <article className="card"><h3>Social Media</h3><SocialLinks /></article>
       </div>
-      <div className="card" style={{ marginTop: 24 }}>
+      <div className="card contact-form-card" id="contact-form" style={{ marginTop: 24, scrollMarginTop: 110 }}>
         <h2>Send a message</h2>
         <StatusMessage status={status} />
         <form className="form" onSubmit={submit}>
@@ -70,9 +70,9 @@ export default function Contact() {
         </form>
       </div>
       <div className="card-grid" style={{ marginTop: 24 }}>
-        <article className="card"><h3>Job seeker?</h3><div className="actions"><Link className="button secondary" to="/jobs">Browse Jobs</Link><Link className="button" to="/upload-cv">Upload CV</Link></div></article>
-        <article className="card"><h3>Care home?</h3><p>Request staffing support for temporary cover, permanent recruitment, or screening.</p><Link className="button secondary" to="/contact">Request Staffing Support</Link></article>
-        <article className="card"><h3>Need a website or SEO?</h3><p>Tell us about your business and we can help with a modern website, local SEO, and online visibility.</p><div className="actions"><Link className="button secondary" to="/services">View Digital Services</Link><Link className="button" to="/contact">Start Project</Link></div></article>
+        <article className="card contact-action-card"><h3>Job seeker?</h3><p>Browse live roles or upload your CV for suitable healthcare opportunities.</p><div className="actions"><Link className="button secondary" to="/jobs">Browse Jobs</Link><Link className="button" to="/upload-cv">Upload CV</Link></div></article>
+        <article className="card contact-action-card"><h3>Care home?</h3><p>Request staffing support for temporary cover, permanent recruitment, or screening.</p><a className="button secondary" href="#contact-form">Request Staffing Support</a></article>
+        <article className="card contact-action-card"><h3>Need a website or SEO?</h3><p>Tell us about your business and we can help with a modern website, local SEO, and online visibility.</p><div className="actions"><Link className="button secondary" to="/services">View Digital Services</Link><a className="button" href="#contact-form">Start Project</a></div></article>
       </div>
     </section>
   );

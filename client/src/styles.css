@@ -280,6 +280,107 @@ main { min-height: 70vh; }
   color: var(--muted);
   line-height: 1.65;
 }
+.about-snapshot-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, .9fr);
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 24px;
+  border-color: #c7e4e8;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.18), transparent 34%),
+    linear-gradient(135deg, #ffffff, #f4fbfb);
+}
+.about-snapshot-card h2 {
+  margin: 8px 0 10px;
+  color: var(--teal);
+  font-size: clamp(1.55rem, 2.8vw, 2.35rem);
+}
+.about-snapshot-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.about-capability-grid {
+  display: grid;
+  gap: 12px;
+}
+.about-capability-grid div {
+  padding: 15px;
+  border: 1px solid #d4e8ec;
+  border-radius: 18px;
+  background: rgba(255,255,255,.78);
+}
+.about-capability-grid strong,
+.about-capability-grid span {
+  display: block;
+}
+.about-capability-grid strong {
+  color: var(--teal);
+  margin-bottom: 5px;
+}
+.about-capability-grid span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.empty-state-card {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  max-width: 760px;
+  border-color: #c7e4e8;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.2), transparent 34%),
+    linear-gradient(135deg, #ffffff, #f4fbfb);
+}
+.empty-state-card svg {
+  color: var(--blue);
+}
+.empty-state-card h2 {
+  margin: 0;
+  color: var(--teal);
+}
+.empty-state-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.contact-form-card,
+.contact-action-card {
+  border-color: #c7e4e8;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(118,207,214,.12), transparent 32%),
+    linear-gradient(180deg, #ffffff, #fbfefe);
+}
+.contact-action-card {
+  display: grid;
+  align-content: space-between;
+  gap: 12px;
+}
+.contact-action-card p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.upload-intro-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 24px;
+  border-color: #c7e4e8;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.18), transparent 34%),
+    linear-gradient(135deg, #ffffff, #f4fbfb);
+}
+.upload-intro-card h2 {
+  margin: 0 0 8px;
+  color: var(--teal);
+}
+.upload-intro-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
 .job-card {
   display: flex;
   flex-direction: column;
@@ -2103,7 +2204,7 @@ th { color: var(--teal); background: #f0f7f8; }
   flex: 0 0 auto;
 }
 @media (max-width: 900px) {
-  .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card, .recruitment-quality-card { grid-template-columns: 1fr; }
+  .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card, .recruitment-quality-card, .about-snapshot-card { grid-template-columns: 1fr; }
   .interview-admin-grid { grid-template-columns: 1fr; }
   .interview-detail, .blog-cta-card { position: static; }
   .blog-detail-image { min-height: 280px; }
@@ -2124,6 +2225,7 @@ th { color: var(--teal); background: #f0f7f8; }
   .testimonial-share-cta { align-items: stretch; flex-direction: column; }
   .testimonial-share-cta .button { width: 100%; }
   .testimonial-card-top { align-items: flex-start; flex-direction: column; }
+  .upload-intro-card { align-items: flex-start; flex-direction: column; }
   .partner-slider-tile { width: 190px; }
   .hero { padding-top: 44px; }
   .site-header { padding: 14px 18px; }

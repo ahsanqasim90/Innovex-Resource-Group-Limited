@@ -6,8 +6,12 @@ import SectionHeading from "../components/SectionHeading.jsx";
 
 export default function Partners() {
   const [partners, setPartners] = useState([]);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
-    api("/partners").then(setPartners).catch(() => {});
+    api("/partners")
+      .then(setPartners)
+      .catch(() => setPartners([]))
+      .finally(() => setLoading(false));
   }, []);
   return (
     <section className="section">
@@ -21,6 +25,18 @@ export default function Partners() {
           <span>active partner relationships</span>
         </div>
       </div>
+      {loading ? (
+        <div className="partners-grid">
+          {[1, 2, 3].map((item) => (
+            <article className="partner-card partner-skeleton" key={item} aria-hidden="true">
+              <div className="skeleton-block" />
+              <div className="skeleton-line short" />
+              <div className="skeleton-line title" />
+              <div className="skeleton-line" />
+            </article>
+          ))}
+        </div>
+      ) : partners.length > 0 ? (
       <div className="partners-grid">
         {partners.map((partner) => (
           <article className="partner-card" key={partner._id}>
@@ -39,6 +55,13 @@ export default function Partners() {
           </article>
         ))}
       </div>
+      ) : (
+        <article className="card empty-state-card">
+          <h2>Partner profiles are being updated</h2>
+          <p>Innovex works with care providers and growing organisations across recruitment, websites and SEO. Speak to us about becoming a partner.</p>
+          <Link className="button" to="/contact">Start a Partnership</Link>
+        </article>
+      )}
       <article className="partner-cta-card">
         <div>
           <span className="eyebrow">Work with Innovex</span>

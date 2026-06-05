@@ -29,6 +29,17 @@ export default function UploadCv() {
     <section className="section">
       <SEO title="Upload CV" path="/upload-cv" description="Upload your CV to Innovex Resource Group Limited for healthcare recruitment opportunities across the UK." />
       <SectionHeading eyebrow="Upload CV" title="Register your interest in healthcare roles" />
+      <article className="card upload-intro-card">
+        <div>
+          <h2>Send your CV to the Innovex recruitment team</h2>
+          <p>Share your preferred role, location and experience so we can review your profile for suitable healthcare and care-sector opportunities.</p>
+        </div>
+        <div className="pill-row">
+          <span>Confidential review</span>
+          <span>Healthcare roles</span>
+          <span>UK opportunities</span>
+        </div>
+      </article>
       <div className="card">
         <StatusMessage status={status} />
         <form className="form" onSubmit={submit}>

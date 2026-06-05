@@ -3,6 +3,21 @@ import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import { company, values } from "../data/content.js";
 
+const capabilities = [
+  {
+    title: "Recruitment",
+    text: "Healthcare, social care, nursing and care-sector recruitment support across the UK."
+  },
+  {
+    title: "Website Development",
+    text: "Professional, responsive websites for organisations that need a clear online presence."
+  },
+  {
+    title: "SEO & Digital Growth",
+    text: "Search-friendly content structure, visibility improvements and practical digital support."
+  }
+];
+
 export default function About() {
   return (
     <section className="section">
@@ -10,6 +25,21 @@ export default function About() {
       <SectionHeading eyebrow="About Innovex" title="Healthcare recruitment built around trust, compliance, and continuity">
         Innovex Resource Group Limited helps UK care providers find dependable healthcare professionals while helping candidates move into roles where they can do meaningful work.
       </SectionHeading>
+      <article className="card about-snapshot-card">
+        <div>
+          <span className="eyebrow">What We Do</span>
+          <h2>Recruitment expertise with digital growth support</h2>
+          <p>Innovex combines care-sector recruitment knowledge with website development and SEO support, helping organisations hire well, present themselves professionally, and grow online.</p>
+        </div>
+        <div className="about-capability-grid">
+          {capabilities.map((item) => (
+            <div key={item.title}>
+              <strong>{item.title}</strong>
+              <span>{item.text}</span>
+            </div>
+          ))}
+        </div>
+      </article>
       <div className="card-grid">
         <article className="card"><h3>Who We Are</h3><p>We are a healthcare recruitment partner focused on care homes, nurses, care assistants, registered managers, and compliance-aware staffing services.</p></article>
         <article className="card"><h3>Mission</h3><p>To connect healthcare providers with skilled, compassionate professionals through responsive and ethical recruitment.</p></article>

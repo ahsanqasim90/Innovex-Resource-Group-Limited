@@ -8,6 +8,7 @@ import SectionHeading from "../components/SectionHeading.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import FileUpload from "../components/FileUpload.jsx";
 import SubmitButton from "../components/SubmitButton.jsx";
+import { BriefcaseBusiness } from "lucide-react";
 
 export default function Jobs() {
   const [searchParams] = useSearchParams();
@@ -18,11 +19,16 @@ export default function Jobs() {
   const [selected, setSelected] = useState(null);
   const [status, setStatus] = useState(null);
   const [applying, setApplying] = useState(false);
+  const [loading, setLoading] = useState(true);
   const applicationRef = useRef(null);
 
-  function loadJobs() {
-    const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
-    api(`/jobs${query ? `?${query}` : ""}`).then(setJobs).catch((error) => setStatus({ type: "error", message: error.message }));
+  function loadJobs(nextFilters = filters) {
+    const query = new URLSearchParams(Object.entries(nextFilters).filter(([, value]) => value)).toString();
+    setLoading(true);
+    api(`/jobs${query ? `?${query}` : ""}`)
+      .then(setJobs)
+      .catch((error) => setStatus({ type: "error", message: error.message }))
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {
@@ -114,7 +120,34 @@ export default function Jobs() {
           </aside>
         </article>
       )}
-      <div className="card-grid" style={{ marginTop: 24 }}>{jobs.map((job) => <JobCard key={job._id} job={job} onApply={startApplication} />)}</div>
+      {loading ? (
+        <div className="card-grid" style={{ marginTop: 24 }}>
+          {[1, 2, 3].map((item) => (
+            <article className="card job-card job-skeleton" key={item} aria-hidden="true">
+              <div className="skeleton-line short" />
+              <div className="skeleton-line title" />
+              <div className="skeleton-line" />
+              <div className="skeleton-block" />
+              <div className="skeleton-actions">
+                <div className="skeleton-pill" />
+                <div className="skeleton-pill small" />
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : jobs.length > 0 ? (
+        <div className="card-grid" style={{ marginTop: 24 }}>{jobs.map((job) => <JobCard key={job._id} job={job} onApply={startApplication} />)}</div>
+      ) : (
+        <article className="card empty-state-card" style={{ marginTop: 24 }}>
+          <BriefcaseBusiness size={34} />
+          <h2>No matching roles found</h2>
+          <p>Try adjusting your search filters, or upload your CV so the Innovex recruitment team can consider you for suitable healthcare roles.</p>
+          <div className="actions">
+            <button className="button secondary" type="button" onClick={() => { const cleared = { search: "", location: "", type: "" }; setFilters(cleared); loadJobs(cleared); }}>Reset Search</button>
+            <Link className="button" to="/upload-cv">Upload CV</Link>
+          </div>
+        </article>
+      )}
       {selected && (
         <div className="card" id="job-application-form" ref={applicationRef} style={{ marginTop: 24, scrollMarginTop: 110 }}>
           <h2>Apply for {selected.title}</h2>

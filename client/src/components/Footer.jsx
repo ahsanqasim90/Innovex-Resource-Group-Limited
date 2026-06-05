@@ -4,6 +4,8 @@ import ComplianceBadges from "./ComplianceBadges.jsx";
 import SocialLinks from "./SocialLinks.jsx";
 
 export default function Footer() {
+  const year = new Date().getFullYear();
+
   return (
     <footer className="footer-wrap">
       <div className="footer">
@@ -33,7 +35,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="footer-bottom">
-        <span>Copyright © {new Date().getFullYear()} {company.name}. All rights reserved.</span>
+        <span>{`Copyright © ${year} ${company.name}. All rights reserved.`}</span>
         <span>Designed and developed by {company.name}.</span>
       </div>
     </footer>

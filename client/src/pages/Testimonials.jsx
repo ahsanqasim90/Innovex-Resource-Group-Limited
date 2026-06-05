@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Award, HeartHandshake, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
 import { api } from "../api/client.js";
 import RatingStars from "../components/RatingStars.jsx";
@@ -14,6 +14,14 @@ export default function Testimonials() {
   const [rating, setRating] = useState(5);
   const [reviewType, setReviewType] = useState("Candidate");
   const [submitting, setSubmitting] = useState(false);
+
+  const ratingStats = useMemo(() => {
+    if (!items.length) return { average: "New", positive: "New" };
+    const ratings = items.map((item) => Number(item.rating) || 0);
+    const average = (ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1);
+    const positive = `${Math.round((ratings.filter((value) => value >= 4).length / ratings.length) * 100)}%`;
+    return { average, positive };
+  }, [items]);
 
   useEffect(() => {
     api("/testimonials").then(setItems).catch(() => {});
@@ -61,30 +69,39 @@ export default function Testimonials() {
 
       <section className="section testimonial-stats-section">
         <div className="testimonial-stats-grid">
-          <article className="testimonial-stat-card"><Award /><strong>5.0</strong><span>Average rating</span></article>
+          <article className="testimonial-stat-card"><Award /><strong>{ratingStats.average}</strong><span>Average rating</span></article>
           <article className="testimonial-stat-card"><MessageCircle /><strong>{items.length}</strong><span>Approved reviews</span></article>
-          <article className="testimonial-stat-card"><HeartHandshake /><strong>98%</strong><span>Positive feedback</span></article>
+          <article className="testimonial-stat-card"><HeartHandshake /><strong>{ratingStats.positive}</strong><span>Positive feedback</span></article>
           <article className="testimonial-stat-card"><ShieldCheck /><strong>Checked</strong><span>Admin approved</span></article>
         </div>
       </section>
 
       <section className="section alt" id="reviews">
         <SectionHeading eyebrow="Client voices" title="Stories from people we have supported">Read how Innovex has helped care providers, candidates, and business partners move forward with confidence.</SectionHeading>
-        <div className="testimonial-review-grid">
-          {items.map((item) => (
-            <article className="testimonial-review-card" key={item._id}>
-              <div className="testimonial-card-top">
-                <RatingStars rating={item.rating} />
-                <span>{item.reviewType || "Review"}</span>
-              </div>
-              <p>{item.message}</p>
-              <div className="testimonial-author">
-                <strong>{item.name}</strong>
-                <span>{item.role}{item.company ? `, ${item.company}` : ""}</span>
-              </div>
-            </article>
-          ))}
-        </div>
+        {items.length > 0 ? (
+          <div className="testimonial-review-grid">
+            {items.map((item) => (
+              <article className="testimonial-review-card" key={item._id}>
+                <div className="testimonial-card-top">
+                  <RatingStars rating={item.rating} />
+                  <span>{item.reviewType || "Review"}</span>
+                </div>
+                <p>{item.message}</p>
+                <div className="testimonial-author">
+                  <strong>{item.name}</strong>
+                  <span>{item.role}{item.company ? `, ${item.company}` : ""}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <article className="card empty-state-card">
+            <MessageCircle size={34} />
+            <h2>Reviews will appear here once approved</h2>
+            <p>Submitted reviews are checked by the Innovex team before being displayed publicly.</p>
+            <a className="button" href="#submit-review">Share Your Experience</a>
+          </article>
+        )}
       </section>
 
       <section className="section testimonial-form-section" id="submit-review">
@@ -94,22 +111,27 @@ export default function Testimonials() {
             <h2>Share your Innovex experience</h2>
             <p>Your review helps new candidates, care providers, and business owners understand what it feels like to work with Innovex Resource Group Limited.</p>
           </div>
-        <StatusMessage status={status} />
-        <form className="form" onSubmit={submit}>
-          <div className="review-type-options" role="radiogroup" aria-label="Review type">
-            {["Candidate", "Partner"].map((type) => (
-              <label key={type} className={reviewType === type ? "active" : ""}>
-                <input type="radio" name="reviewType" value={type} checked={reviewType === type} onChange={() => setReviewType(type)} />
-                <span>{type === "Candidate" ? "Candidate review" : "Partner review"}</span>
-                <small>{type === "Candidate" ? "For candidates we helped into work" : "For care homes and business partners"}</small>
-              </label>
-            ))}
-          </div>
-          <div className="form-grid"><input name="name" placeholder="Name" required /><input name="role" placeholder={reviewType === "Candidate" ? "Role placed into" : "Your role / organisation"} required /><input name="company" placeholder={reviewType === "Candidate" ? "Company / care provider" : "Company name"} /><StarRatingInput value={rating} onChange={setRating} /></div>
-          <textarea name="message" placeholder="Your review" required />
-          <SubmitButton loading={submitting} loadingText="Submitting review...">Submit Review</SubmitButton>
-        </form>
-      </div>
+          <StatusMessage status={status} />
+          <form className="form" onSubmit={submit}>
+            <div className="review-type-options" role="radiogroup" aria-label="Review type">
+              {["Candidate", "Partner"].map((type) => (
+                <label key={type} className={reviewType === type ? "active" : ""}>
+                  <input type="radio" name="reviewType" value={type} checked={reviewType === type} onChange={() => setReviewType(type)} />
+                  <span>{type === "Candidate" ? "Candidate review" : "Partner review"}</span>
+                  <small>{type === "Candidate" ? "For candidates we helped into work" : "For care homes and business partners"}</small>
+                </label>
+              ))}
+            </div>
+            <div className="form-grid">
+              <input name="name" placeholder="Name" required />
+              <input name="role" placeholder={reviewType === "Candidate" ? "Role placed into" : "Your role / organisation"} required />
+              <input name="company" placeholder={reviewType === "Candidate" ? "Company / care provider" : "Company name"} />
+              <StarRatingInput value={rating} onChange={setRating} />
+            </div>
+            <textarea name="message" placeholder="Your review" required />
+            <SubmitButton loading={submitting} loadingText="Submitting review...">Submit Review</SubmitButton>
+          </form>
+        </div>
       </section>
     </main>
   );
