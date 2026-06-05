@@ -6,7 +6,43 @@ import SocialLinks from "../components/SocialLinks.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import SubmitButton from "../components/SubmitButton.jsx";
 import { company, contact } from "../data/content.js";
+import { BriefcaseBusiness, CheckCircle2, HeartHandshake, MonitorSmartphone } from "lucide-react";
 import { useState } from "react";
+
+const actionCards = [
+  {
+    label: "For candidates",
+    title: "Job seeker?",
+    text: "Looking for your next healthcare role? Browse live vacancies or send your CV so our recruitment team can match you with suitable opportunities.",
+    icon: BriefcaseBusiness,
+    points: ["Live healthcare roles", "CV review support", "Candidate matching"],
+    actions: [
+      { label: "Browse Jobs", to: "/jobs", secondary: true },
+      { label: "Upload CV", to: "/upload-cv" }
+    ]
+  },
+  {
+    label: "For care providers",
+    title: "Care home?",
+    text: "Need reliable staffing support? Share your requirements for temporary cover, permanent recruitment, screening, or urgent workforce support.",
+    icon: HeartHandshake,
+    points: ["Temporary staffing", "Permanent recruitment", "Screened candidates"],
+    actions: [
+      { label: "Request Staffing Support", href: "#contact-form", secondary: true }
+    ]
+  },
+  {
+    label: "For growing businesses",
+    title: "Need a website or SEO?",
+    text: "Tell us about your business and we can help with a modern website, local SEO, content visibility, and lead-focused digital growth.",
+    icon: MonitorSmartphone,
+    points: ["Website development", "Local SEO", "Online enquiries"],
+    actions: [
+      { label: "Digital Services", to: "/services", secondary: true },
+      { label: "Start Project", href: "#contact-form" }
+    ]
+  }
+];
 
 export default function Contact() {
   const [status, setStatus] = useState(null);
@@ -69,10 +105,34 @@ export default function Contact() {
           <p className="cta-microcopy">No obligation. Tell us what you need and our team will respond.</p>
         </form>
       </div>
-      <div className="card-grid" style={{ marginTop: 24 }}>
-        <article className="card contact-action-card"><h3>Job seeker?</h3><p>Browse live roles or upload your CV for suitable healthcare opportunities.</p><div className="actions"><Link className="button secondary" to="/jobs">Browse Jobs</Link><Link className="button" to="/upload-cv">Upload CV</Link></div></article>
-        <article className="card contact-action-card"><h3>Care home?</h3><p>Request staffing support for temporary cover, permanent recruitment, or screening.</p><a className="button secondary" href="#contact-form">Request Staffing Support</a></article>
-        <article className="card contact-action-card"><h3>Need a website or SEO?</h3><p>Tell us about your business and we can help with a modern website, local SEO, and online visibility.</p><div className="actions"><Link className="button secondary" to="/services">View Digital Services</Link><a className="button" href="#contact-form">Start Project</a></div></article>
+      <div className="card-grid contact-action-grid" style={{ marginTop: 24 }}>
+        {actionCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <article className="card contact-action-card" key={card.title}>
+              <div className="contact-action-head">
+                <span className="contact-action-icon"><Icon size={24} /></span>
+                <span className="contact-action-label">{card.label}</span>
+              </div>
+              <div>
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+              </div>
+              <ul className="contact-action-list">
+                {card.points.map((point) => (
+                  <li key={point}><CheckCircle2 size={16} />{point}</li>
+                ))}
+              </ul>
+              <div className="actions contact-action-buttons">
+                {card.actions.map((action) => action.to ? (
+                  <Link className={`button${action.secondary ? " secondary" : ""}`} to={action.to} key={action.label}>{action.label}</Link>
+                ) : (
+                  <a className={`button${action.secondary ? " secondary" : ""}`} href={action.href} key={action.label}>{action.label}</a>
+                ))}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
