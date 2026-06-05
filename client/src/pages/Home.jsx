@@ -5,9 +5,9 @@ import { api } from "../api/client.js";
 import BlogCard from "../components/BlogCard.jsx";
 import HomeJobsSlider from "../components/HomeJobsSlider.jsx";
 import PartnerLogoSlider from "../components/PartnerLogoSlider.jsx";
-import RatingStars from "../components/RatingStars.jsx";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
+import TestimonialSlider from "../components/TestimonialSlider.jsx";
 import { services } from "../data/content.js";
 
 export default function Home() {
@@ -22,7 +22,7 @@ export default function Home() {
       .then((data) => setJobs(data))
       .catch(() => setJobs([]))
       .finally(() => setJobsLoading(false));
-    api("/testimonials").then((data) => setTestimonials(data.slice(0, 3))).catch(() => {});
+    api("/testimonials").then(setTestimonials).catch(() => {});
     api("/blogs").then((data) => setBlogs(data.slice(0, 3))).catch(() => {});
     api("/partners").then((data) => setPartners(data)).catch(() => {});
   }, []);
@@ -100,10 +100,7 @@ export default function Home() {
         </section>
       )}
 
-      <section className="section alt">
-        <SectionHeading eyebrow="Testimonials" title="Trusted by providers and candidates" />
-        <div className="card-grid">{testimonials.map((item) => <article className="card testimonial-card" key={item._id}><RatingStars rating={item.rating} /><p>{item.message}</p><h3>{item.name}</h3><p className="muted">{item.role}{item.company ? `, ${item.company}` : ""}</p></article>)}</div>
-      </section>
+      <TestimonialSlider testimonials={testimonials} />
     </>
   );
 }
