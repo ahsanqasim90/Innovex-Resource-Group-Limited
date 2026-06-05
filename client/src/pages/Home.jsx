@@ -15,6 +15,7 @@ const helpCards = [
     icon: ShieldCheck,
     title: "Recruitment",
     text: "Healthcare, social care, nursing, care home and children's residential recruitment support across the UK.",
+    points: ["Candidate sourcing", "Screening support", "Interview coordination"],
     cta: "Request Recruitment Support",
     to: "/contact"
   },
@@ -22,6 +23,7 @@ const helpCards = [
     icon: MonitorSmartphone,
     title: "Website Development",
     text: "Modern, responsive websites built to help businesses look professional and generate enquiries.",
+    points: ["Mobile-friendly pages", "Clear service content", "Enquiry forms"],
     cta: "Start Website Project",
     to: "/services#website-development"
   },
@@ -29,6 +31,7 @@ const helpCards = [
     icon: Search,
     title: "SEO & Digital Growth",
     text: "SEO, content and digital visibility support to help businesses attract more leads online.",
+    points: ["SEO foundations", "Content structure", "Local visibility"],
     cta: "Improve My SEO",
     to: "/services#seo-digital-growth"
   }
@@ -112,11 +115,19 @@ export default function Home() {
           Choose the support you need - recruitment, website development, or SEO growth.
         </SectionHeading>
         <div className="card-grid service-choice-grid">
-          {helpCards.map(({ icon: Icon, title, text, cta, to }) => (
+          {helpCards.map(({ icon: Icon, title, text, points, cta, to }) => (
             <article className="card service-choice-card" key={title}>
-              <span className="digital-icon"><Icon size={24} /></span>
-              <h3>{title}</h3>
-              <p>{text}</p>
+              <div className="service-choice-top">
+                <span className="digital-icon"><Icon size={24} /></span>
+                <span className="service-choice-label">Core service</span>
+              </div>
+              <div>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </div>
+              <ul className="service-mini-list">
+                {points.map((point) => <li key={point}>{point}</li>)}
+              </ul>
               <Link className="button secondary small" to={to}>{cta}</Link>
             </article>
           ))}
