@@ -56,6 +56,7 @@ export const contact = {
   socials: {
     instagram: "https://www.instagram.com/irg__ltd/",
     facebook: "https://www.facebook.com/profile.php?id=61566587935583",
-    twitter: "https://x.com/IRG__LTD?fbclid=IwY2xjawSMLSVleHRuA2FlbQIxMABicmlkETFZbGdCUk0zcEZqMm4wQ3RZc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHstC1QN8eJtkPfyPIkAKSMW-nrz7Hz8C_e6pMIcL6UXbL8ukiCcXXPzLxe3N_aem_66l20kjeWxqPjjwsIQKcgg"
+    twitter: "https://x.com/IRG__LTD?fbclid=IwY2xjawSMLSVleHRuA2FlbQIxMABicmlkETFZbGdCUk0zcEZqMm4wQ3RZc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHstC1QN8eJtkPfyPIkAKSMW-nrz7Hz8C_e6pMIcL6UXbL8ukiCcXXPzLxe3N_aem_66l20kjeWxqPjjwsIQKcgg",
+    linkedin: "https://www.linkedin.com/company/innovex-resource-group/?viewAsMember=true"
   }
 };

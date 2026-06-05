@@ -64,7 +64,7 @@ export default function SEO({ title, description, path, noIndex = false, jsonLd 
         postalCode: "CF23 7HP",
         addressCountry: "GB"
       },
-      sameAs: [contact.socials.instagram, contact.socials.facebook, contact.socials.twitter],
+      sameAs: [contact.socials.instagram, contact.socials.facebook, contact.socials.linkedin, contact.socials.twitter],
       areaServed: "United Kingdom",
       description
     });

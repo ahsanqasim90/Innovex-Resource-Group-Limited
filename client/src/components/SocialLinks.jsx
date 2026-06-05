@@ -1,4 +1,4 @@
-import { Facebook } from "lucide-react";
+import { Facebook, Linkedin } from "lucide-react";
 import { contact } from "../data/content.js";
 
 function InstagramIcon() {
@@ -20,6 +20,7 @@ function XIcon() {
 const socials = [
   ["Instagram", contact.socials.instagram, InstagramIcon],
   ["Facebook", contact.socials.facebook, Facebook],
+  ["LinkedIn", contact.socials.linkedin, Linkedin],
   ["X / Twitter", contact.socials.twitter, XIcon]
 ];
 
