@@ -24,6 +24,7 @@ export default function PartnerLogoSlider({ partners = [] }) {
       <div className="partner-slider-heading">
         <span className="eyebrow">Trusted partners</span>
         <h2>Care providers and organisations working with Innovex</h2>
+        <p>Supporting care providers, candidates and businesses across the UK through recruitment, website development and SEO.</p>
       </div>
       <Link className="partner-slider" to="/partners" aria-label="View all Innovex partners">
         <div className="partner-slider-track">

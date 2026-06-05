@@ -7,6 +7,15 @@ import SectionHeading from "../components/SectionHeading.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import { company } from "../data/content.js";
 
+const topics = [
+  "Recruitment Tips",
+  "Care Home Staffing",
+  "Interview Guidance",
+  "Website Advice",
+  "SEO Growth",
+  "Digital Marketing"
+];
+
 export default function Blogs() {
   const [blogs, setBlogs] = useState([]);
   const [filters, setFilters] = useState({ search: "", category: "" });
@@ -17,6 +26,15 @@ export default function Blogs() {
   function loadBlogs() {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
     api(`/blogs${query ? `?${query}` : ""}`)
+      .then(setBlogs)
+      .catch((error) => setStatus({ type: "error", message: error.message }));
+  }
+
+  function applyTopic(topic) {
+    const nextFilters = { search: topic, category: "" };
+    setFilters(nextFilters);
+    const query = new URLSearchParams({ search: topic }).toString();
+    api(`/blogs?${query}`)
       .then(setBlogs)
       .catch((error) => setStatus({ type: "error", message: error.message }));
   }
@@ -47,6 +65,22 @@ export default function Blogs() {
           <Search size={26} />
           <h3>SEO content hub</h3>
           <p>Fresh articles help Google understand your services, locations, expertise, and authority.</p>
+        </div>
+      </div>
+
+      <div className="topics-card card">
+        <h2>Topics We Cover</h2>
+        <div className="chip-cloud">
+          {topics.map((topic) => (
+            <button
+              className="topic-chip"
+              type="button"
+              key={topic}
+              onClick={() => applyTopic(topic)}
+            >
+              {topic}
+            </button>
+          ))}
         </div>
       </div>
 

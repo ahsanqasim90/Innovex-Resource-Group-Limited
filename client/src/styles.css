@@ -90,6 +90,126 @@ main { min-height: 70vh; }
 
 .card { background: white; border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: 0 18px 45px rgba(6,63,79,.08); }
 .card h3 { color: var(--teal); margin-top: 0; }
+.compact-section {
+  padding-top: clamp(34px, 5vw, 58px);
+  padding-bottom: clamp(34px, 5vw, 58px);
+}
+.cta-microcopy {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: .94rem;
+  font-weight: 800;
+}
+.hero .cta-microcopy {
+  color: #d8edf1;
+}
+.service-choice-grid {
+  margin-bottom: 22px;
+}
+.service-choice-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.service-choice-card p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.who-help-card,
+.topics-card {
+  margin-top: 24px;
+  padding: 22px 24px;
+  border: 1px solid #d4e8ec;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(118,207,214,.14), transparent 32%),
+    linear-gradient(180deg, #ffffff, #fbfefe);
+  box-shadow: 0 18px 45px rgba(6,63,79,.06);
+}
+.who-help-card h2,
+.topics-card h2 {
+  margin: 0 0 14px;
+  color: var(--teal);
+  font-size: 1.35rem;
+}
+.chip-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.chip-cloud span,
+.topic-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 9px 12px;
+  border: 1px solid #c7e4e8;
+  border-radius: 999px;
+  background: var(--mint);
+  color: var(--blue);
+  font-weight: 900;
+  font-size: .86rem;
+}
+.topic-chip {
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease, color .18s ease;
+}
+.topic-chip:hover {
+  transform: translateY(-1px);
+  background: var(--teal);
+  color: white;
+}
+.recruitment-quality-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 24px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.18), transparent 32%),
+    linear-gradient(135deg, #ffffff, #f4fbfb);
+  border-color: #c7e4e8;
+}
+.recruitment-quality-card h2 {
+  margin: 8px 0 10px;
+  color: var(--teal);
+}
+.recruitment-quality-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.quality-list {
+  margin: 0;
+}
+.digital-proof-block {
+  margin-top: 34px;
+}
+.service-intro-card {
+  margin-bottom: 24px;
+  border-color: #c7e4e8;
+  background: linear-gradient(135deg, #ffffff, #f4fbfb);
+}
+.service-intro-card h2 {
+  margin: 0 0 10px;
+  color: var(--teal);
+  font-size: clamp(1.35rem, 2.4vw, 2rem);
+}
+.service-intro-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.faq-card p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
 .job-card {
   display: flex;
   flex-direction: column;
@@ -435,6 +555,12 @@ main { min-height: 70vh; }
   margin: 6px 0 0;
   color: var(--teal);
   font-size: clamp(1.65rem, 3vw, 2.7rem);
+}
+.partner-slider-heading p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
 }
 .partner-slider {
   display: block;
@@ -1907,12 +2033,12 @@ th { color: var(--teal); background: #f0f7f8; }
   flex: 0 0 auto;
 }
 @media (max-width: 900px) {
-  .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card { grid-template-columns: 1fr; }
+  .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card, .recruitment-quality-card { grid-template-columns: 1fr; }
   .interview-admin-grid { grid-template-columns: 1fr; }
   .interview-detail, .blog-cta-card { position: static; }
   .blog-detail-image { min-height: 280px; }
   .stats-grid, .card-grid, .interview-summary-grid, .testimonial-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .digital-grid, .blog-grid, .partners-grid, .testimonial-review-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .digital-grid, .blog-grid, .partners-grid, .testimonial-review-grid, .faq-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .menu-button { display: block; }
   .nav { position: absolute; top: 78px; left: 20px; right: 20px; display: none; flex-direction: column; align-items: stretch; padding: 20px; border-radius: 22px; background: white; box-shadow: 0 20px 50px rgba(0,0,0,.14); }
   .nav.open { display: flex; }
@@ -1920,7 +2046,7 @@ th { color: var(--teal); background: #f0f7f8; }
 }
 
 @media (max-width: 620px) {
-  .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid, .testimonial-stats-grid, .testimonial-review-grid { grid-template-columns: 1fr; }
+  .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid, .testimonial-stats-grid, .testimonial-review-grid, .faq-grid { grid-template-columns: 1fr; }
   .section-heading-row { align-items: flex-start; flex-direction: column; }
   .blog-detail-hero { padding: 22px; border-radius: 24px; }
   .blog-detail-image { min-height: 220px; border-radius: 20px; }

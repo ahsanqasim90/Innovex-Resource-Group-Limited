@@ -31,6 +31,7 @@ export async function sendContactEmail(message) {
     `Name: ${message.name}`,
     `Email: ${message.email}`,
     `Phone: ${message.phone || "Not provided"}`,
+    `Help needed: ${message.inquiryType || "General Enquiry"}`,
     `Subject: ${message.subject}`,
     "",
     "Message:",
@@ -42,6 +43,7 @@ export async function sendContactEmail(message) {
     <p><strong>Name:</strong> ${message.name}</p>
     <p><strong>Email:</strong> <a href="mailto:${message.email}">${message.email}</a></p>
     <p><strong>Phone:</strong> ${message.phone || "Not provided"}</p>
+    <p><strong>Help needed:</strong> ${message.inquiryType || "General Enquiry"}</p>
     <p><strong>Subject:</strong> ${message.subject}</p>
     <hr />
     <p>${String(message.message).replace(/\n/g, "<br />")}</p>

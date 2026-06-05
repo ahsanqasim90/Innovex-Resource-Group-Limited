@@ -46,9 +46,27 @@ export default function Contact() {
         <h2>Send a message</h2>
         <StatusMessage status={status} />
         <form className="form" onSubmit={submit}>
-          <div className="form-grid"><input name="name" placeholder="Name" required /><input name="email" type="email" placeholder="Email" required /><input name="phone" placeholder="Phone" /><input name="subject" placeholder="Subject" required /></div>
+          <div className="form-grid">
+            <input name="name" placeholder="Name" required />
+            <input name="email" type="email" placeholder="Email" required />
+            <input name="phone" placeholder="Phone" />
+            <label>
+              <span>What do you need help with?</span>
+              <select name="inquiryType" required defaultValue="">
+                <option value="" disabled>Select a service</option>
+                <option>Recruitment Support</option>
+                <option>Job Application / CV</option>
+                <option>Website Development</option>
+                <option>SEO Services</option>
+                <option>Partnership</option>
+                <option>General Enquiry</option>
+              </select>
+            </label>
+            <input name="subject" placeholder="Subject" required />
+          </div>
           <textarea name="message" placeholder="How can we help?" required />
           <SubmitButton loading={submitting} loadingText="Sending message...">Send Message</SubmitButton>
+          <p className="cta-microcopy">No obligation. Tell us what you need and our team will respond.</p>
         </form>
       </div>
       <div className="card-grid" style={{ marginTop: 24 }}>

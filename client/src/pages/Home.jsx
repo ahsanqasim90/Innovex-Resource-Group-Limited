@@ -10,6 +10,56 @@ import SectionHeading from "../components/SectionHeading.jsx";
 import TestimonialSlider from "../components/TestimonialSlider.jsx";
 import { services } from "../data/content.js";
 
+const helpCards = [
+  {
+    icon: ShieldCheck,
+    title: "Recruitment",
+    text: "Healthcare, social care, nursing, care home and children's residential recruitment support across the UK.",
+    cta: "Request Recruitment Support",
+    to: "/contact"
+  },
+  {
+    icon: MonitorSmartphone,
+    title: "Website Development",
+    text: "Modern, responsive websites built to help businesses look professional and generate enquiries.",
+    cta: "Start Website Project",
+    to: "/services#website-development"
+  },
+  {
+    icon: Search,
+    title: "SEO & Digital Growth",
+    text: "SEO, content and digital visibility support to help businesses attract more leads online.",
+    cta: "Improve My SEO",
+    to: "/services#seo-digital-growth"
+  }
+];
+
+const audiences = [
+  "Care Providers",
+  "Healthcare Candidates",
+  "Nursing Homes",
+  "Children's Residential Homes",
+  "Supported Living Providers",
+  "Local Businesses",
+  "Service-Based Businesses",
+  "Growing Organisations"
+];
+
+const digitalProof = [
+  {
+    title: "Mobile-Friendly Website",
+    text: "Responsive websites designed to work smoothly across desktop, tablet and mobile."
+  },
+  {
+    title: "SEO-Ready Structure",
+    text: "Pages structured with clear headings, metadata and search-friendly content foundations."
+  },
+  {
+    title: "Lead-Focused Contact Journey",
+    text: "Clear calls-to-action and enquiry forms designed to turn visitors into leads."
+  }
+];
+
 export default function Home() {
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(true);
@@ -41,6 +91,7 @@ export default function Home() {
             <Link className="button hero-digital" to="/contact">Build Website</Link>
             <Link className="button hero-digital secondary-hero" to="/contact">Boost SEO</Link>
           </div>
+          <p className="cta-microcopy hero-helper">For care providers, candidates, and businesses looking for recruitment, websites and digital growth.</p>
         </div>
         <aside className="hero-card" aria-label="Innovex highlights">
           <div className="stats-grid">
@@ -56,11 +107,47 @@ export default function Home() {
         </aside>
       </section>
 
+      <section className="section compact-section">
+        <SectionHeading eyebrow="Three Core Services" title="How Innovex Can Help">
+          Choose the support you need - recruitment, website development, or SEO growth.
+        </SectionHeading>
+        <div className="card-grid service-choice-grid">
+          {helpCards.map(({ icon: Icon, title, text, cta, to }) => (
+            <article className="card service-choice-card" key={title}>
+              <span className="digital-icon"><Icon size={24} /></span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+              <Link className="button secondary small" to={to}>{cta}</Link>
+            </article>
+          ))}
+        </div>
+        <div className="who-help-card">
+          <h2>Who We Help</h2>
+          <div className="chip-cloud">
+            {audiences.map((audience) => <span key={audience}>{audience}</span>)}
+          </div>
+        </div>
+      </section>
+
       <section className="section">
         <SectionHeading eyebrow="Services" title="Specialist support for care providers">From temporary shifts to permanent leadership roles, Innovex keeps recruitment practical, fast, and compliant.</SectionHeading>
         <div className="card-grid">
           {services.slice(0, 6).map((service) => <article className="card" key={service.title}><h3>{service.title}</h3><p>{service.description}</p><Link to="/services" className="button secondary small">Learn More</Link></article>)}
         </div>
+        <article className="card recruitment-quality-card">
+          <div>
+            <span className="eyebrow">Recruitment Quality</span>
+            <h2>Recruitment Support Built Around Quality</h2>
+            <p>We support employers with candidate sourcing, screening and communication throughout the recruitment process.</p>
+          </div>
+          <ul className="clean-list quality-list">
+            <li>Candidate screening</li>
+            <li>Right to work awareness</li>
+            <li>DBS and compliance awareness</li>
+            <li>Interview coordination</li>
+            <li>Ongoing communication</li>
+          </ul>
+        </article>
       </section>
 
       <section className="section alt">
@@ -70,6 +157,17 @@ export default function Home() {
         <div className="card-grid">
           <article className="card digital-card"><span className="digital-icon"><MonitorSmartphone size={24} /></span><h3>Website Design</h3><p>Responsive, professional websites built around your services, brand, and customer journey.</p><Link to="/services" className="button secondary small">Explore Digital Services</Link></article>
           <article className="card digital-card"><span className="digital-icon"><Search size={24} /></span><h3>SEO Services</h3><p>Search-friendly pages, local SEO, content structure, and visibility improvements.</p><Link to="/contact" className="button small">Discuss SEO</Link></article>
+        </div>
+        <div className="digital-proof-block">
+          <SectionHeading eyebrow="Digital Delivery" title="What You Get With Our Digital Services" />
+          <div className="card-grid">
+            {digitalProof.map((item) => (
+              <article className="card digital-card" key={item.title}>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
