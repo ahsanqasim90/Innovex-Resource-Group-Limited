@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import BlogCard from "../components/BlogCard.jsx";
 import JobCard from "../components/JobCard.jsx";
+import PartnerLogoSlider from "../components/PartnerLogoSlider.jsx";
 import RatingStars from "../components/RatingStars.jsx";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
@@ -13,11 +14,13 @@ export default function Home() {
   const [jobs, setJobs] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [blogs, setBlogs] = useState([]);
+  const [partners, setPartners] = useState([]);
 
   useEffect(() => {
     api("/jobs").then((data) => setJobs(data.slice(0, 3))).catch(() => {});
     api("/testimonials").then((data) => setTestimonials(data.slice(0, 3))).catch(() => {});
     api("/blogs").then((data) => setBlogs(data.slice(0, 3))).catch(() => {});
+    api("/partners").then((data) => setPartners(data)).catch(() => {});
   }, []);
 
   return (
@@ -79,6 +82,8 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <PartnerLogoSlider partners={partners} />
 
       {blogs.length > 0 && (
         <section className="section alt">

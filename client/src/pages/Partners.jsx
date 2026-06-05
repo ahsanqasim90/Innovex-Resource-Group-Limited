@@ -12,10 +12,18 @@ export default function Partners() {
   return (
     <section className="section">
       <SEO title="Partners" path="/partners" description="View Innovex Resource Group Limited partners and learn how care providers and businesses can partner with us across recruitment and digital services." />
-      <SectionHeading eyebrow="Our Partners" title="Care-sector partnerships that support reliable staffing" />
-      <div className="card-grid">
+      <div className="partners-hero">
+        <SectionHeading eyebrow="Our Partners" title="Professional partnerships built on trust">
+          We work with care providers and growing organisations that value reliable communication, ethical recruitment, and long-term support.
+        </SectionHeading>
+        <div className="partners-stat-card">
+          <strong>{partners.length}+</strong>
+          <span>active partner relationships</span>
+        </div>
+      </div>
+      <div className="partners-grid">
         {partners.map((partner) => (
-          <article className="card partner-card" key={partner._id}>
+          <article className="partner-card" key={partner._id}>
             <div className="partner-logo-wrap">
               {partner.logo?.url ? (
                 <img src={publicAssetUrl(partner.logo.url)} alt={`${partner.name} logo`} className="partner-logo" loading="lazy" width="180" height="74" />
@@ -23,15 +31,20 @@ export default function Partners() {
                 <span className="partner-logo-fallback">{partner.name?.slice(0, 2).toUpperCase()}</span>
               )}
             </div>
-            <div className="badge">{partner.location}</div>
-            <h3>{partner.name}</h3>
-            <p>{partner.serviceProvided}</p>
+            <div className="partner-card-body">
+              <span className="partner-location">{partner.location}</span>
+              <h3>{partner.name}</h3>
+              <p>{partner.serviceProvided}</p>
+            </div>
           </article>
         ))}
       </div>
-      <article className="card" style={{ marginTop: 24 }}>
-        <h2>Become a Partner</h2>
-        <p>Work with Innovex for compliant recruitment, temporary staffing, permanent placements, and specialist care-sector support.</p>
+      <article className="partner-cta-card">
+        <div>
+          <span className="eyebrow">Work with Innovex</span>
+          <h2>Become a Partner</h2>
+          <p>Work with Innovex for compliant recruitment, temporary staffing, permanent placements, website support, SEO, and specialist care-sector services.</p>
+        </div>
         <Link className="button" to="/contact">Start a Partnership</Link>
       </article>
     </section>
