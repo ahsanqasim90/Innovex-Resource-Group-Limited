@@ -146,8 +146,11 @@ main { min-height: 70vh; }
   scroll-snap-type: x mandatory;
   scroll-padding: 4px;
   padding: 4px 4px 18px;
-  scrollbar-width: thin;
-  scrollbar-color: #a7cdd4 transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.home-jobs-rail::-webkit-scrollbar {
+  display: none;
 }
 .job-slide {
   flex: 0 0 min(390px, 86vw);

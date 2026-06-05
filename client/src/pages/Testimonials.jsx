@@ -91,7 +91,7 @@ export default function Testimonials() {
         <div className="testimonial-form-card card">
           <div className="testimonial-form-intro">
             <span className="eyebrow">Share feedback</span>
-            <h2>Apna Innovex experience share karein</h2>
+            <h2>Share your Innovex experience</h2>
             <p>Your review helps new candidates, care providers, and business owners understand what it feels like to work with Innovex Resource Group Limited.</p>
           </div>
         <StatusMessage status={status} />
