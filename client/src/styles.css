@@ -282,10 +282,10 @@ main { min-height: 70vh; }
   border-block: 1px solid var(--line);
 }
 .partner-slider-heading {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  justify-items: center;
   gap: 24px;
-  align-items: end;
+  text-align: center;
   padding: 0 clamp(20px, 5vw, 72px) 20px;
 }
 .partner-slider-heading h2 {
