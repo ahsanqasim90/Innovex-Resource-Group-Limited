@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import BlogCard from "../components/BlogCard.jsx";
-import JobCard from "../components/JobCard.jsx";
+import HomeJobsSlider from "../components/HomeJobsSlider.jsx";
 import PartnerLogoSlider from "../components/PartnerLogoSlider.jsx";
 import RatingStars from "../components/RatingStars.jsx";
 import SEO from "../components/SEO.jsx";
@@ -12,12 +12,16 @@ import { services } from "../data/content.js";
 
 export default function Home() {
   const [jobs, setJobs] = useState([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
   const [testimonials, setTestimonials] = useState([]);
   const [blogs, setBlogs] = useState([]);
   const [partners, setPartners] = useState([]);
 
   useEffect(() => {
-    api("/jobs").then((data) => setJobs(data.slice(0, 3))).catch(() => {});
+    api("/jobs")
+      .then((data) => setJobs(data))
+      .catch(() => setJobs([]))
+      .finally(() => setJobsLoading(false));
     api("/testimonials").then((data) => setTestimonials(data.slice(0, 3))).catch(() => {});
     api("/blogs").then((data) => setBlogs(data.slice(0, 3))).catch(() => {});
     api("/partners").then((data) => setPartners(data)).catch(() => {});
@@ -70,8 +74,11 @@ export default function Home() {
       </section>
 
       <section className="section alt">
-        <SectionHeading eyebrow="Opportunities" title="Current healthcare roles">Jobs are loaded from the Innovex admin panel.</SectionHeading>
-        <div className="card-grid">{jobs.map((job) => <JobCard key={job._id} job={job} />)}</div>
+        <div className="section-heading-row">
+          <SectionHeading eyebrow="Opportunities" title="Current healthcare roles">Live vacancies from the Innovex admin panel, updated for candidates across the UK.</SectionHeading>
+          <Link className="button secondary" to="/jobs">View All Jobs</Link>
+        </div>
+        <HomeJobsSlider jobs={jobs} loading={jobsLoading} />
       </section>
 
       <section className="section">

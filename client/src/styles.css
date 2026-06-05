@@ -77,6 +77,16 @@ main { min-height: 70vh; }
 .section-heading span, .eyebrow { color: var(--blue); font-weight: 900; text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; }
 .section-heading h1, .section-heading h2 { margin: 8px 0 12px; font-size: clamp(2rem, 4vw, 3.4rem); color: var(--teal); }
 .section-heading p, .muted { color: var(--muted); }
+.section-heading-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+.section-heading-row .section-heading {
+  margin-bottom: 0;
+}
 
 .card { background: white; border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: 0 18px 45px rgba(6,63,79,.08); }
 .card h3 { color: var(--teal); margin-top: 0; }
@@ -96,6 +106,135 @@ main { min-height: 70vh; }
 }
 .job-card .card-actions {
   margin-top: auto;
+}
+.home-jobs-shell {
+  position: relative;
+  display: grid;
+  gap: 16px;
+}
+.home-jobs-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.carousel-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid #c7e4e8;
+  border-radius: 999px;
+  background: white;
+  color: var(--teal);
+  cursor: pointer;
+  box-shadow: 0 14px 32px rgba(6,63,79,.08);
+  transition: transform .18s ease, background .18s ease, color .18s ease;
+}
+.carousel-icon:hover {
+  transform: translateY(-2px);
+  background: var(--teal);
+  color: white;
+}
+.carousel-icon:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+.home-jobs-rail {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 4px;
+  padding: 4px 4px 18px;
+  scrollbar-width: thin;
+  scrollbar-color: #a7cdd4 transparent;
+}
+.job-slide {
+  flex: 0 0 min(390px, 86vw);
+  scroll-snap-align: start;
+  display: flex;
+}
+.job-slide .job-card,
+.home-jobs-rail > .job-skeleton {
+  width: 100%;
+}
+.home-jobs-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 11px 15px;
+  border-radius: 999px;
+  background: #e6f7f4;
+  color: var(--blue);
+  font-weight: 900;
+}
+.job-skeleton {
+  min-width: min(390px, 86vw);
+  overflow: hidden;
+}
+.skeleton-line,
+.skeleton-block,
+.skeleton-pill {
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eaf3f5;
+}
+.skeleton-line::after,
+.skeleton-block::after,
+.skeleton-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.72), transparent);
+  animation: shimmer 1.4s infinite;
+}
+.skeleton-line {
+  height: 18px;
+  margin-bottom: 16px;
+}
+.skeleton-line.short { width: 46%; }
+.skeleton-line.title {
+  width: 76%;
+  height: 28px;
+  border-radius: 14px;
+}
+.skeleton-block {
+  height: 112px;
+  margin: 8px 0 22px;
+  border-radius: 18px;
+}
+.skeleton-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+}
+.skeleton-pill {
+  width: 120px;
+  height: 42px;
+}
+.skeleton-pill.small {
+  width: 86px;
+}
+.home-jobs-empty {
+  display: grid;
+  justify-items: start;
+  max-width: 760px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.24), transparent 34%),
+    linear-gradient(135deg, #ffffff, #f4fbfb);
+}
+.home-jobs-empty svg {
+  color: var(--blue);
+}
+.home-jobs-empty p {
+  color: var(--muted);
+  max-width: 600px;
+}
+@keyframes shimmer {
+  to { transform: translateX(100%); }
 }
 .job-detail-card {
   display: grid;
@@ -1489,6 +1628,7 @@ th { color: var(--teal); background: #f0f7f8; }
 
 @media (max-width: 620px) {
   .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid { grid-template-columns: 1fr; }
+  .section-heading-row { align-items: flex-start; flex-direction: column; }
   .blog-detail-hero { padding: 22px; border-radius: 24px; }
   .blog-detail-image { min-height: 220px; border-radius: 20px; }
   .partner-cta-card, .partner-slider-heading { align-items: flex-start; flex-direction: column; }
