@@ -17,6 +17,14 @@ function escapeRegex(value = "") {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function locationSearchRegex(value = "") {
+  const location = String(value).trim();
+  const firstToken = location.split(/[\s,]+/).find(Boolean) || "";
+  const compactPrefix = location.replace(/[^a-z0-9]/gi, "").slice(0, 2);
+  const options = [...new Set([location, firstToken, compactPrefix].filter((item) => item.length >= 2))];
+  return new RegExp(options.map(escapeRegex).join("|"), "i");
+}
+
 router.get("/", protectAdminQuery, async (req, res, next) => {
   try {
     const filter = {};
@@ -32,7 +40,7 @@ router.get("/", protectAdminQuery, async (req, res, next) => {
         { shift: search }
       ];
     }
-    if (req.query.location) filter.location = new RegExp(escapeRegex(req.query.location), "i");
+    if (req.query.location) filter.location = locationSearchRegex(req.query.location);
     if (req.query.type) filter.type = new RegExp(escapeRegex(req.query.type), "i");
 
     const jobs = await Job.find(filter).sort({ createdAt: -1 });
