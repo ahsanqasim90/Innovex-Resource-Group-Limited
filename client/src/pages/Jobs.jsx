@@ -13,6 +13,7 @@ import { BriefcaseBusiness, Filter, MapPin, RotateCcw, Search } from "lucide-rea
 export default function Jobs() {
   const [searchParams] = useSearchParams();
   const selectedJobId = searchParams.get("job");
+  const shouldAutoApply = searchParams.get("apply") === "1";
   const [jobs, setJobs] = useState([]);
   const [detailJob, setDetailJob] = useState(null);
   const [filters, setFilters] = useState({ search: "", location: "", type: "" });
@@ -21,6 +22,7 @@ export default function Jobs() {
   const [applying, setApplying] = useState(false);
   const [loading, setLoading] = useState(true);
   const applicationRef = useRef(null);
+  const autoAppliedRef = useRef(null);
   const hasFilters = Boolean(filters.search || filters.location || filters.type);
 
   function loadJobs(nextFilters = filters) {
@@ -59,6 +61,12 @@ export default function Jobs() {
       applicationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }, [selected]);
+
+  useEffect(() => {
+    if (!shouldAutoApply || !detailJob || autoAppliedRef.current === detailJob._id) return;
+    autoAppliedRef.current = detailJob._id;
+    startApplication(detailJob);
+  }, [shouldAutoApply, detailJob]);
 
   useEffect(() => {
     if (!selectedJobId) {

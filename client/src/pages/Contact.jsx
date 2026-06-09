@@ -6,7 +6,7 @@ import SocialLinks from "../components/SocialLinks.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import SubmitButton from "../components/SubmitButton.jsx";
 import { company, contact } from "../data/content.js";
-import { BriefcaseBusiness, CheckCircle2, HeartHandshake, MonitorSmartphone } from "lucide-react";
+import { BriefcaseBusiness, CheckCircle2, Clock3, HeartHandshake, Mail, MapPinned, MessageCircle, MonitorSmartphone, Share2 } from "lucide-react";
 import { useState } from "react";
 
 const actionCards = [
@@ -44,6 +44,14 @@ const actionCards = [
   }
 ];
 
+const contactCards = [
+  { title: "Email", text: contact.email, href: `mailto:${contact.email}`, icon: Mail, label: "Fast response" },
+  { title: "Phone / WhatsApp", text: contact.phoneDisplay, href: contact.whatsappUrl, icon: MessageCircle, label: "Main contact" },
+  { title: "Office Address", text: contact.address, icon: MapPinned, label: "Cardiff, UK" },
+  { title: "Office hours", text: contact.hours, icon: Clock3, label: "Availability" },
+  { title: "Social Media", social: true, icon: Share2, label: "Connect with us" }
+];
+
 export default function Contact() {
   const [status, setStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -71,12 +79,21 @@ export default function Contact() {
     <section className="section">
       <SEO title="Contact" path="/contact" description="Contact Innovex Resource Group Limited in Cardiff for healthcare recruitment, care home staffing, website design, SEO, partnerships, and job seeker support." />
       <SectionHeading eyebrow="Contact Us" title={`Talk to ${company.name}`} />
-      <div className="card-grid">
-        <article className="card"><h3>Email</h3><p><a href={`mailto:${contact.email}`}>{contact.email}</a></p></article>
-        <article className="card"><h3>Phone / WhatsApp</h3><p><a href={contact.whatsappUrl} target="_blank" rel="noreferrer">{contact.phoneDisplay}</a></p></article>
-        <article className="card"><h3>Office Address</h3><p>{contact.address}</p></article>
-        <article className="card"><h3>Office hours</h3><p>{contact.hours}</p></article>
-        <article className="card"><h3>Social Media</h3><SocialLinks /></article>
+      <div className="card-grid contact-info-grid">
+        {contactCards.map(({ title, text, href, icon: Icon, label, social }) => (
+          <article className="card contact-info-card" key={title}>
+            <div className="contact-info-icon"><Icon size={22} /></div>
+            <span>{label}</span>
+            <h3>{title}</h3>
+            {social ? (
+              <SocialLinks />
+            ) : href ? (
+              <p><a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noreferrer" : undefined}>{text}</a></p>
+            ) : (
+              <p>{text}</p>
+            )}
+          </article>
+        ))}
       </div>
       <div className="card contact-form-card" id="contact-form" style={{ marginTop: 24, scrollMarginTop: 110 }}>
         <h2>Send a message</h2>

@@ -13,7 +13,11 @@ export default function JobCard({ job, onApply }) {
       <p className="job-card-description">{previewJobText(job.description)}</p>
       <div className="card-actions">
         <Link className="button secondary" to={`/jobs?job=${job._id}`}>View Details</Link>
-        <button className="button" onClick={() => onApply?.(job)}>Apply</button>
+        {onApply ? (
+          <button className="button" onClick={() => onApply(job)}>Apply</button>
+        ) : (
+          <Link className="button" to={`/jobs?job=${job._id}&apply=1`}>Apply</Link>
+        )}
       </div>
     </article>
   );

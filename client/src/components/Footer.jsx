@@ -35,7 +35,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="footer-bottom">
-        <span>{`Copyright © ${year} ${company.name}. All rights reserved.`}</span>
+        <span>{`Copyright \u00a9 ${year} ${company.name}. All rights reserved.`}</span>
         <span>Designed and developed by {company.name}.</span>
       </div>
     </footer>
