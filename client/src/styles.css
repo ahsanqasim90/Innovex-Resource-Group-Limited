@@ -1783,6 +1783,12 @@ th { color: var(--teal); background: #f0f7f8; }
   gap: 26px;
   align-items: start;
 }
+.meeting-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(360px, .9fr);
+  gap: 26px;
+  align-items: start;
+}
 .interview-form {
   position: relative;
   overflow: hidden;
@@ -2047,7 +2053,9 @@ th { color: var(--teal); background: #f0f7f8; }
 }
 .contact-strip a,
 .contact-strip span {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 9px 10px;
   border-radius: 13px;
   background: rgba(255,255,255,.66);
@@ -2093,6 +2101,23 @@ th { color: var(--teal); background: #f0f7f8; }
 }
 .interview-table table {
   min-width: 1120px;
+}
+.meeting-table table {
+  min-width: 1080px;
+}
+.meeting-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 34px;
+  color: var(--muted);
+}
+.meeting-empty svg,
+.meeting-empty strong {
+  color: var(--teal);
+}
+.meeting-empty strong {
+  font-size: 1.1rem;
 }
 .interview-table tbody tr {
   transition: background .18s ease, transform .18s ease;
@@ -2373,7 +2398,7 @@ th { color: var(--teal); background: #f0f7f8; }
 @media (max-width: 900px) {
   .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card, .recruitment-quality-card, .about-snapshot-card { grid-template-columns: 1fr; }
   .jobs-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .interview-admin-grid { grid-template-columns: 1fr; }
+  .interview-admin-grid, .meeting-admin-grid { grid-template-columns: 1fr; }
   .interview-detail, .blog-cta-card { position: static; }
   .blog-detail-image { min-height: 280px; }
   .stats-grid, .card-grid, .interview-summary-grid, .testimonial-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -32,7 +32,10 @@ export async function api(path, options = {}) {
         window.location.assign("/admin/login");
       }
     }
-    throw new Error(data?.message || "Request failed");
+    const error = new Error(data?.message || "Request failed");
+    error.status = response.status;
+    error.data = data;
+    throw error;
   }
   return data;
 }

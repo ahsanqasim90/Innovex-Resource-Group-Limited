@@ -87,3 +87,34 @@ export async function sendInterviewReminderEmail(interview) {
 
   return { sent: true };
 }
+
+export async function sendMeetingReminderEmail(meeting) {
+  if (!hasSmtpConfig()) {
+    return { sent: false, reason: "SMTP is not configured" };
+  }
+
+  const transporter = makeTransporter();
+  const subject = "Meeting reminder";
+  const text = `Reminder: ${meeting.attendeeName} has a ${meeting.meetingPurpose} meeting today at ${meeting.meetingTime} with ${meeting.companyName}.`;
+  const html = `
+    <h2>Meeting reminder</h2>
+    <p><strong>Reminder:</strong> ${meeting.attendeeName} has a ${meeting.meetingPurpose} meeting today at ${meeting.meetingTime} with ${meeting.companyName}.</p>
+    <p><strong>Meeting:</strong> ${meeting.meetingTitle}</p>
+    <p><strong>Company:</strong> ${meeting.companyName}</p>
+    <p><strong>Attendee:</strong> ${meeting.attendeeName}</p>
+    <p><strong>Email:</strong> ${meeting.attendeeEmail ? `<a href="mailto:${meeting.attendeeEmail}">${meeting.attendeeEmail}</a>` : "Not provided"}</p>
+    <p><strong>Phone:</strong> ${meeting.attendeePhone || "Not provided"}</p>
+    <p><strong>Type:</strong> ${meeting.meetingType}</p>
+    ${meeting.notes ? `<p><strong>Notes:</strong> ${String(meeting.notes).replace(/\n/g, "<br />")}</p>` : ""}
+  `;
+
+  await transporter.sendMail({
+    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    to: recipient,
+    subject,
+    text,
+    html
+  });
+
+  return { sent: true };
+}

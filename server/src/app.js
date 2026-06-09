@@ -12,6 +12,7 @@ import cvRoutes from "./routes/cvRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import interviewRoutes from "./routes/interviewRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
+import meetingRoutes from "./routes/meetingRoutes.js";
 import partnerRoutes from "./routes/partnerRoutes.js";
 import seoRoutes from "./routes/seoRoutes.js";
 import testimonialRoutes from "./routes/testimonialRoutes.js";
@@ -40,6 +41,7 @@ app.use("/api/partners", partnerRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/interviews", interviewRoutes);
+app.use("/api/meetings", meetingRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
