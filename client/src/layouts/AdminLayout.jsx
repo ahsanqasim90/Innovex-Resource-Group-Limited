@@ -34,27 +34,31 @@ export default function AdminLayout() {
             </span>
           </div>
           <div className="admin-nav-label">Workspace</div>
-          {links.map(([href, label, Icon]) => (
-            <NavLink key={href} to={href}>
-              <Icon size={18} /> {label}
-            </NavLink>
-          ))}
-          <div className="admin-sidebar-card">
-            <ShieldCheck size={20} />
-            <div>
-              <strong>Secure admin</strong>
-              <span>Protected business data</span>
+          <nav className="admin-nav">
+            {links.map(([href, label, Icon]) => (
+              <NavLink key={href} to={href}>
+                <Icon size={18} /> {label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="admin-sidebar-footer">
+            <div className="admin-sidebar-card">
+              <ShieldCheck size={20} />
+              <div>
+                <strong>Secure admin</strong>
+                <span>Protected business data</span>
+              </div>
             </div>
+            <button
+              className="ghost admin-logout"
+              onClick={() => {
+                logout();
+                navigate("/admin/login");
+              }}
+            >
+              <LogOut size={18} /> Logout
+            </button>
           </div>
-          <button
-            className="ghost admin-logout"
-            onClick={() => {
-              logout();
-              navigate("/admin/login");
-            }}
-          >
-            <LogOut size={18} /> Logout
-          </button>
         </div>
       </aside>
       <main className="admin-main">

@@ -1715,15 +1715,17 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
 
 .admin-shell {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 292px 1fr;
   background:
     radial-gradient(circle at 86% 0%, rgba(118,207,214,.22), transparent 32%),
     linear-gradient(180deg, #f5fbfb, #edf6f7);
 }
 .admin-sidebar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 30;
+  width: 292px;
   height: 100vh;
   padding: 18px;
   background:
@@ -1737,6 +1739,7 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
   flex-direction: column;
   gap: 8px;
   height: 100%;
+  min-height: 0;
 }
 .admin-brand {
   color: white;
@@ -1770,6 +1773,22 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
   letter-spacing: .14em;
   text-transform: uppercase;
 }
+.admin-nav {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.24) transparent;
+}
+.admin-nav::-webkit-scrollbar {
+  width: 6px;
+}
+.admin-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255,255,255,.24);
+}
 .admin-sidebar a,
 .admin-sidebar button {
   display: flex;
@@ -1796,7 +1815,6 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin-top: auto;
   padding: 14px;
   border-radius: 18px;
   color: #e8fbfd;
@@ -1804,6 +1822,13 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
     radial-gradient(circle at 100% 0%, rgba(244,185,66,.26), transparent 38%),
     rgba(255,255,255,.1);
   border: 1px solid rgba(255,255,255,.14);
+}
+.admin-sidebar-footer {
+  display: grid;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.1);
 }
 .admin-sidebar-card strong,
 .admin-sidebar-card span {
@@ -1823,6 +1848,7 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
 }
 .admin-main {
   min-width: 0;
+  margin-left: 292px;
 }
 .admin-command-bar {
   position: sticky;
@@ -2629,8 +2655,10 @@ tbody tr:hover td {
   .menu-button { display: block; }
   .nav { position: absolute; top: 78px; left: 20px; right: 20px; display: none; flex-direction: column; align-items: stretch; padding: 20px; border-radius: 22px; background: white; box-shadow: 0 20px 50px rgba(0,0,0,.14); }
   .nav.open { display: flex; }
-  .admin-sidebar { position: relative; height: auto; }
+  .admin-sidebar { position: relative; width: auto; height: auto; }
   .admin-sidebar-inner { height: auto; }
+  .admin-nav { max-height: none; overflow: visible; }
+  .admin-main { margin-left: 0; }
   .admin-command-bar { position: relative; align-items: flex-start; flex-direction: column; }
   .admin-command-meta { width: 100%; }
 }
