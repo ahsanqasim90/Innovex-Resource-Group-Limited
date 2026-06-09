@@ -1480,6 +1480,89 @@ main { min-height: 70vh; }
 input, textarea, select { width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: white; color: var(--ink); }
 textarea { min-height: 120px; resize: vertical; }
 label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
+.jobs-filter-card {
+  position: relative;
+  overflow: hidden;
+  border-color: #bfe0e5;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.18), transparent 34%),
+    linear-gradient(135deg, #ffffff, #f3fbfb);
+}
+.jobs-filter-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, var(--teal), #82d5db, var(--gold));
+}
+.jobs-filter-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+.jobs-filter-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: var(--teal);
+  box-shadow: 0 14px 28px rgba(4,75,88,.16);
+}
+.jobs-filter-heading h2 {
+  margin: 0 0 4px;
+  color: var(--teal);
+  font-size: clamp(1.35rem, 2.4vw, 2rem);
+}
+.jobs-filter-heading p {
+  margin: 0;
+  color: var(--muted);
+}
+.jobs-filter-form {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr .85fr;
+  gap: 14px;
+  align-items: end;
+}
+.filter-field span {
+  font-size: .78rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.input-with-icon {
+  position: relative;
+}
+.input-with-icon svg {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--blue);
+  pointer-events: none;
+}
+.input-with-icon input,
+.input-with-icon select {
+  min-height: 52px;
+  padding-left: 44px;
+  box-shadow: 0 10px 22px rgba(6,63,79,.04);
+}
+.jobs-filter-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.jobs-filter-actions .button {
+  min-height: 52px;
+  flex: 1;
+}
+.reset-filter-button {
+  border: 1px solid #d4e8eb;
+  color: var(--teal);
+  gap: 8px;
+}
 .status { padding: 12px 14px; border-radius: 14px; background: var(--mint); color: var(--blue); }
 .status.error { background: #ffe9e7; color: #9b2418; }
 .file-upload { display: grid; gap: 10px; }
@@ -2289,6 +2372,7 @@ th { color: var(--teal); background: #f0f7f8; }
 }
 @media (max-width: 900px) {
   .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card, .recruitment-quality-card, .about-snapshot-card { grid-template-columns: 1fr; }
+  .jobs-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .interview-admin-grid { grid-template-columns: 1fr; }
   .interview-detail, .blog-cta-card { position: static; }
   .blog-detail-image { min-height: 280px; }
@@ -2302,6 +2386,9 @@ th { color: var(--teal); background: #f0f7f8; }
 
 @media (max-width: 620px) {
   .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid, .testimonial-stats-grid, .testimonial-review-grid, .faq-grid { grid-template-columns: 1fr; }
+  .jobs-filter-form { grid-template-columns: 1fr; }
+  .jobs-filter-heading { align-items: flex-start; flex-direction: column; }
+  .jobs-filter-actions { flex-direction: column; align-items: stretch; }
   .section-heading-row { align-items: flex-start; flex-direction: column; }
   .blog-detail-hero { padding: 22px; border-radius: 24px; }
   .blog-detail-image { min-height: 220px; border-radius: 20px; }

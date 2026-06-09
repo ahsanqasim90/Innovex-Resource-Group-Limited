@@ -13,13 +13,27 @@ function protectAdminQuery(req, res, next) {
   next();
 }
 
+function escapeRegex(value = "") {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 router.get("/", protectAdminQuery, async (req, res, next) => {
   try {
     const filter = {};
     if (!req.query.admin) filter.isActive = true;
-    if (req.query.search) filter.$text = { $search: req.query.search };
-    if (req.query.location) filter.location = new RegExp(req.query.location, "i");
-    if (req.query.type) filter.type = new RegExp(req.query.type, "i");
+    if (req.query.search) {
+      const search = new RegExp(escapeRegex(req.query.search), "i");
+      filter.$or = [
+        { title: search },
+        { description: search },
+        { location: search },
+        { salary: search },
+        { type: search },
+        { shift: search }
+      ];
+    }
+    if (req.query.location) filter.location = new RegExp(escapeRegex(req.query.location), "i");
+    if (req.query.type) filter.type = new RegExp(escapeRegex(req.query.type), "i");
 
     const jobs = await Job.find(filter).sort({ createdAt: -1 });
     res.json(jobs);

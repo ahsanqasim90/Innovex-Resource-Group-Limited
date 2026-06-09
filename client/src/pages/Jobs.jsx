@@ -8,7 +8,7 @@ import SectionHeading from "../components/SectionHeading.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import FileUpload from "../components/FileUpload.jsx";
 import SubmitButton from "../components/SubmitButton.jsx";
-import { BriefcaseBusiness } from "lucide-react";
+import { BriefcaseBusiness, Filter, MapPin, RotateCcw, Search } from "lucide-react";
 
 export default function Jobs() {
   const [searchParams] = useSearchParams();
@@ -21,14 +21,32 @@ export default function Jobs() {
   const [applying, setApplying] = useState(false);
   const [loading, setLoading] = useState(true);
   const applicationRef = useRef(null);
+  const hasFilters = Boolean(filters.search || filters.location || filters.type);
 
   function loadJobs(nextFilters = filters) {
-    const query = new URLSearchParams(Object.entries(nextFilters).filter(([, value]) => value)).toString();
+    const cleanedFilters = Object.fromEntries(
+      Object.entries(nextFilters)
+        .map(([key, value]) => [key, String(value || "").trim()])
+        .filter(([, value]) => value)
+    );
+    const query = new URLSearchParams(cleanedFilters).toString();
+    setStatus(null);
     setLoading(true);
     api(`/jobs${query ? `?${query}` : ""}`)
       .then(setJobs)
       .catch((error) => setStatus({ type: "error", message: error.message }))
       .finally(() => setLoading(false));
+  }
+
+  function searchJobs(event) {
+    event.preventDefault();
+    loadJobs(filters);
+  }
+
+  function resetSearch() {
+    const cleared = { search: "", location: "", type: "" };
+    setFilters(cleared);
+    loadJobs(cleared);
   }
 
   useEffect(() => {
@@ -83,13 +101,50 @@ export default function Jobs() {
     <section className="section">
       <SEO title="Healthcare Jobs" path="/jobs" description="Search and apply for UK healthcare jobs including nurse, care assistant, registered manager, temporary staffing, and permanent recruitment roles." />
       <SectionHeading eyebrow="Jobs" title="Current opportunities" />
-      <div className="card filters">
-        <div className="form-grid">
-          <input placeholder="Search role or keyword" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
-          <input placeholder="Location" value={filters.location} onChange={(e) => setFilters({ ...filters, location: e.target.value })} />
-          <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}><option value="">All types</option><option>Temporary</option><option>Permanent</option><option>Contract</option></select>
-          <button className="button" onClick={loadJobs}>Search Jobs</button>
+      <div className="card filters jobs-filter-card">
+        <div className="jobs-filter-heading">
+          <span className="jobs-filter-icon"><Search size={24} /></span>
+          <div>
+            <h2>Find the right healthcare role</h2>
+            <p>Search by role, keyword, location, shift, salary, or employment type.</p>
+          </div>
         </div>
+        <form className="jobs-filter-form" onSubmit={searchJobs}>
+          <label className="filter-field">
+            <span>Role or keyword</span>
+            <div className="input-with-icon">
+              <Search size={18} />
+              <input placeholder="e.g. Nurse, Team Leader, Manager" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
+            </div>
+          </label>
+          <label className="filter-field">
+            <span>Location</span>
+            <div className="input-with-icon">
+              <MapPin size={18} />
+              <input placeholder="e.g. Dover, SO40, Birmingham" value={filters.location} onChange={(e) => setFilters({ ...filters, location: e.target.value })} />
+            </div>
+          </label>
+          <label className="filter-field">
+            <span>Job type</span>
+            <div className="input-with-icon">
+              <Filter size={18} />
+              <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
+                <option value="">All types</option>
+                <option>Temporary</option>
+                <option>Permanent</option>
+                <option>Contract</option>
+              </select>
+            </div>
+          </label>
+          <div className="jobs-filter-actions">
+            <button className="button" type="submit" disabled={loading}>{loading ? "Searching..." : "Search Jobs"}</button>
+            {hasFilters && (
+              <button className="button light reset-filter-button" type="button" onClick={resetSearch}>
+                <RotateCcw size={17} /> Reset
+              </button>
+            )}
+          </div>
+        </form>
       </div>
       <StatusMessage status={status} />
       {detailJob && (
@@ -143,7 +198,7 @@ export default function Jobs() {
           <h2>No matching roles found</h2>
           <p>Try adjusting your search filters, or upload your CV so the Innovex recruitment team can consider you for suitable healthcare roles.</p>
           <div className="actions">
-            <button className="button secondary" type="button" onClick={() => { const cleared = { search: "", location: "", type: "" }; setFilters(cleared); loadJobs(cleared); }}>Reset Search</button>
+            <button className="button secondary" type="button" onClick={resetSearch}>Reset Search</button>
             <Link className="button" to="/upload-cv">Upload CV</Link>
           </div>
         </article>
