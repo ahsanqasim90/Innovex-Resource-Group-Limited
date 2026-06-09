@@ -1,4 +1,4 @@
-import { Menu, X } from "lucide-react";
+import { LockKeyhole, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { company } from "../data/content.js";
@@ -31,9 +31,14 @@ export default function Header() {
             {label}
           </NavLink>
         ))}
-        <Link className="button small" to="/upload-cv" onClick={() => setOpen(false)}>
-          Upload CV
-        </Link>
+        <div className="nav-actions">
+          <Link className="admin-login-link" to="/admin/login" onClick={() => setOpen(false)}>
+            <LockKeyhole size={15} /> Admin Login
+          </Link>
+          <Link className="button small header-upload-button" to="/upload-cv" onClick={() => setOpen(false)}>
+            Upload CV
+          </Link>
+        </div>
       </nav>
     </header>
   );
