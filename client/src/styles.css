@@ -2643,8 +2643,7 @@ tbody tr:hover td {
 }
 .blog-card.featured {
   grid-column: span 2;
-  display: grid;
-  grid-template-columns: minmax(280px, .92fr) minmax(0, 1.08fr);
+  display: block;
 }
 .blog-image-link {
   display: block;
@@ -2656,9 +2655,9 @@ tbody tr:hover td {
     linear-gradient(135deg, var(--teal), var(--blue));
 }
 .blog-card.featured .blog-image-link {
-  height: 100%;
-  min-height: 430px;
-  aspect-ratio: auto;
+  height: auto;
+  min-height: 280px;
+  aspect-ratio: 16 / 9;
 }
 .blog-image-link img,
 .blog-image-link img {
