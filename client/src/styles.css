@@ -2642,7 +2642,6 @@ tbody tr:hover td {
   box-shadow: 0 28px 65px rgba(6,63,79,.12);
 }
 .blog-card.featured {
-  grid-column: span 2;
   display: block;
 }
 .blog-image-link {
