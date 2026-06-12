@@ -1,4 +1,4 @@
-import { BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, LayoutDashboard, LogOut, MessageSquare, ShieldCheck, Upload } from "lucide-react";
+import { ArrowUpRight, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, LayoutDashboard, LogOut, MessageSquare, ShieldCheck, Upload } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -49,6 +49,9 @@ export default function AdminLayout() {
                 <span>Protected business data</span>
               </div>
             </div>
+            <NavLink className="admin-website-link" to="/">
+              <ArrowUpRight size={18} /> Move to Website
+            </NavLink>
             <button
               className="ghost admin-logout"
               onClick={() => {
