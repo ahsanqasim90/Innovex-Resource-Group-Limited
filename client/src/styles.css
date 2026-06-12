@@ -2627,8 +2627,11 @@ tbody tr:hover td {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 22px;
+  align-items: stretch;
 }
 .blog-card {
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 28px;
@@ -2642,12 +2645,13 @@ tbody tr:hover td {
   box-shadow: 0 28px 65px rgba(6,63,79,.12);
 }
 .blog-card.featured {
-  display: block;
+  display: flex;
 }
 .blog-image-link {
   display: block;
-  min-height: 220px;
-  aspect-ratio: 16 / 10;
+  height: 245px;
+  min-height: 0;
+  aspect-ratio: auto;
   overflow: hidden;
   background:
     radial-gradient(circle at 80% 20%, rgba(244,185,66,.28), transparent 32%),
@@ -2655,8 +2659,8 @@ tbody tr:hover td {
 }
 .blog-card.featured .blog-image-link {
   height: auto;
-  min-height: 280px;
-  aspect-ratio: 16 / 9;
+  min-height: 245px;
+  aspect-ratio: auto;
 }
 .blog-image-link img,
 .blog-image-link img {
@@ -2681,17 +2685,31 @@ tbody tr:hover td {
   font-weight: 900;
 }
 .blog-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   padding: 24px;
 }
 .blog-card h2 {
   color: var(--teal);
-  font-size: clamp(1.3rem, 2.5vw, 2rem);
-  line-height: 1.12;
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  line-height: 1.14;
   margin: 14px 0 12px;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
 }
 .blog-card p {
   color: var(--muted);
   line-height: 1.65;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+.blog-card .text-link {
+  margin-top: auto;
 }
 .blog-meta-row {
   display: flex;
@@ -2872,6 +2890,7 @@ tbody tr:hover td {
   .interview-admin-grid, .meeting-admin-grid { grid-template-columns: 1fr; }
   .interview-detail, .blog-cta-card { position: static; }
   .blog-detail-image { min-height: 280px; }
+  .blog-image-link, .blog-card.featured .blog-image-link { height: 230px; min-height: 230px; }
   .stats-grid, .card-grid, .interview-summary-grid, .testimonial-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .digital-grid, .blog-grid, .partners-grid, .testimonial-review-grid, .faq-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .menu-button { display: grid; }
@@ -2899,6 +2918,7 @@ tbody tr:hover td {
   .section-heading-row { align-items: flex-start; flex-direction: column; }
   .blog-detail-hero { padding: 22px; border-radius: 24px; }
   .blog-detail-image { min-height: 220px; border-radius: 20px; }
+  .blog-image-link, .blog-card.featured .blog-image-link { height: 215px; min-height: 215px; }
   .partner-cta-card, .partner-slider-heading { align-items: flex-start; flex-direction: column; }
   .testimonial-share-cta { align-items: stretch; flex-direction: column; }
   .testimonial-share-cta .button { width: 100%; }
