@@ -16,7 +16,7 @@ const emptyCourse = {
 };
 
 function money(value) {
-  return `£${Number(value || 0).toLocaleString()}`;
+  return `\u00a3${Number(value || 0).toLocaleString()}`;
 }
 
 export default function AdminCourses() {
@@ -97,14 +97,14 @@ export default function AdminCourses() {
       <div className="admin-top"><h1>Courses</h1></div>
       <StatusMessage status={status} />
 
-      <div className="training-summary-grid">
+      <div className="training-summary-grid course-summary-grid">
         <div className="training-summary-card"><BookOpenCheck /><span>Total courses</span><strong>{summary.total}</strong></div>
         <div className="training-summary-card"><Clock /><span>Active courses</span><strong>{summary.active}</strong></div>
         <div className="training-summary-card"><FileBadge /><span>Certificates included</span><strong>{summary.certificate}</strong></div>
         <div className="training-summary-card highlight"><CircleDollarSign /><span>Average selling price</span><strong>{money(summary.averagePrice)}</strong></div>
       </div>
 
-      <form className="card form training-form" onSubmit={save}>
+      <form className="card form training-form course-editor-card" onSubmit={save}>
         <div className="admin-form-title">
           <div>
             <span className="eyebrow">Course library</span>
@@ -125,7 +125,7 @@ export default function AdminCourses() {
         <SubmitButton loading={saving} loadingText="Saving course...">{editing ? "Update Course" : "Create Course"}</SubmitButton>
       </form>
 
-      <div className="card filters training-filters" style={{ marginTop: 24 }}>
+      <div className="card filters training-filters course-filter-card" style={{ marginTop: 24 }}>
         <div className="form-grid">
           <input placeholder="Search course or category" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
           <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">All statuses</option><option>Active</option><option>Inactive</option></select>
@@ -134,26 +134,41 @@ export default function AdminCourses() {
         </div>
       </div>
 
-      <div className="table-wrap training-table" style={{ marginTop: 24 }}>
-        <table>
-          <thead><tr><th>Course</th><th>Category</th><th>Duration</th><th>Price</th><th>Trainer Cost</th><th>Certificate</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
+      <section className="course-library-section">
+        <div className="course-library-heading">
+          <div>
+            <span className="eyebrow">Course catalogue</span>
+            <h2>Training courses</h2>
+          </div>
+          <span>{courses.length} course{courses.length === 1 ? "" : "s"}</span>
+        </div>
+        {courses.length ? (
+          <div className="course-admin-grid">
             {courses.map((course) => (
-              <tr key={course._id}>
-                <td><strong>{course.title}</strong><br /><span className="muted">{course.description}</span></td>
-                <td>{course.category}</td>
-                <td>{course.duration}</td>
-                <td>{money(course.defaultSellingPrice)}</td>
-                <td>{money(course.defaultTrainerCost)}</td>
-                <td>{course.certificateIncluded ? "Yes" : "No"}</td>
-                <td><span className="status-chip table-chip">{course.status}</span></td>
-                <td className="action-cell"><div className="compact-actions"><button className="button small" onClick={() => edit(course)}>Edit</button><button className="button small" onClick={() => remove(course._id)}>Delete</button></div></td>
-              </tr>
+              <article className="course-admin-card" key={course._id}>
+                <div className="course-admin-card-top">
+                  <span className="course-category-pill">{course.category}</span>
+                  <span className="status-chip table-chip">{course.status}</span>
+                </div>
+                <h3>{course.title}</h3>
+                <p>{course.description}</p>
+                <div className="course-admin-meta">
+                  <div><span>Duration</span><strong>{course.duration}</strong></div>
+                  <div><span>Selling price</span><strong>{money(course.defaultSellingPrice)}</strong></div>
+                  <div><span>Trainer cost</span><strong>{money(course.defaultTrainerCost)}</strong></div>
+                  <div><span>Certificate</span><strong>{course.certificateIncluded ? "Included" : "No"}</strong></div>
+                </div>
+                <div className="course-admin-actions">
+                  <button className="button small" onClick={() => edit(course)}>Edit course</button>
+                  <button className="button secondary small" onClick={() => remove(course._id)}>Delete</button>
+                </div>
+              </article>
             ))}
-          </tbody>
-        </table>
-        {!courses.length && <div className="meeting-empty"><BookOpenCheck size={32} /><strong>No courses found</strong><span>Add your first healthcare training course above.</span></div>}
-      </div>
+          </div>
+        ) : (
+          <div className="card meeting-empty"><BookOpenCheck size={32} /><strong>No courses found</strong><span>Add your first healthcare training course above.</span></div>
+        )}
+      </section>
     </>
   );
 }
