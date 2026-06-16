@@ -8,6 +8,7 @@ import applicationRoutes from "./routes/applicationRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import blogRoutes from "./routes/blogRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import courseRoutes from "./routes/courseRoutes.js";
 import cvRoutes from "./routes/cvRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import interviewRoutes from "./routes/interviewRoutes.js";
@@ -16,6 +17,7 @@ import meetingRoutes from "./routes/meetingRoutes.js";
 import partnerRoutes from "./routes/partnerRoutes.js";
 import seoRoutes from "./routes/seoRoutes.js";
 import testimonialRoutes from "./routes/testimonialRoutes.js";
+import trainingBookingRoutes from "./routes/trainingBookingRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 dotenv.config();
@@ -42,6 +44,8 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/interviews", interviewRoutes);
 app.use("/api/meetings", meetingRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/training-bookings", trainingBookingRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

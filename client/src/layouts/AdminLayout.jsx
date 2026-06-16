@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, LayoutDashboard, LogOut, MessageSquare, ShieldCheck, Upload } from "lucide-react";
+import { ArrowUpRight, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, GraduationCap, LayoutDashboard, LogOut, MessageSquare, ShieldCheck, Upload } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -9,6 +9,8 @@ const links = [
   ["/admin/cv-uploads", "CV Uploads", Upload],
   ["/admin/interviews", "Interviews", CalendarCheck],
   ["/admin/meetings", "Meetings", CalendarClock],
+  ["/admin/courses", "Courses", BookOpenCheck],
+  ["/admin/training-bookings", "Training Bookings", GraduationCap],
   ["/admin/blogs", "Blogs", BookOpenText],
   ["/admin/testimonials", "Testimonials", MessageSquare],
   ["/admin/partners", "Partners", Building2]

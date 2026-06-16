@@ -17,11 +17,13 @@ import UploadCv from "./pages/UploadCv.jsx";
 import Login from "./pages/admin/Login.jsx";
 import Dashboard from "./pages/admin/Dashboard.jsx";
 import AdminBlogs from "./pages/admin/AdminBlogs.jsx";
+import AdminCourses from "./pages/admin/AdminCourses.jsx";
 import AdminJobs from "./pages/admin/AdminJobs.jsx";
 import AdminApplications from "./pages/admin/AdminApplications.jsx";
 import AdminCvs from "./pages/admin/AdminCvs.jsx";
 import AdminInterviews from "./pages/admin/AdminInterviews.jsx";
 import AdminMeetings from "./pages/admin/AdminMeetings.jsx";
+import AdminTrainingBookings from "./pages/admin/AdminTrainingBookings.jsx";
 import AdminTestimonials from "./pages/admin/AdminTestimonials.jsx";
 import AdminPartners from "./pages/admin/AdminPartners.jsx";
 import "./styles.css";
@@ -64,6 +66,8 @@ createRoot(document.getElementById("root")).render(
             <Route path="cv-uploads" element={<AdminCvs />} />
             <Route path="interviews" element={<AdminInterviews />} />
             <Route path="meetings" element={<AdminMeetings />} />
+            <Route path="courses" element={<AdminCourses />} />
+            <Route path="training-bookings" element={<AdminTrainingBookings />} />
             <Route path="blogs" element={<AdminBlogs />} />
             <Route path="testimonials" element={<AdminTestimonials />} />
             <Route path="partners" element={<AdminPartners />} />
