@@ -7,6 +7,12 @@ const allowedCvMimeTypes = new Set([
 ]);
 
 const allowedImageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
+const allowedCsvMimeTypes = new Set([
+  "text/csv",
+  "application/csv",
+  "application/vnd.ms-excel",
+  "text/plain"
+]);
 
 function safeFilename(originalName) {
   return `${Date.now()}-${originalName.replace(/[^a-z0-9.\-_]/gi, "-").toLowerCase()}`;
@@ -47,6 +53,19 @@ export const uploadBlogImage = multer({
       return;
     }
     cb(new Error("Featured image must be a JPG, PNG, WEBP, or SVG image"));
+  }
+});
+
+export const uploadCandidateCsv = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const isCsvName = /\.csv$/i.test(file.originalname || "");
+    if (allowedCsvMimeTypes.has(file.mimetype) || isCsvName) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("Candidate import must be a CSV file"));
   }
 });
 

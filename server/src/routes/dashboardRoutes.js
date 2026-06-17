@@ -1,5 +1,6 @@
 import express from "express";
 import Application from "../models/Application.js";
+import Candidate from "../models/Candidate.js";
 import ContactMessage from "../models/ContactMessage.js";
 import CvUpload from "../models/CvUpload.js";
 import Interview from "../models/Interview.js";
@@ -34,7 +35,10 @@ router.get("/stats", async (req, res, next) => {
       upcomingTrainingSessions,
       trainingFinance,
       trainingReminders,
-      recentTrainingBookings
+      recentTrainingBookings,
+      totalCandidates,
+      availableCandidates,
+      interestedTalent
     ] = await Promise.all([
       Job.countDocuments({ isActive: true }),
       Application.countDocuments(),
@@ -66,7 +70,10 @@ router.get("/stats", async (req, res, next) => {
         trainingDate: { $gte: new Date(), $lte: new Date(Date.now() + 48 * 60 * 60 * 1000) },
         bookingStatus: { $nin: ["Cancelled", "Completed"] }
       }).sort({ trainingDate: 1, trainingStartTime: 1 }).limit(8),
-      TrainingBooking.find().sort({ trainingDate: -1, trainingStartTime: -1, createdAt: -1 }).limit(6)
+      TrainingBooking.find().sort({ trainingDate: -1, trainingStartTime: -1, createdAt: -1 }).limit(6),
+      Candidate.countDocuments(),
+      Candidate.countDocuments({ status: "Available" }),
+      Candidate.countDocuments({ status: "Interested" })
     ]);
 
     res.json({
@@ -87,7 +94,10 @@ router.get("/stats", async (req, res, next) => {
         upcomingTrainingSessions,
         totalQuotedRevenue: trainingFinance[0]?.totalQuotedRevenue || 0,
         totalTrainerCosts: trainingFinance[0]?.totalTrainerCosts || 0,
-        totalTrainingProfit: trainingFinance[0]?.totalTrainingProfit || 0
+        totalTrainingProfit: trainingFinance[0]?.totalTrainingProfit || 0,
+        totalCandidates,
+        availableCandidates,
+        interestedTalent
       },
       recentApplications,
       recentInterviews,

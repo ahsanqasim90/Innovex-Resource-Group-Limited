@@ -2748,6 +2748,161 @@ tbody tr:hover td {
 .training-table table {
   min-width: 1180px;
 }
+.talent-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, .42fr);
+  gap: 22px;
+  align-items: stretch;
+  margin-bottom: 22px;
+  padding: 28px;
+  border: 1px solid #c7e4e8;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.22), transparent 34%),
+    linear-gradient(135deg, #ffffff, #f3fbfb);
+  box-shadow: 0 24px 60px rgba(6,63,79,.08);
+}
+.talent-hero h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 10px;
+  color: var(--teal);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+.talent-hero p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+.talent-hero-note {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 22px;
+  border: 1px solid rgba(244,185,66,.5);
+  border-radius: 24px;
+  background: #fffaf0;
+}
+.talent-hero-note svg,
+.talent-hero-note strong {
+  color: var(--teal);
+}
+.talent-hero-note span {
+  color: var(--muted);
+  font-weight: 800;
+}
+.talent-summary-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.talent-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(330px, .8fr);
+  gap: 22px;
+  align-items: start;
+  margin-bottom: 22px;
+}
+.talent-form-card,
+.talent-match-card,
+.talent-filter-card,
+.talent-import-card,
+.talent-outreach-card {
+  border-color: #c7e4e8;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(118,207,214,.11), transparent 34%),
+    linear-gradient(180deg, #ffffff, #fbfefe);
+}
+.talent-side-stack {
+  display: grid;
+  gap: 18px;
+}
+.talent-import-card,
+.talent-outreach-card {
+  display: grid;
+  gap: 14px;
+}
+.talent-import-card svg,
+.talent-outreach-card svg {
+  color: var(--blue);
+}
+.talent-import-card h2,
+.talent-outreach-card h2 {
+  margin: 0;
+  color: var(--teal);
+}
+.talent-import-card p,
+.talent-outreach-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.talent-import-card input[type="file"] {
+  width: 100%;
+  padding: 14px;
+  border: 1px dashed #9fd2db;
+  border-radius: 18px;
+  background: #f7fcfc;
+}
+.talent-match-card {
+  margin-bottom: 22px;
+}
+.talent-match-form {
+  align-items: end;
+}
+.talent-match-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+.talent-match-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #d4e8ec;
+  border-radius: 20px;
+  background: white;
+}
+.talent-match-item strong {
+  color: var(--teal);
+}
+.talent-match-item span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 750;
+}
+.talent-score {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: var(--teal);
+  color: white;
+  font-weight: 950;
+}
+.talent-match-item .button {
+  grid-column: 1 / -1;
+}
+.talent-table table {
+  min-width: 1180px;
+}
+.talent-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid #c7e4e8;
+  border-radius: 20px;
+  background: white;
+  color: var(--muted);
+  font-weight: 850;
+}
 .course-summary-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -3877,13 +4032,13 @@ tbody tr:hover td {
   flex: 0 0 auto;
 }
 @media (max-width: 900px) {
-  .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card, .recruitment-quality-card, .about-snapshot-card, .dashboard-hero, .dashboard-kpi-grid { grid-template-columns: 1fr; }
+  .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card, .recruitment-quality-card, .about-snapshot-card, .dashboard-hero, .dashboard-kpi-grid, .talent-hero { grid-template-columns: 1fr; }
   .jobs-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .interview-admin-grid, .meeting-admin-grid, .training-admin-grid { grid-template-columns: 1fr; }
+  .interview-admin-grid, .meeting-admin-grid, .training-admin-grid, .talent-admin-grid { grid-template-columns: 1fr; }
   .interview-detail, .blog-cta-card { position: static; }
   .blog-detail-image { min-height: 280px; }
   .blog-image-link, .blog-card.featured .blog-image-link { height: 230px; min-height: 230px; }
-  .stats-grid, .card-grid, .interview-summary-grid, .testimonial-stats-grid, .training-summary-grid, .training-reminder-grid, .course-admin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats-grid, .card-grid, .interview-summary-grid, .testimonial-stats-grid, .training-summary-grid, .training-reminder-grid, .course-admin-grid, .talent-summary-grid, .talent-match-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-hero-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .digital-grid, .blog-grid, .partners-grid, .testimonial-review-grid, .faq-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .menu-button { display: grid; }
@@ -3904,7 +4059,7 @@ tbody tr:hover td {
 }
 
 @media (max-width: 620px) {
-  .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid, .testimonial-stats-grid, .testimonial-review-grid, .faq-grid, .training-summary-grid, .training-reminder-grid, .course-select-grid, .training-money-grid, .course-admin-grid, .course-admin-meta, .dashboard-hero-metrics, .dashboard-kpi-list { grid-template-columns: 1fr; }
+  .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid, .testimonial-stats-grid, .testimonial-review-grid, .faq-grid, .training-summary-grid, .training-reminder-grid, .course-select-grid, .training-money-grid, .course-admin-grid, .course-admin-meta, .dashboard-hero-metrics, .dashboard-kpi-list, .talent-summary-grid, .talent-match-grid { grid-template-columns: 1fr; }
   .jobs-filter-form { grid-template-columns: 1fr; }
   .jobs-filter-heading { align-items: flex-start; flex-direction: column; }
   .jobs-filter-actions { flex-direction: column; align-items: stretch; }
@@ -3931,6 +4086,8 @@ tbody tr:hover td {
   .footer-bottom { flex-direction: column; }
   .admin-sidebar { padding: 14px; }
   .admin-content, .admin-command-bar { padding: 18px; }
+  .talent-hero { padding: 22px; }
+  .talent-pagination { align-items: stretch; flex-direction: column; }
   .admin-top { align-items: stretch; flex-direction: column; }
   .dashboard-hero-brand, .dashboard-section-head { align-items: flex-start; flex-direction: column; }
   .dashboard-logo-panel { width: 82px; height: 82px; flex-basis: 82px; }

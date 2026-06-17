@@ -6,7 +6,8 @@ import {
   LayoutDashboard,
   LineChart,
   ShieldCheck,
-  TrendingUp
+  TrendingUp,
+  UsersRound
 } from "lucide-react";
 import { api } from "../../api/client.js";
 
@@ -47,9 +48,12 @@ export default function Dashboard() {
   const metricGroups = [
     {
       title: "Recruitment pipeline",
-      description: "Jobs, applicants, CVs and placements.",
-      Icon: BriefcaseBusiness,
+      description: "Jobs, applicants, talent pool and placements.",
+      Icon: UsersRound,
       metrics: [
+        ["Talent pool", stats.totalCandidates],
+        ["Available talent", stats.availableCandidates],
+        ["Interested talent", stats.interestedTalent],
         ["Active jobs", stats.activeJobs],
         ["Applications", stats.applications],
         ["New CVs", stats.newCvs],
