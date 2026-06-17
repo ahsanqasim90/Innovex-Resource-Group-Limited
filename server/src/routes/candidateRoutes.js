@@ -345,8 +345,9 @@ router.post("/import", uploadCandidateCsv.single("file"), async (req, res, next)
   try {
     if (!req.file) return res.status(400).json({ message: "CSV file is required" });
     const rows = parseCsv(req.file.buffer);
-    const operations = [];
+    const candidatesByKey = new Map();
     let skipped = 0;
+    let duplicatesMerged = 0;
 
     for (const row of rows) {
       if (!row.name && !row.email && !row.phone) {
@@ -360,14 +361,18 @@ router.post("/import", uploadCandidateCsv.single("file"), async (req, res, next)
         skipped += 1;
         continue;
       }
-      operations.push({
-        updateOne: {
-          filter: identifier,
-          update: { $set: data, $setOnInsert: { createdAt: new Date() } },
-          upsert: true
-        }
-      });
+      const candidateKey = data.email ? `email:${data.email}` : `phone:${data.phone}`;
+      if (candidatesByKey.has(candidateKey)) duplicatesMerged += 1;
+      candidatesByKey.set(candidateKey, { identifier, data });
     }
+
+    const operations = Array.from(candidatesByKey.values()).map(({ identifier, data }) => ({
+      updateOne: {
+        filter: identifier,
+        update: { $set: data, $setOnInsert: { createdAt: new Date() } },
+        upsert: true
+      }
+    }));
 
     let result = { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
     for (let index = 0; index < operations.length; index += 1000) {
@@ -379,9 +384,12 @@ router.post("/import", uploadCandidateCsv.single("file"), async (req, res, next)
     }
 
     res.status(201).json({
+      rowsRead: rows.length,
       imported: operations.length,
+      uniqueCandidates: operations.length,
       created: result.upsertedCount,
       updated: result.modifiedCount,
+      duplicatesMerged,
       skipped,
       message: "Candidate import completed"
     });

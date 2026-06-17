@@ -154,7 +154,16 @@ export default function AdminTalentPool() {
     setImporting(true);
     try {
       const result = await api("/candidates/import", { method: "POST", body });
-      setStatus({ message: `${result.message}. Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}.` });
+      const parts = [
+        `${result.message}.`,
+        `${Number(result.rowsRead || 0).toLocaleString()} CSV rows read.`,
+        `${Number(result.uniqueCandidates || result.imported || 0).toLocaleString()} unique candidates processed.`,
+        `${Number(result.created || 0).toLocaleString()} created.`,
+        `${Number(result.updated || 0).toLocaleString()} updated.`
+      ];
+      if (result.duplicatesMerged) parts.push(`${Number(result.duplicatesMerged).toLocaleString()} duplicate rows merged.`);
+      if (result.skipped) parts.push(`${Number(result.skipped).toLocaleString()} empty rows skipped.`);
+      setStatus({ message: parts.join(" ") });
       event.currentTarget.reset();
       await load(1);
       loadStats();
