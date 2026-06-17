@@ -97,6 +97,15 @@ export default function Home() {
           <p className="cta-microcopy hero-helper">For care providers, candidates, and businesses looking for recruitment, websites and digital growth.</p>
         </div>
         <aside className="hero-card" aria-label="Innovex highlights">
+          <img
+            className="hero-visual-image"
+            src="/innovex-hero-visual.svg"
+            alt="Innovex healthcare recruitment, website and SEO support visual"
+            width="1100"
+            height="680"
+            loading="eager"
+            fetchPriority="high"
+          />
           <div className="stats-grid">
             <div className="stat"><strong>24/7</strong><span>Staffing response</span></div>
             <div className="stat"><strong>128+</strong><span>Placements</span></div>
