@@ -158,7 +158,7 @@ function buildSummary(flow, flowId, answers) {
 export default function Chatbot() {
   const navigate = useNavigate();
   const bodyRef = useRef(null);
-  const scrollRef = useRef(null);
+  const bottomRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([openingMessage]);
   const [flowId, setFlowId] = useState(null);
@@ -179,12 +179,17 @@ export default function Chatbot() {
   useEffect(() => {
     const scrollChat = () => {
       if (bodyRef.current) {
-        bodyRef.current.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
+        bodyRef.current.scrollTo({
+          top: bodyRef.current.scrollHeight + 300,
+          behavior: "smooth"
+        });
       }
-      scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     };
-    window.setTimeout(scrollChat, 60);
-  }, [messages, typing, completed, status]);
+    window.requestAnimationFrame(scrollChat);
+    const timeout = window.setTimeout(scrollChat, 180);
+    return () => window.clearTimeout(timeout);
+  }, [messages, typing, completed, status, step, flowId, currentQuestion?.key]);
 
   function addUser(text) {
     setMessages((current) => [...current, { from: "user", text }]);
@@ -334,7 +339,6 @@ export default function Chatbot() {
                   <p className="typing-dots"><span></span><span></span><span></span></p>
                 </div>
               )}
-              <div ref={scrollRef} />
             </div>
 
             {!activeFlow && (
@@ -404,6 +408,7 @@ export default function Chatbot() {
               </button>
             )}
             {status && <p className={`chatbot-status ${status.type || "success"}`}>{status.message}</p>}
+            <div className="chatbot-scroll-anchor" ref={bottomRef} />
           </div>
         </section>
       )}

@@ -3838,6 +3838,10 @@ tbody tr:hover td {
   background: #fde5e3;
   color: #a33a2e;
 }
+.chatbot-scroll-anchor {
+  width: 1px;
+  height: 1px;
+}
 .login-page { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: linear-gradient(135deg, var(--teal), var(--blue)); }
 .login-card { width: min(440px, 100%); }
 .brand-logo {
