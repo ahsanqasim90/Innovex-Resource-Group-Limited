@@ -318,7 +318,7 @@ export default function AdminTalentPool() {
           <form className="card talent-import-card" onSubmit={importCsv}>
             <UploadCloud size={28} />
             <h2>Import candidate CSV</h2>
-            <p>Export Google Sheet as CSV. Accepted headers include name, email, phone, postcode, role, visa status, availability, shift, pay and notes.</p>
+            <p>Export your sheet as CSV. Accepted headers include name, email, phone/number, postcode, role, visa status, availability, shift, pay and notes. Email spacing is cleaned automatically; if a row still needs attention, the importer will show the exact row number.</p>
             <input name="file" type="file" accept=".csv,text/csv" />
             <SubmitButton loading={importing} loadingText="Importing candidates...">Import CSV</SubmitButton>
           </form>

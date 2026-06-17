@@ -37,6 +37,8 @@ const headerMap = {
   emailaddress: "email",
   phone: "phone",
   phonenumber: "phone",
+  number: "phone",
+  contactnumber: "phone",
   mobile: "phone",
   mobilenumber: "phone",
   postcode: "postcode",
@@ -51,12 +53,18 @@ const headerMap = {
   position: "desiredRole",
   experience: "experience",
   visastatus: "visaStatus",
+  visastatu: "visaStatus",
+  visastat: "visaStatus",
   visa: "visaStatus",
   availability: "availability",
+  availabi: "availability",
+  available: "availability",
   availablefrom: "availability",
   shift: "shiftPreference",
+  shiftpref: "shiftPreference",
   shiftpreference: "shiftPreference",
   pay: "payExpectation",
+  payexpec: "payExpectation",
   payexpectation: "payExpectation",
   expectedpay: "payExpectation",
   latitude: "latitude",
@@ -90,6 +98,10 @@ function normalizeRole(value = "") {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+function cleanEmail(value = "") {
+  return String(value).replace(/\s+/g, "").trim().toLowerCase();
+}
+
 function parseCsvLine(line) {
   const cells = [];
   let current = "";
@@ -113,25 +125,66 @@ function parseCsvLine(line) {
   return cells.map((cell) => cell.replace(/^"|"$/g, ""));
 }
 
+function splitCsvRows(text) {
+  const rows = [];
+  let current = "";
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"' && quoted && next === '"') {
+      current += char + next;
+      index += 1;
+      continue;
+    }
+
+    if (char === '"') quoted = !quoted;
+
+    if ((char === "\n" || char === "\r") && !quoted) {
+      if (current.trim()) rows.push(current);
+      current = "";
+      if (char === "\r" && next === "\n") index += 1;
+    } else {
+      current += char;
+    }
+  }
+
+  if (current.trim()) rows.push(current);
+  return rows;
+}
+
 function parseCsv(buffer) {
   const text = buffer.toString("utf8").replace(/^\uFEFF/, "");
-  const rows = text.split(/\r?\n/).filter((line) => line.trim());
+  const rows = splitCsvRows(text);
   if (rows.length < 2) return [];
   const headers = parseCsvLine(rows[0]).map((header) => headerMap[normalizeHeader(header)] || normalizeHeader(header));
-  return rows.slice(1).map((line) => {
+  return rows.slice(1).map((line, rowIndex) => {
     const values = parseCsvLine(line);
-    return headers.reduce((record, header, index) => {
-      if (!header) return record;
-      record[header] = values[index] || "";
-      return record;
+    const record = headers.reduce((result, header, index) => {
+      if (!header) return result;
+      result[header] = values[index] || "";
+      return result;
     }, {});
+    record.__rowNumber = rowIndex + 2;
+    return record;
   });
 }
 
-function sanitizeCandidate(input) {
+function sanitizeCandidate(input, options = {}) {
   const data = pick(input, candidateFields);
-  if (data.email) data.email = String(data.email).trim().toLowerCase();
-  if (data.email) validateEmail(data.email);
+  if (data.email) data.email = cleanEmail(data.email);
+  if (data.email) {
+    try {
+      validateEmail(data.email);
+    } catch (error) {
+      if (options.rowNumber) {
+        error.message = `Row ${options.rowNumber}: A valid email address is required (${data.email})`;
+      }
+      throw error;
+    }
+  }
   if (data.postcode) {
     data.postcode = cleanPostcode(data.postcode);
     data.postcodePrefix = postcodePrefix(data.postcode);
@@ -300,7 +353,7 @@ router.post("/import", uploadCandidateCsv.single("file"), async (req, res, next)
         skipped += 1;
         continue;
       }
-      const data = sanitizeCandidate({ source: "CSV Import", ...row });
+      const data = sanitizeCandidate({ source: "CSV Import", ...row }, { rowNumber: row.__rowNumber });
       if (!data.name) data.name = data.email || data.phone || "Unnamed candidate";
       const identifier = data.email ? { email: data.email } : data.phone ? { phone: data.phone } : null;
       if (!identifier) {
