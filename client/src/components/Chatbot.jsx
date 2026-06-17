@@ -157,6 +157,7 @@ function buildSummary(flow, flowId, answers) {
 
 export default function Chatbot() {
   const navigate = useNavigate();
+  const bodyRef = useRef(null);
   const scrollRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([openingMessage]);
@@ -176,7 +177,13 @@ export default function Chatbot() {
   const priority = activeFlow ? getPriority(flowId, answers) : "";
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const scrollChat = () => {
+      if (bodyRef.current) {
+        bodyRef.current.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
+      }
+      scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    };
+    window.setTimeout(scrollChat, 60);
   }, [messages, typing, completed, status]);
 
   function addUser(text) {
@@ -305,12 +312,12 @@ export default function Chatbot() {
             </button>
           </div>
 
-          <div className="chatbot-body">
+          <div className="chatbot-body" ref={bodyRef}>
             <div className="chatbot-progress-card">
               <ProgressIcon size={19} />
               <div>
-                <span>{activeFlow ? activeFlow.title : "Choose a service"}</span>
-                <strong>{activeFlow ? `${Math.min(step, questions.length)} of ${questions.length} details collected` : "Zero-cost guided assistant"}</strong>
+                <span>{activeFlow ? activeFlow.title : "Innovex support"}</span>
+                <strong>{activeFlow ? `${Math.min(step, questions.length)} of ${questions.length} details collected` : "Online now - ready to help"}</strong>
               </div>
             </div>
 
@@ -402,8 +409,20 @@ export default function Chatbot() {
       )}
 
       <button className="chatbot-launcher" type="button" onClick={() => setOpen((value) => !value)} aria-label={open ? "Close Innovex assistant" : "Open Innovex assistant"}>
-        {open ? <X size={24} /> : <MessageCircle size={25} />}
-        {!open && <span>Need help?</span>}
+        {open ? (
+          <X size={24} />
+        ) : (
+          <>
+            <span className="chatbot-launcher-avatar">
+              <img src="/Logo.png" alt="" />
+              <span className="chatbot-online-dot"></span>
+            </span>
+            <span className="chatbot-launcher-copy">
+              <small>Online now</small>
+              <strong>Chat with Innovex</strong>
+            </span>
+          </>
+        )}
       </button>
     </div>
   );
