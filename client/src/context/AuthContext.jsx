@@ -5,6 +5,15 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(Boolean(localStorage.getItem("innovexToken")));
+
+  useEffect(() => {
+    if (!localStorage.getItem("innovexToken")) return;
+    api("/auth/me")
+      .then((data) => setUser(data.user))
+      .catch(() => setToken(null))
+      .finally(() => setLoadingUser(false));
+  }, []);
 
   useEffect(() => {
     const onLogout = () => setUser(null);
@@ -24,7 +33,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loadingUser, login, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

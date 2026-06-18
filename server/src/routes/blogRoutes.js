@@ -1,6 +1,6 @@
 import express from "express";
 import Blog from "../models/Blog.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { fileMeta, uploadBlogImage } from "../middleware/upload.js";
 import { pick, requireFields } from "../utils.js";
 
@@ -42,7 +42,7 @@ function publicFilter(req) {
 }
 
 function protectAdminQuery(req, res, next) {
-  if (req.query.admin) return protect(req, res, next);
+  if (req.query.admin) return protect(req, res, () => requirePermission("blogs.view")(req, res, next));
   next();
 }
 
@@ -80,7 +80,7 @@ router.get("/:id/image", async (req, res, next) => {
   }
 });
 
-router.get("/:id", protect, async (req, res, next) => {
+router.get("/:id", protect, requirePermission("blogs.view"), async (req, res, next) => {
   try {
     const blog = await Blog.findById(req.params.id).select("-featuredImage.data");
     if (!blog) return res.status(404).json({ message: "Blog not found" });
@@ -90,7 +90,7 @@ router.get("/:id", protect, async (req, res, next) => {
   }
 });
 
-router.post("/", protect, uploadBlogImage.single("featuredImage"), async (req, res, next) => {
+router.post("/", protect, requirePermission("blogs.view"), uploadBlogImage.single("featuredImage"), async (req, res, next) => {
   try {
     requireFields(req.body, ["title", "excerpt", "content"]);
     const blog = await Blog.create(blogPayload(req));
@@ -100,7 +100,7 @@ router.post("/", protect, uploadBlogImage.single("featuredImage"), async (req, r
   }
 });
 
-router.put("/:id", protect, uploadBlogImage.single("featuredImage"), async (req, res, next) => {
+router.put("/:id", protect, requirePermission("blogs.view"), uploadBlogImage.single("featuredImage"), async (req, res, next) => {
   try {
     const payload = blogPayload(req);
     const blog = await Blog.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true }).select("-featuredImage.data");
@@ -111,7 +111,7 @@ router.put("/:id", protect, uploadBlogImage.single("featuredImage"), async (req,
   }
 });
 
-router.delete("/:id", protect, async (req, res, next) => {
+router.delete("/:id", protect, requirePermission("blogs.view"), async (req, res, next) => {
   try {
     const blog = await Blog.findByIdAndDelete(req.params.id);
     if (!blog) return res.status(404).json({ message: "Blog not found" });

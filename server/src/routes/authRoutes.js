@@ -2,6 +2,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { protect } from "../middleware/auth.js";
+import { safeUser } from "../config/permissions.js";
 import { requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
@@ -24,7 +25,7 @@ router.post("/login", async (req, res, next) => {
 
     res.json({
       token: signToken(user),
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: safeUser(user)
     });
   } catch (error) {
     next(error);
@@ -32,7 +33,7 @@ router.post("/login", async (req, res, next) => {
 });
 
 router.get("/me", protect, (req, res) => {
-  res.json({ user: req.user });
+  res.json({ user: safeUser(req.user) });
 });
 
 export default router;

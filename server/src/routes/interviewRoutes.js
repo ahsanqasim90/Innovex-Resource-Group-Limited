@@ -1,6 +1,6 @@
 import express from "express";
 import Interview from "../models/Interview.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 import { runInterviewReminders } from "../services/interviewReminderService.js";
 
@@ -84,7 +84,7 @@ router.get("/reminders/run", async (req, res, next) => {
   }
 });
 
-router.use(protect);
+router.use(protect, requirePermission("interviews.view"));
 
 router.get("/stats/dashboard", async (req, res, next) => {
   try {

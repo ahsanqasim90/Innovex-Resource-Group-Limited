@@ -1,33 +1,51 @@
-import { ArrowUpRight, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, GraduationCap, LayoutDashboard, LogOut, MessageSquare, ShieldCheck, Store, Upload, UsersRound } from "lucide-react";
+import { useEffect } from "react";
+import { ArrowUpRight, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, GraduationCap, LayoutDashboard, LogOut, MessageSquare, ShieldCheck, Store, Upload, UserCog, UsersRound } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { hasPermission } from "../auth/permissions.js";
 
 const links = [
-  ["/admin/dashboard", "Dashboard", LayoutDashboard],
-  ["/admin/jobs", "Jobs", Briefcase],
-  ["/admin/applications", "Applications", FileText],
-  ["/admin/cv-uploads", "CV Uploads", Upload],
-  ["/admin/talent-pool", "Talent Pool", UsersRound],
-  ["/admin/business-leads", "Business Leads", Store],
-  ["/admin/interviews", "Interviews", CalendarCheck],
-  ["/admin/meetings", "Meetings", CalendarClock],
-  ["/admin/courses", "Courses", BookOpenCheck],
-  ["/admin/training-bookings", "Training Bookings", GraduationCap],
-  ["/admin/blogs", "Blogs", BookOpenText],
-  ["/admin/testimonials", "Testimonials", MessageSquare],
-  ["/admin/partners", "Partners", Building2]
+  ["/admin/dashboard", "Dashboard", LayoutDashboard, "dashboard.view"],
+  ["/admin/jobs", "Jobs", Briefcase, "jobs.view"],
+  ["/admin/applications", "Applications", FileText, "applications.view"],
+  ["/admin/cv-uploads", "CV Uploads", Upload, "cvs.view"],
+  ["/admin/talent-pool", "Talent Pool", UsersRound, "talentPool.view"],
+  ["/admin/business-leads", "Business Leads", Store, "businessLeads.view"],
+  ["/admin/interviews", "Interviews", CalendarCheck, "interviews.view"],
+  ["/admin/meetings", "Meetings", CalendarClock, "meetings.view"],
+  ["/admin/courses", "Courses", BookOpenCheck, "courses.view"],
+  ["/admin/training-bookings", "Training Bookings", GraduationCap, "trainingBookings.view"],
+  ["/admin/blogs", "Blogs", BookOpenText, "blogs.view"],
+  ["/admin/testimonials", "Testimonials", MessageSquare, "testimonials.view"],
+  ["/admin/partners", "Partners", Building2, "partners.view"],
+  ["/admin/team", "Team Members", UserCog, "team.manage"]
 ];
 
 export default function AdminLayout() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const current = links.find(([href]) => location.pathname.startsWith(href));
+  const visibleLinks = links.filter(([, , , permission]) => hasPermission(user, permission));
+  const current = visibleLinks.find(([href]) => location.pathname.startsWith(href)) || links.find(([href]) => location.pathname.startsWith(href));
   const CurrentIcon = current?.[2] || LayoutDashboard;
   const title = current?.[1] || "Dashboard";
+  const copyLocked = user && !user.canCopyData;
+
+  useEffect(() => {
+    if (!copyLocked) return undefined;
+    const prevent = (event) => event.preventDefault();
+    document.addEventListener("copy", prevent);
+    document.addEventListener("cut", prevent);
+    document.addEventListener("contextmenu", prevent);
+    return () => {
+      document.removeEventListener("copy", prevent);
+      document.removeEventListener("cut", prevent);
+      document.removeEventListener("contextmenu", prevent);
+    };
+  }, [copyLocked]);
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell${copyLocked ? " copy-locked" : ""}`}>
       <aside className="admin-sidebar">
         <div className="admin-sidebar-inner">
           <div className="brand admin-brand">
@@ -39,7 +57,7 @@ export default function AdminLayout() {
           </div>
           <div className="admin-nav-label">Workspace</div>
           <nav className="admin-nav">
-            {links.map(([href, label, Icon]) => (
+            {visibleLinks.map(([href, label, Icon]) => (
               <NavLink key={href} to={href}>
                 <Icon size={18} /> {label}
               </NavLink>
@@ -50,7 +68,7 @@ export default function AdminLayout() {
               <ShieldCheck size={20} />
               <div>
                 <strong>Secure admin</strong>
-                <span>Protected business data</span>
+                <span>{copyLocked ? "Copy restricted account" : "Protected business data"}</span>
               </div>
             </div>
             <NavLink className="admin-website-link" to="/">

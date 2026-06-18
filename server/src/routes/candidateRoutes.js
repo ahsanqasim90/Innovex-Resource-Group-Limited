@@ -1,13 +1,13 @@
 import express from "express";
 import Candidate from "../models/Candidate.js";
 import Job from "../models/Job.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { uploadCandidateCsv } from "../middleware/upload.js";
 import { sendCandidateOutreachEmail } from "../services/emailService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
-router.use(protect);
+router.use(protect, requirePermission("talentPool.view"));
 
 const candidateFields = [
   "name",

@@ -6,7 +6,13 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 8 },
-    role: { type: String, enum: ["admin"], default: "admin" },
+    role: {
+      type: String,
+      enum: ["super_admin", "admin", "recruitment", "sales", "training", "marketing", "viewer"],
+      default: "viewer"
+    },
+    permissions: [{ type: String, trim: true }],
+    canCopyData: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true }
   },
   { timestamps: true }

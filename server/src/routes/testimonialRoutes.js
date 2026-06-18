@@ -1,13 +1,13 @@
 import express from "express";
 import Testimonial from "../models/Testimonial.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields } from "../utils.js";
 
 const router = express.Router();
 const fields = ["name", "reviewType", "role", "company", "rating", "message", "status"];
 
 function protectAdminQuery(req, res, next) {
-  if (req.query.admin) return protect(req, res, next);
+  if (req.query.admin) return protect(req, res, () => requirePermission("testimonials.view")(req, res, next));
   next();
 }
 
@@ -31,7 +31,7 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-router.put("/:id", protect, async (req, res, next) => {
+router.put("/:id", protect, requirePermission("testimonials.view"), async (req, res, next) => {
   try {
     const testimonial = await Testimonial.findByIdAndUpdate(req.params.id, pick(req.body, fields), { new: true, runValidators: true });
     if (!testimonial) return res.status(404).json({ message: "Testimonial not found" });
@@ -41,7 +41,7 @@ router.put("/:id", protect, async (req, res, next) => {
   }
 });
 
-router.delete("/:id", protect, async (req, res, next) => {
+router.delete("/:id", protect, requirePermission("testimonials.view"), async (req, res, next) => {
   try {
     const testimonial = await Testimonial.findByIdAndDelete(req.params.id);
     if (!testimonial) return res.status(404).json({ message: "Testimonial not found" });

@@ -1,10 +1,10 @@
 import express from "express";
 import Application from "../models/Application.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect, requirePermission("applications.view"));
 
 router.get("/", async (req, res, next) => {
   try {

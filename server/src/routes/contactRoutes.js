@@ -1,6 +1,6 @@
 import express from "express";
 import ContactMessage from "../models/ContactMessage.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { sendContactEmail } from "../services/emailService.js";
 import { requireFields, validateEmail } from "../utils.js";
 
@@ -18,7 +18,7 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-router.get("/", protect, async (req, res, next) => {
+router.get("/", protect, requirePermission("contacts.view"), async (req, res, next) => {
   try {
     const messages = await ContactMessage.find().sort({ createdAt: -1 });
     res.json(messages);

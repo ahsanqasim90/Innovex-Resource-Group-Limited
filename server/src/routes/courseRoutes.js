@@ -1,6 +1,6 @@
 import express from "express";
 import Course from "../models/Course.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields } from "../utils.js";
 
 const router = express.Router();
@@ -30,7 +30,7 @@ function toPayload(body) {
   return payload;
 }
 
-router.use(protect);
+router.use(protect, requirePermission("courses.view"));
 
 router.get("/", async (req, res, next) => {
   try {

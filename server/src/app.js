@@ -20,6 +20,7 @@ import partnerRoutes from "./routes/partnerRoutes.js";
 import seoRoutes from "./routes/seoRoutes.js";
 import testimonialRoutes from "./routes/testimonialRoutes.js";
 import trainingBookingRoutes from "./routes/trainingBookingRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 dotenv.config();
@@ -50,6 +51,7 @@ app.use("/api/interviews", interviewRoutes);
 app.use("/api/meetings", meetingRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/training-bookings", trainingBookingRoutes);
+app.use("/api/users", userRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

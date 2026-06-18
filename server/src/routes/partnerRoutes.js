@@ -1,6 +1,6 @@
 import express from "express";
 import Partner from "../models/Partner.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { fileMeta, uploadPartnerLogo } from "../middleware/upload.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
@@ -28,7 +28,7 @@ function partnerPayload(req) {
 }
 
 function protectAdminQuery(req, res, next) {
-  if (req.query.admin) return protect(req, res, next);
+  if (req.query.admin) return protect(req, res, () => requirePermission("partners.view")(req, res, next));
   next();
 }
 
@@ -54,7 +54,7 @@ router.get("/:id/logo", async (req, res, next) => {
   }
 });
 
-router.post("/", protect, uploadPartnerLogo.single("logo"), async (req, res, next) => {
+router.post("/", protect, requirePermission("partners.view"), uploadPartnerLogo.single("logo"), async (req, res, next) => {
   try {
     requireFields(req.body, ["name", "serviceProvided", "location"]);
     if (req.body.contactEmail) validateEmail(req.body.contactEmail);
@@ -65,7 +65,7 @@ router.post("/", protect, uploadPartnerLogo.single("logo"), async (req, res, nex
   }
 });
 
-router.put("/:id", protect, uploadPartnerLogo.single("logo"), async (req, res, next) => {
+router.put("/:id", protect, requirePermission("partners.view"), uploadPartnerLogo.single("logo"), async (req, res, next) => {
   try {
     if (req.body.contactEmail) validateEmail(req.body.contactEmail);
     const partner = await Partner.findByIdAndUpdate(req.params.id, partnerPayload(req), { new: true, runValidators: true });
@@ -76,7 +76,7 @@ router.put("/:id", protect, uploadPartnerLogo.single("logo"), async (req, res, n
   }
 });
 
-router.delete("/:id", protect, async (req, res, next) => {
+router.delete("/:id", protect, requirePermission("partners.view"), async (req, res, next) => {
   try {
     const partner = await Partner.findByIdAndDelete(req.params.id);
     if (!partner) return res.status(404).json({ message: "Partner not found" });

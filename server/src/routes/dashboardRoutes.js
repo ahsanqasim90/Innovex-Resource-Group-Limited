@@ -9,10 +9,10 @@ import Meeting from "../models/Meeting.js";
 import Partner from "../models/Partner.js";
 import Testimonial from "../models/Testimonial.js";
 import TrainingBooking from "../models/TrainingBooking.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 
 const router = express.Router();
-router.use(protect);
+router.use(protect, requirePermission("dashboard.view"));
 
 router.get("/stats", async (req, res, next) => {
   try {

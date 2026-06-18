@@ -1,6 +1,6 @@
 import express from "express";
 import CvUpload from "../models/CvUpload.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { fileMeta, uploadCv } from "../middleware/upload.js";
 import { requireFields, validateEmail } from "../utils.js";
 
@@ -22,7 +22,7 @@ router.post("/", uploadCv.single("cv"), async (req, res, next) => {
   }
 });
 
-router.get("/", protect, async (req, res, next) => {
+router.get("/", protect, requirePermission("cvs.view"), async (req, res, next) => {
   try {
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
@@ -35,7 +35,7 @@ router.get("/", protect, async (req, res, next) => {
   }
 });
 
-router.put("/:id/status", protect, async (req, res, next) => {
+router.put("/:id/status", protect, requirePermission("cvs.view"), async (req, res, next) => {
   try {
     const cv = await CvUpload.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true, runValidators: true });
     if (!cv) return res.status(404).json({ message: "CV upload not found" });
@@ -45,7 +45,7 @@ router.put("/:id/status", protect, async (req, res, next) => {
   }
 });
 
-router.get("/:id/download", protect, async (req, res, next) => {
+router.get("/:id/download", protect, requirePermission("cvs.view"), async (req, res, next) => {
   try {
     const cv = await CvUpload.findById(req.params.id);
     if (!cv?.cv?.data) return res.status(404).json({ message: "CV not found" });

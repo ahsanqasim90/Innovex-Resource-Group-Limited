@@ -28,11 +28,30 @@ import AdminMeetings from "./pages/admin/AdminMeetings.jsx";
 import AdminTrainingBookings from "./pages/admin/AdminTrainingBookings.jsx";
 import AdminTestimonials from "./pages/admin/AdminTestimonials.jsx";
 import AdminPartners from "./pages/admin/AdminPartners.jsx";
+import AdminTeam from "./pages/admin/AdminTeam.jsx";
+import { useAuth } from "./context/AuthContext.jsx";
+import { hasPermission } from "./auth/permissions.js";
 import "./styles.css";
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("innovexToken");
+  const { loadingUser } = useAuth();
+  if (token && loadingUser) return <div className="admin-loading-screen">Loading secure admin...</div>;
   return token ? children : <Navigate to="/admin/login" replace />;
+}
+
+function RequirePermission({ permission, children }) {
+  const { user, loadingUser } = useAuth();
+  if (loadingUser) return <div className="admin-loading-screen">Checking permissions...</div>;
+  if (!hasPermission(user, permission)) {
+    return (
+      <section className="card admin-denied-card">
+        <h1>Access restricted</h1>
+        <p>Your account does not have permission to view this admin area.</p>
+      </section>
+    );
+  }
+  return children;
 }
 
 createRoot(document.getElementById("root")).render(
@@ -62,19 +81,20 @@ createRoot(document.getElementById("root")).render(
             }
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="jobs" element={<AdminJobs />} />
-            <Route path="applications" element={<AdminApplications />} />
-            <Route path="cv-uploads" element={<AdminCvs />} />
-            <Route path="talent-pool" element={<AdminTalentPool />} />
-            <Route path="business-leads" element={<AdminBusinessLeads />} />
-            <Route path="interviews" element={<AdminInterviews />} />
-            <Route path="meetings" element={<AdminMeetings />} />
-            <Route path="courses" element={<AdminCourses />} />
-            <Route path="training-bookings" element={<AdminTrainingBookings />} />
-            <Route path="blogs" element={<AdminBlogs />} />
-            <Route path="testimonials" element={<AdminTestimonials />} />
-            <Route path="partners" element={<AdminPartners />} />
+            <Route path="dashboard" element={<RequirePermission permission="dashboard.view"><Dashboard /></RequirePermission>} />
+            <Route path="jobs" element={<RequirePermission permission="jobs.view"><AdminJobs /></RequirePermission>} />
+            <Route path="applications" element={<RequirePermission permission="applications.view"><AdminApplications /></RequirePermission>} />
+            <Route path="cv-uploads" element={<RequirePermission permission="cvs.view"><AdminCvs /></RequirePermission>} />
+            <Route path="talent-pool" element={<RequirePermission permission="talentPool.view"><AdminTalentPool /></RequirePermission>} />
+            <Route path="business-leads" element={<RequirePermission permission="businessLeads.view"><AdminBusinessLeads /></RequirePermission>} />
+            <Route path="interviews" element={<RequirePermission permission="interviews.view"><AdminInterviews /></RequirePermission>} />
+            <Route path="meetings" element={<RequirePermission permission="meetings.view"><AdminMeetings /></RequirePermission>} />
+            <Route path="courses" element={<RequirePermission permission="courses.view"><AdminCourses /></RequirePermission>} />
+            <Route path="training-bookings" element={<RequirePermission permission="trainingBookings.view"><AdminTrainingBookings /></RequirePermission>} />
+            <Route path="blogs" element={<RequirePermission permission="blogs.view"><AdminBlogs /></RequirePermission>} />
+            <Route path="testimonials" element={<RequirePermission permission="testimonials.view"><AdminTestimonials /></RequirePermission>} />
+            <Route path="partners" element={<RequirePermission permission="partners.view"><AdminPartners /></RequirePermission>} />
+            <Route path="team" element={<RequirePermission permission="team.manage"><AdminTeam /></RequirePermission>} />
           </Route>
         </Routes>
       </AuthProvider>

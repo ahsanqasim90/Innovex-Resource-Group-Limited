@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { hasPermission } from "../config/permissions.js";
 
 export async function protect(req, res, next) {
   try {
@@ -22,4 +23,11 @@ export async function protect(req, res, next) {
   } catch (error) {
     res.status(401).json({ message: "Invalid authentication token" });
   }
+}
+
+export function requirePermission(permission) {
+  return (req, res, next) => {
+    if (hasPermission(req.user, permission)) return next();
+    return res.status(403).json({ message: "You do not have permission to access this area" });
+  };
 }

@@ -1,7 +1,7 @@
 import express from "express";
 import Course from "../models/Course.js";
 import TrainingBooking from "../models/TrainingBooking.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
@@ -123,7 +123,7 @@ async function dashboardStats() {
   };
 }
 
-router.use(protect);
+router.use(protect, requirePermission("trainingBookings.view"));
 
 router.get("/stats/dashboard", async (req, res, next) => {
   try {

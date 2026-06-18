@@ -1,12 +1,12 @@
 import express from "express";
 import BusinessLead from "../models/BusinessLead.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { uploadBusinessLeadCsv } from "../middleware/upload.js";
 import { sendBusinessLeadOutreachEmail } from "../services/emailService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
-router.use(protect);
+router.use(protect, requirePermission("businessLeads.view"));
 
 const leadFields = [
   "companyName",

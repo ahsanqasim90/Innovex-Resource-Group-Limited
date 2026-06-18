@@ -3295,6 +3295,101 @@ tbody tr:hover td {
   min-height: 42px;
   padding-inline: 16px;
 }
+.team-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, .55fr);
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+.team-member-card {
+  border-top: 5px solid var(--teal);
+  box-shadow: 0 24px 62px rgba(6,63,79,.08);
+}
+.team-security-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 12px 0 18px;
+}
+.team-security-options label,
+.permission-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--teal);
+  font-weight: 900;
+}
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.permission-group {
+  padding: 18px;
+  border: 1px solid rgba(199,228,232,.95);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff, #f8fdfd);
+}
+.permission-group h3 {
+  margin: 0 0 12px;
+  color: var(--teal);
+  font-size: 1rem;
+}
+.permission-group label {
+  display: flex;
+  margin-top: 10px;
+  color: var(--muted);
+}
+.team-policy-card {
+  position: sticky;
+  top: 24px;
+  border-color: rgba(244,185,66,.65);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.18), transparent 34%),
+    linear-gradient(180deg, #ffffff, #fbfefe);
+  box-shadow: 0 22px 56px rgba(6,63,79,.08);
+}
+.team-policy-card svg {
+  color: var(--blue);
+}
+.team-policy-card h2 {
+  color: var(--teal);
+}
+.team-policy-card p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.team-policy-card strong {
+  color: var(--teal);
+}
+.team-table table {
+  min-width: 980px;
+}
+.copy-locked .table-wrap,
+.copy-locked .admin-content p,
+.copy-locked .admin-content td,
+.copy-locked .admin-content th,
+.copy-locked .candidate-cell,
+.copy-locked .status-chip {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.admin-loading-screen,
+.admin-denied-card {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.admin-denied-card h1 {
+  margin: 0 0 8px;
+  color: var(--teal);
+}
+.admin-denied-card p {
+  margin: 0;
+  color: var(--muted);
+}
 .course-summary-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -4426,7 +4521,7 @@ tbody tr:hover td {
 @media (max-width: 900px) {
   .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card, .recruitment-quality-card, .about-snapshot-card, .dashboard-hero, .dashboard-kpi-grid, .talent-hero { grid-template-columns: 1fr; }
   .jobs-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .interview-admin-grid, .meeting-admin-grid, .training-admin-grid, .talent-admin-grid { grid-template-columns: 1fr; }
+  .interview-admin-grid, .meeting-admin-grid, .training-admin-grid, .talent-admin-grid, .team-admin-grid { grid-template-columns: 1fr; }
   .interview-detail, .blog-cta-card { position: static; }
   .blog-detail-image { min-height: 280px; }
   .blog-image-link, .blog-card.featured .blog-image-link { height: 230px; min-height: 230px; }
@@ -4451,7 +4546,7 @@ tbody tr:hover td {
 }
 
 @media (max-width: 620px) {
-  .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid, .testimonial-stats-grid, .testimonial-review-grid, .faq-grid, .training-summary-grid, .training-reminder-grid, .course-select-grid, .training-money-grid, .course-admin-grid, .course-admin-meta, .dashboard-hero-metrics, .dashboard-kpi-list, .talent-summary-grid, .talent-match-grid, .crm-segment-grid { grid-template-columns: 1fr; }
+  .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid, .testimonial-stats-grid, .testimonial-review-grid, .faq-grid, .training-summary-grid, .training-reminder-grid, .course-select-grid, .training-money-grid, .course-admin-grid, .course-admin-meta, .dashboard-hero-metrics, .dashboard-kpi-list, .talent-summary-grid, .talent-match-grid, .crm-segment-grid, .permission-grid { grid-template-columns: 1fr; }
   .jobs-filter-form { grid-template-columns: 1fr; }
   .jobs-filter-heading { align-items: flex-start; flex-direction: column; }
   .jobs-filter-actions { flex-direction: column; align-items: stretch; }

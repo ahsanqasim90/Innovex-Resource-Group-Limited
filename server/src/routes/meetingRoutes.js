@@ -1,6 +1,6 @@
 import express from "express";
 import Meeting from "../models/Meeting.js";
-import { protect } from "../middleware/auth.js";
+import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 import { runMeetingReminders } from "../services/meetingReminderService.js";
 
@@ -78,7 +78,7 @@ router.get("/reminders/run", async (req, res, next) => {
   }
 });
 
-router.use(protect);
+router.use(protect, requirePermission("meetings.view"));
 
 router.get("/stats/dashboard", async (req, res, next) => {
   try {
