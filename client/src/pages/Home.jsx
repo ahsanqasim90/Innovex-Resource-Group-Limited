@@ -1,4 +1,4 @@
-import { ArrowRight, ShieldCheck, Users, HeartHandshake, MonitorSmartphone, Search } from "lucide-react";
+import { ArrowRight, ShieldCheck, Users, HeartHandshake, MonitorSmartphone, Search, GraduationCap, CalendarCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
@@ -34,6 +34,14 @@ const helpCards = [
     points: ["SEO foundations", "Content structure", "Local visibility"],
     cta: "Improve My SEO",
     to: "/services#seo-digital-growth"
+  },
+  {
+    icon: GraduationCap,
+    title: "Healthcare Courses",
+    text: "Training enquiry support for care homes, children's homes, nursing homes and healthcare teams.",
+    points: ["Course selection", "Delegate planning", "Quotation support"],
+    cta: "View Courses",
+    to: "/courses"
   }
 ];
 
@@ -146,6 +154,24 @@ export default function Home() {
           <div className="chip-cloud">
             {audiences.map((audience) => <span key={audience}>{audience}</span>)}
           </div>
+        </div>
+      </section>
+
+      <section className="section training-home-section">
+        <div className="training-home-card">
+          <div>
+            <span className="eyebrow">Healthcare training</span>
+            <h2>Need staff training for your care team?</h2>
+            <p>
+              Browse available healthcare courses, select the training your staff need, tell us delegate numbers and location, and our team will send a tailored quotation.
+            </p>
+          </div>
+          <div className="training-home-points">
+            <span><GraduationCap size={18} /> Active course library</span>
+            <span><Users size={18} /> Delegate-based enquiries</span>
+            <span><CalendarCheck size={18} /> Preferred date planning</span>
+          </div>
+          <Link className="button" to="/courses">Explore Healthcare Courses</Link>
         </div>
       </section>
 

@@ -21,6 +21,7 @@ export default function Footer() {
           <h3>Quick links</h3>
           <Link to="/jobs">Current opportunities</Link>
           <Link to="/services">Services</Link>
+          <Link to="/courses">Healthcare courses</Link>
           <Link to="/blogs">Insights & blog</Link>
           <Link to="/partners">Partners</Link>
           <Link to="/admin/login">Admin login</Link>

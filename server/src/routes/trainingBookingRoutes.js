@@ -3,6 +3,7 @@ import Course from "../models/Course.js";
 import TrainingBooking from "../models/TrainingBooking.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
+import { sendTrainingEnquiryEmail } from "../services/emailService.js";
 
 const router = express.Router();
 const fields = [
@@ -75,6 +76,9 @@ async function toPayload(body) {
   if (payload.selectedCourses !== undefined) {
     payload.selectedCourses = await normalizeSelectedCourses(payload.selectedCourses);
   }
+  ["trainingDate", "trainingStartTime", "trainingEndTime"].forEach((field) => {
+    if (payload[field] === "") delete payload[field];
+  });
   ["numberOfDelegates", "quotedPrice", "actualTrainerCost", "otherExpenses"].forEach((field) => {
     if (payload[field] !== undefined) payload[field] = numberValue(payload[field], field === "numberOfDelegates" ? 1 : 0);
   });
@@ -122,6 +126,38 @@ async function dashboardStats() {
     recentTrainingBookings
   };
 }
+
+router.post("/enquiry", async (req, res, next) => {
+  try {
+    requireFields(req.body, ["clientName", "contactPersonName", "email", "phone", "address", "numberOfDelegates"]);
+    validateEmail(req.body.email);
+    if (!req.body.selectedCourses?.length) {
+      return res.status(400).json({ message: "Please select at least one course" });
+    }
+
+    const booking = await TrainingBooking.create(await toPayload({
+      ...req.body,
+      bookingStatus: "Enquiry",
+      paymentStatus: "Pending",
+      quotedPrice: 0,
+      actualTrainerCost: 0,
+      otherExpenses: 0
+    }));
+
+    const emailResult = await sendTrainingEnquiryEmail(booking).catch((error) => ({
+      sent: false,
+      reason: error.message
+    }));
+
+    res.status(201).json({
+      message: "Training enquiry received. Our team will contact you with course options and a quotation.",
+      booking,
+      emailSent: emailResult.sent
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.use(protect, requirePermission("trainingBookings.view"));
 

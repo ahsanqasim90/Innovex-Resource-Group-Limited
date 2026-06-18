@@ -30,6 +30,17 @@ function toPayload(body) {
   return payload;
 }
 
+router.get("/public", async (req, res, next) => {
+  try {
+    const courses = await Course.find({ status: "Active" })
+      .select("title category description duration defaultSellingPrice certificateIncluded updatedAt")
+      .sort({ category: 1, title: 1 });
+    res.json(courses);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.use(protect, requirePermission("courses.view"));
 
 router.get("/", async (req, res, next) => {

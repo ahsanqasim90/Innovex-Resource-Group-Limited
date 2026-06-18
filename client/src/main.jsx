@@ -8,6 +8,7 @@ import About from "./pages/About.jsx";
 import BlogDetail from "./pages/BlogDetail.jsx";
 import Blogs from "./pages/Blogs.jsx";
 import Contact from "./pages/Contact.jsx";
+import Courses from "./pages/Courses.jsx";
 import Home from "./pages/Home.jsx";
 import Jobs from "./pages/Jobs.jsx";
 import Partners from "./pages/Partners.jsx";
@@ -63,6 +64,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
+            <Route path="/courses" element={<Courses />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/blogs" element={<Blogs />} />
             <Route path="/blogs/:slug" element={<BlogDetail />} />

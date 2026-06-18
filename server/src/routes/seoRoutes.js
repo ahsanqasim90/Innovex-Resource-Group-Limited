@@ -31,6 +31,7 @@ router.get("/sitemap.xml", async (req, res, next) => {
       { path: "/", changefreq: "weekly", priority: "1.0" },
       { path: "/about", changefreq: "monthly", priority: "0.8" },
       { path: "/services", changefreq: "monthly", priority: "0.9" },
+      { path: "/courses", changefreq: "weekly", priority: "0.85" },
       { path: "/jobs", changefreq: "daily", priority: "0.9" },
       { path: "/blogs", changefreq: "weekly", priority: "0.8" },
       { path: "/testimonials", changefreq: "monthly", priority: "0.6" },

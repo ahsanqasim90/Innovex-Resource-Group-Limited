@@ -119,6 +119,60 @@ export async function sendMeetingReminderEmail(meeting) {
   return { sent: true };
 }
 
+export async function sendTrainingEnquiryEmail(booking) {
+  if (!hasSmtpConfig()) {
+    return { sent: false, reason: "SMTP is not configured" };
+  }
+
+  const transporter = makeTransporter();
+  const courseList = booking.selectedCourses?.map((course) => course.title).join(", ") || "Not provided";
+  const preferredSlot = [
+    booking.trainingDate ? new Date(booking.trainingDate).toLocaleDateString("en-GB") : "Flexible date",
+    booking.trainingStartTime || "Flexible time"
+  ].join(" at ");
+  const subject = `Training course enquiry: ${booking.clientName}`;
+  const text = [
+    "New healthcare training course enquiry",
+    "",
+    `Client/company: ${booking.clientName}`,
+    `Contact person: ${booking.contactPersonName}`,
+    `Email: ${booking.email}`,
+    `Phone: ${booking.phone || "Not provided"}`,
+    `Location/address: ${booking.address || "Not provided"}`,
+    `Courses: ${courseList}`,
+    `Delegates: ${booking.numberOfDelegates || "Not provided"}`,
+    `Preferred slot: ${preferredSlot}`,
+    "",
+    "Notes:",
+    booking.notes || "No extra notes provided"
+  ].join("\n");
+
+  const html = `
+    <h2>New healthcare training course enquiry</h2>
+    <p><strong>Client/company:</strong> ${booking.clientName}</p>
+    <p><strong>Contact person:</strong> ${booking.contactPersonName}</p>
+    <p><strong>Email:</strong> <a href="mailto:${booking.email}">${booking.email}</a></p>
+    <p><strong>Phone:</strong> ${booking.phone || "Not provided"}</p>
+    <p><strong>Location/address:</strong> ${booking.address || "Not provided"}</p>
+    <p><strong>Selected courses:</strong> ${courseList}</p>
+    <p><strong>Delegates:</strong> ${booking.numberOfDelegates || "Not provided"}</p>
+    <p><strong>Preferred slot:</strong> ${preferredSlot}</p>
+    <hr />
+    <p>${String(booking.notes || "No extra notes provided").replace(/\n/g, "<br />")}</p>
+  `;
+
+  await transporter.sendMail({
+    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    to: recipient,
+    replyTo: booking.email,
+    subject,
+    text,
+    html
+  });
+
+  return { sent: true };
+}
+
 export async function sendCandidateOutreachEmail({ candidate, subject, message, replyTo }) {
   if (!hasSmtpConfig()) {
     return { sent: false, reason: "SMTP is not configured" };
