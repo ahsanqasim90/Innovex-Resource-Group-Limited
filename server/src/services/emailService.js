@@ -151,3 +151,38 @@ export async function sendCandidateOutreachEmail({ candidate, subject, message, 
 
   return { sent: true };
 }
+
+export async function sendBusinessLeadOutreachEmail({ lead, subject, message, replyTo }) {
+  if (!hasSmtpConfig()) {
+    return { sent: false, reason: "SMTP is not configured" };
+  }
+
+  const emails = Array.isArray(lead.emails) ? lead.emails.map((item) => item.email).filter(Boolean) : [];
+  if (!emails.length) {
+    return { sent: false, reason: "Business lead email is missing" };
+  }
+
+  const transporter = makeTransporter();
+  const safeMessage = String(message || "").replace(/\n/g, "<br />");
+
+  await transporter.sendMail({
+    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    to: emails[0],
+    bcc: emails.slice(1),
+    replyTo: replyTo || recipient,
+    subject,
+    text: message,
+    html: `
+      <div style="font-family:Arial,sans-serif;line-height:1.55;color:#10242c">
+        <p>${safeMessage}</p>
+        <hr style="border:none;border-top:1px solid #dce8eb;margin:20px 0" />
+        <p style="font-size:13px;color:#667985">
+          Innovex Resource Group Limited<br />
+          info@innovexresourcegroup.co.uk
+        </p>
+      </div>
+    `
+  });
+
+  return { sent: true };
+}

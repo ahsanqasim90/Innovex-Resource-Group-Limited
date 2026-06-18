@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import blogRoutes from "./routes/blogRoutes.js";
+import businessLeadRoutes from "./routes/businessLeadRoutes.js";
 import candidateRoutes from "./routes/candidateRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
@@ -36,6 +37,7 @@ app.get("/api/health", (req, res) => res.json({ status: "ok", service: "Innovex 
 app.use("/api", seoRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/blogs", blogRoutes);
+app.use("/api/business-leads", businessLeadRoutes);
 app.use("/api/candidates", candidateRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);

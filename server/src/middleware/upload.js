@@ -69,6 +69,19 @@ export const uploadCandidateCsv = multer({
   }
 });
 
+export const uploadBusinessLeadCsv = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const isCsvName = /\.csv$/i.test(file.originalname || "");
+    if (allowedCsvMimeTypes.has(file.mimetype) || isCsvName) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("Business lead import must be a CSV file"));
+  }
+});
+
 export function fileMeta(file) {
   if (!file) return undefined;
   return {
