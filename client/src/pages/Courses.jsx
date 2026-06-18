@@ -1,4 +1,4 @@
-import { Award, CalendarDays, CheckCircle2, ClipboardList, GraduationCap, Mail, MapPin, Phone, ShieldCheck, Users } from "lucide-react";
+import { Award, CalendarDays, CheckCircle2, Clock, ClipboardList, GraduationCap, Mail, MapPin, Phone, Search, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
@@ -34,26 +34,50 @@ const processSteps = [
   }
 ];
 
-function money(value) {
-  const number = Number(value || 0);
-  if (!number) return "Quote on request";
-  return number.toLocaleString("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
-}
-
 function shortDescription(text = "") {
   const clean = String(text).replace(/\s+/g, " ").trim();
   if (clean.length <= 210) return clean;
   return `${clean.slice(0, 210).trim()}...`;
 }
 
+const categoryStyles = {
+  "Mandatory Care Training": { color: "#1D9E75", bg: "#E1F5EE", text: "#0F6E56" },
+  "Children's Homes Specialist Training": { color: "#D85A30", bg: "#FBE8E1", text: "#8B341B" },
+  "Clinical & Complex Care Training": { color: "#EF9F27", bg: "#FFF2D8", text: "#8A570C" },
+  "Mental Health & Behavioural Training": { color: "#7F77DD", bg: "#ECEAFE", text: "#4942A0" },
+  "Adult Care": { color: "#1D9E75", bg: "#E1F5EE", text: "#0F6E56" },
+  "Specialist Awareness Courses": { color: "#378ADD", bg: "#E6F1FD", text: "#185C99" },
+  "Popular Courses": { color: "#639922", bg: "#EDF7DE", text: "#3D6411" }
+};
+
+function styleForCategory(category = "") {
+  return categoryStyles[category] || { color: "#1D9E75", bg: "#E1F5EE", text: "#0F6E56" };
+}
+
 export default function Courses() {
   const [courses, setCourses] = useState([]);
   const [selectedCourses, setSelectedCourses] = useState([]);
   const [form, setForm] = useState(initialForm);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All courses");
+  const [visibleCount, setVisibleCount] = useState(9);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(null);
   const categories = useMemo(() => [...new Set(courses.map((course) => course.category).filter(Boolean))], [courses]);
+  const filteredCourses = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return courses.filter((course) => {
+      const matchesCategory = activeCategory === "All courses" || course.category === activeCategory;
+      const searchable = `${course.title || ""} ${course.description || ""}`.toLowerCase();
+      return matchesCategory && (!query || searchable.includes(query));
+    });
+  }, [activeCategory, courses, searchTerm]);
+  const visibleCourses = filteredCourses.slice(0, visibleCount);
+
+  useEffect(() => {
+    setVisibleCount(9);
+  }, [activeCategory, searchTerm]);
 
   useEffect(() => {
     api("/courses/public")
@@ -64,6 +88,20 @@ export default function Courses() {
 
   function toggleCourse(id) {
     setSelectedCourses((current) => current.includes(id) ? current.filter((courseId) => courseId !== id) : [...current, id]);
+  }
+
+  function requestQuote(course) {
+    setSelectedCourses((current) => current.includes(course._id) ? current : [...current, course._id]);
+    setForm((current) => {
+      const quoteLine = `Interested course: ${course.title}`;
+      return {
+        ...current,
+        notes: current.notes?.includes(quoteLine) ? current.notes : [quoteLine, current.notes].filter(Boolean).join("\n")
+      };
+    });
+    window.setTimeout(() => {
+      document.getElementById("course-enquiry")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
   }
 
   async function submit(e) {
@@ -139,28 +177,80 @@ export default function Courses() {
           </div>
         ) : courses.length ? (
           <>
-            <div className="training-category-strip">
-              {categories.map((category) => <span key={category}>{category}</span>)}
+            <div className="course-stats-row">
+              <div><strong>50+</strong><span>Courses available</span></div>
+              <div><strong>{categories.length || 6}</strong><span>Categories</span></div>
+              <div><strong>All</strong><span>Include certificate</span></div>
+              <div><strong>UK</strong><span>Nationwide delivery</span></div>
             </div>
+
+            <div className="course-library-controls">
+              <label className="course-search-box">
+                <Search size={19} />
+                <input
+                  type="search"
+                  placeholder="Search courses by title or description..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <span>Showing {filteredCourses.length ? Math.min(visibleCount, filteredCourses.length) : 0} of {filteredCourses.length} courses</span>
+              </label>
+              <div className="training-category-strip" role="tablist" aria-label="Course categories">
+                {["All courses", ...categories].map((category) => (
+                  <button
+                    type="button"
+                    className={activeCategory === category ? "active" : ""}
+                    key={category}
+                    onClick={() => setActiveCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="public-course-grid">
-              {courses.map((course) => (
-                <article className={`public-course-card ${selectedCourses.includes(course._id) ? "selected" : ""}`} key={course._id}>
+              {visibleCourses.map((course) => {
+                const palette = styleForCategory(course.category);
+                return (
+                <article
+                  className={`public-course-card ${selectedCourses.includes(course._id) ? "selected" : ""}`}
+                  key={course._id}
+                  style={{
+                    "--course-accent": palette.color,
+                    "--course-badge-bg": palette.bg,
+                    "--course-badge-text": palette.text
+                  }}
+                >
+                  <div className="course-category-badge">{course.category}</div>
                   <div className="public-course-top">
-                    <span><ShieldCheck size={18} /> {course.category}</span>
-                    {course.certificateIncluded && <span><Award size={18} /> Certificate</span>}
+                    <span><Clock size={15} /> {course.duration || "Flexible"}</span>
+                    {course.certificateIncluded && <span><Award size={15} /> Certificate</span>}
                   </div>
                   <h2>{course.title}</h2>
                   <p>{shortDescription(course.description)}</p>
-                  <div className="public-course-meta">
-                    <div><span>Duration</span><strong>{course.duration || "Flexible"}</strong></div>
-                    <div><span>Guide price</span><strong>{money(course.defaultSellingPrice)}</strong></div>
-                  </div>
-                  <button type="button" className="button secondary small" onClick={() => toggleCourse(course._id)}>
-                    {selectedCourses.includes(course._id) ? "Selected" : "Select Course"}
+                  <button type="button" className="button secondary small quote-course-button" onClick={() => requestQuote(course)}>
+                    {selectedCourses.includes(course._id) ? "Course selected" : "Get a quote"}
                   </button>
                 </article>
-              ))}
+              );
+              })}
             </div>
+            {!visibleCourses.length && (
+              <div className="card public-empty-card">
+                <Search size={30} />
+                <h2>No matching courses found</h2>
+                <p>Try a different keyword or category, or send an enquiry and our team will help you choose the right training.</p>
+              </div>
+            )}
+            {visibleCount < filteredCourses.length && (
+              <div className="load-more-courses">
+                <span>Showing {visibleCourses.length} of {filteredCourses.length} courses</span>
+                <button type="button" className="button secondary" onClick={() => setVisibleCount((current) => current + 9)}>
+                  Load more courses
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <div className="card public-empty-card">
