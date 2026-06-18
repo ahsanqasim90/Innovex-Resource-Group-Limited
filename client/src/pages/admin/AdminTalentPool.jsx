@@ -54,6 +54,53 @@ const emailTemplate = {
   ].join("\n")
 };
 
+const candidateStatuses = [
+  "Available",
+  "Contacted",
+  "Interested",
+  "Not Interested",
+  "Shortlisted",
+  "Submitted",
+  "Placed",
+  "Do Not Contact"
+];
+
+const candidateTemplatePresets = [
+  {
+    label: "Vacancy outreach",
+    subject: "New {{jobTitle}} opportunity in {{location}}",
+    message: emailTemplate.message
+  },
+  {
+    label: "Availability check",
+    subject: "Quick availability check from Innovex",
+    message: [
+      "Hi {{name}},",
+      "",
+      "I hope you are well. We are updating availability for upcoming healthcare roles across your area.",
+      "",
+      "Are you currently available for new opportunities? If yes, please reply with your preferred role, location, shift pattern and start date.",
+      "",
+      "Kind regards,",
+      "Innovex Resource Group Limited"
+    ].join("\n")
+  },
+  {
+    label: "CV update request",
+    subject: "Updated CV request from Innovex",
+    message: [
+      "Hi {{name}},",
+      "",
+      "I hope you are well. We are reviewing candidates for upcoming healthcare opportunities and would like to keep your profile updated.",
+      "",
+      "Please reply with your latest CV, current postcode, preferred role and availability.",
+      "",
+      "Kind regards,",
+      "Innovex Resource Group Limited"
+    ].join("\n")
+  }
+];
+
 function formatDate(value) {
   return value ? new Date(value).toLocaleDateString("en-GB") : "-";
 }
@@ -92,6 +139,8 @@ export default function AdminTalentPool() {
   const [matchPostcode, setMatchPostcode] = useState("");
   const [matches, setMatches] = useState([]);
   const [outreach, setOutreach] = useState(emailTemplate);
+  const [campaignPreset, setCampaignPreset] = useState(candidateTemplatePresets[0].label);
+  const [bulkStatus, setBulkStatus] = useState("Contacted");
   const [sending, setSending] = useState(false);
 
   const selectedCount = selectedIds.length;
@@ -244,8 +293,44 @@ export default function AdminTalentPool() {
     setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   }
 
+  function selectVisible() {
+    setSelectedIds(candidates.map((candidate) => candidate._id));
+  }
+
+  function clearSelection() {
+    setSelectedIds([]);
+  }
+
   function selectMatch(candidate) {
     if (!selectedIds.includes(candidate._id)) setSelectedIds((current) => [...current, candidate._id]);
+  }
+
+  function applyQuickSegment(nextFilters) {
+    const merged = { ...emptyFilters, ...nextFilters };
+    setFilters(merged);
+    load(1, merged);
+  }
+
+  function applyCampaignPreset(label) {
+    const preset = candidateTemplatePresets.find((item) => item.label === label);
+    setCampaignPreset(label);
+    if (preset) setOutreach({ subject: preset.subject, message: preset.message });
+  }
+
+  async function updateSelectedStatus() {
+    if (!selectedCount) return;
+    try {
+      const result = await api("/candidates/bulk-status", {
+        method: "PATCH",
+        body: { candidateIds: selectedIds, status: bulkStatus }
+      });
+      setStatus({ message: result.message });
+      clearSelection();
+      await load(pagination.page);
+      loadStats();
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    }
   }
 
   function applyFilters(event) {
@@ -306,6 +391,29 @@ export default function AdminTalentPool() {
           </article>
         ))}
       </div>
+
+      <section className="crm-segment-grid" aria-label="Candidate quick segments">
+        <button type="button" className="crm-segment-card" onClick={() => applyQuickSegment({ status: "Available" })}>
+          <span>Ready to contact</span>
+          <strong>Available candidates</strong>
+          <small>Start outreach from candidates open to roles.</small>
+        </button>
+        <button type="button" className="crm-segment-card" onClick={() => applyQuickSegment({ role: "HCA", status: "Available" })}>
+          <span>Healthcare assistants</span>
+          <strong>HCA shortlist</strong>
+          <small>Useful for urgent care home shifts.</small>
+        </button>
+        <button type="button" className="crm-segment-card" onClick={() => applyQuickSegment({ role: "Nurse" })}>
+          <span>Nursing desk</span>
+          <strong>Nurse / RGN pool</strong>
+          <small>Find clinical candidates quickly.</small>
+        </button>
+        <button type="button" className="crm-segment-card" onClick={() => applyQuickSegment({ role: "Manager" })}>
+          <span>Leadership roles</span>
+          <strong>Managers</strong>
+          <small>Registered and deputy manager searches.</small>
+        </button>
+      </section>
 
       <div className="talent-admin-grid">
         <form className="card form talent-form-card" onSubmit={saveCandidate}>
@@ -369,6 +477,9 @@ export default function AdminTalentPool() {
               </div>
             </div>
             <p>Use <strong>{"{{name}}"}</strong>, <strong>{"{{jobTitle}}"}</strong> and <strong>{"{{location}}"}</strong> to keep emails personal at scale.</p>
+            <select className="crm-preset-select" value={campaignPreset} onChange={(e) => applyCampaignPreset(e.target.value)}>
+              {candidateTemplatePresets.map((preset) => <option key={preset.label}>{preset.label}</option>)}
+            </select>
             <input placeholder="Email subject" value={outreach.subject} onChange={(e) => setOutreach({ ...outreach, subject: e.target.value })} required />
             <textarea rows="8" value={outreach.message} onChange={(e) => setOutreach({ ...outreach, message: e.target.value })} required />
             <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount}>
@@ -446,19 +557,35 @@ export default function AdminTalentPool() {
             <span>Status</span>
             <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
               <option value="">All statuses</option>
-              <option>Available</option>
-              <option>Contacted</option>
-              <option>Interested</option>
-              <option>Not Interested</option>
-              <option>Shortlisted</option>
-              <option>Submitted</option>
-              <option>Placed</option>
-              <option>Do Not Contact</option>
+              {candidateStatuses.map((item) => <option key={item}>{item}</option>)}
             </select>
+          </label>
+          <label className="filter-field">
+            <span>Visa status</span>
+            <input placeholder="e.g. British, ILR, Student" value={filters.visaStatus} onChange={(e) => setFilters({ ...filters, visaStatus: e.target.value })} />
+          </label>
+          <label className="filter-field">
+            <span>Availability</span>
+            <input placeholder="e.g. Immediate, 2 weeks, weekends" value={filters.availability} onChange={(e) => setFilters({ ...filters, availability: e.target.value })} />
           </label>
           <button className="button">Apply Filters</button>
           <button className="button secondary" type="button" onClick={resetFilters}>Reset</button>
         </form>
+      </section>
+
+      <section className={`crm-selection-bar${selectedCount ? " active" : ""}`}>
+        <div>
+          <strong>{selectedCount ? `${selectedCount} selected` : "Campaign control"}</strong>
+          <span>{selectedCount ? "Update status or send a personalised campaign to selected candidates." : "Select visible records or individual candidates from the table to start an action."}</span>
+        </div>
+        <div className="crm-selection-actions">
+          <button className="button secondary small" type="button" onClick={selectVisible} disabled={!candidates.length}>Select visible</button>
+          <button className="button secondary small" type="button" onClick={clearSelection} disabled={!selectedCount}>Clear</button>
+          <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} disabled={!selectedCount}>
+            {candidateStatuses.map((item) => <option key={item}>{item}</option>)}
+          </select>
+          <button className="button small" type="button" onClick={updateSelectedStatus} disabled={!selectedCount}>Update status</button>
+        </div>
       </section>
 
       <div className="table-wrap talent-table">

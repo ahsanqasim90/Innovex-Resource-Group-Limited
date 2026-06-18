@@ -438,6 +438,23 @@ router.post("/outreach", async (req, res, next) => {
   }
 });
 
+router.patch("/bulk-status", async (req, res, next) => {
+  try {
+    const candidateIds = Array.isArray(req.body.candidateIds) ? req.body.candidateIds.slice(0, 500) : [];
+    requireFields(req.body, ["status"]);
+    if (!candidateIds.length) return res.status(400).json({ message: "Select at least one candidate" });
+
+    const update = { status: req.body.status };
+    if (req.body.status === "Contacted") update.lastContactedAt = new Date();
+
+    const result = await Candidate.updateMany({ _id: { $in: candidateIds } }, { $set: update });
+    const updated = result.modifiedCount || result.matchedCount || 0;
+    res.json({ updated, message: `Updated ${updated} candidate${updated === 1 ? "" : "s"}.` });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/:id", async (req, res, next) => {
   try {
     const candidate = await Candidate.findById(req.params.id).lean();

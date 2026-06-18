@@ -67,6 +67,70 @@ const emailTemplate = {
   ].join("\n")
 };
 
+const businessTemplatePresets = [
+  {
+    label: "General introduction",
+    subject: emailTemplate.subject,
+    message: emailTemplate.message
+  },
+  {
+    label: "Recruitment support",
+    subject: "Healthcare staffing support for {{companyName}}",
+    message: [
+      "Hi {{contactName}},",
+      "",
+      "I hope you are well. Innovex Resource Group supports care providers with compliant healthcare recruitment, temporary staffing and permanent placements.",
+      "",
+      "If {{companyName}} needs support with care staff, nurses, managers or screening, I would be happy to arrange a quick conversation.",
+      "",
+      "Kind regards,",
+      "Innovex Resource Group Limited"
+    ].join("\n")
+  },
+  {
+    label: "Training courses",
+    subject: "Healthcare training courses for {{companyName}}",
+    message: [
+      "Hi {{contactName}},",
+      "",
+      "I hope you are well. We provide healthcare training courses for care homes and healthcare organisations, including delegate coordination, trainer details and booking support.",
+      "",
+      "Would you like us to send course options and pricing for {{companyName}}?",
+      "",
+      "Kind regards,",
+      "Innovex Resource Group Limited"
+    ].join("\n")
+  },
+  {
+    label: "Website and SEO",
+    subject: "Website and SEO support for {{companyName}}",
+    message: [
+      "Hi {{contactName}},",
+      "",
+      "I hope you are well. Innovex also helps care providers and local businesses improve online visibility with professional websites, local SEO and lead generation support.",
+      "",
+      "If {{companyName}} would like to attract more enquiries online, I would be happy to share a few practical ideas.",
+      "",
+      "Kind regards,",
+      "Innovex Resource Group Limited"
+    ].join("\n")
+  },
+  {
+    label: "Compliance support",
+    subject: "Compliance and staffing support for {{companyName}}",
+    message: [
+      "Hi {{contactName}},",
+      "",
+      "I hope you are well. We support care-sector organisations with recruitment, screening, training and compliance-aware operational support.",
+      "",
+      "Would a short call be useful to discuss where {{companyName}} may need support?",
+      "",
+      "Kind regards,",
+      "Innovex Resource Group Limited"
+    ].join("\n")
+  }
+];
+
 function formatDate(value) {
   return value ? new Date(value).toLocaleDateString("en-GB") : "-";
 }
@@ -119,6 +183,8 @@ export default function AdminBusinessLeads() {
   const [sending, setSending] = useState(false);
   const [importCategory, setImportCategory] = useState("Care Home");
   const [outreach, setOutreach] = useState(emailTemplate);
+  const [campaignPreset, setCampaignPreset] = useState(businessTemplatePresets[0].label);
+  const [bulkStatus, setBulkStatus] = useState("Contacted");
 
   const selectedCount = selectedIds.length;
   const selectedService = useMemo(() => filters.service || importCategory || "Recruitment", [filters.service, importCategory]);
@@ -258,6 +324,43 @@ export default function AdminBusinessLeads() {
     setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   }
 
+  function selectVisible() {
+    setSelectedIds(leads.map((lead) => lead._id));
+  }
+
+  function clearSelection() {
+    setSelectedIds([]);
+  }
+
+  function applyQuickSegment(nextFilters) {
+    const merged = { ...emptyFilters, ...nextFilters };
+    setFilters(merged);
+    if (nextFilters.category) setImportCategory(nextFilters.category);
+    load(1, merged);
+  }
+
+  function applyCampaignPreset(label) {
+    const preset = businessTemplatePresets.find((item) => item.label === label);
+    setCampaignPreset(label);
+    if (preset) setOutreach({ subject: preset.subject, message: preset.message });
+  }
+
+  async function updateSelectedStatus() {
+    if (!selectedCount) return;
+    try {
+      const result = await api("/business-leads/bulk-status", {
+        method: "PATCH",
+        body: { leadIds: selectedIds, status: bulkStatus }
+      });
+      setStatus({ message: result.message });
+      clearSelection();
+      await load(pagination.page);
+      loadStats();
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    }
+  }
+
   const summaryCards = [
     { label: "Total companies", value: stats.total || 0, Icon: Database, tone: "primary" },
     { label: "Care homes", value: stats.careHomes || 0, Icon: Building2, tone: "success" },
@@ -303,6 +406,29 @@ export default function AdminBusinessLeads() {
           </article>
         ))}
       </div>
+
+      <section className="crm-segment-grid" aria-label="Business lead quick segments">
+        <button type="button" className="crm-segment-card" onClick={() => applyQuickSegment({ category: "Care Home", service: "Recruitment" })}>
+          <span>Care-sector sales</span>
+          <strong>Care homes</strong>
+          <small>Recruitment, training and compliance prospects.</small>
+        </button>
+        <button type="button" className="crm-segment-card" onClick={() => applyQuickSegment({ category: "Children Home" })}>
+          <span>Children services</span>
+          <strong>Children homes</strong>
+          <small>Leadership hiring, staffing and training.</small>
+        </button>
+        <button type="button" className="crm-segment-card" onClick={() => applyQuickSegment({ service: "Courses" })}>
+          <span>Training pipeline</span>
+          <strong>Course buyers</strong>
+          <small>Find organisations interested in training.</small>
+        </button>
+        <button type="button" className="crm-segment-card" onClick={() => applyQuickSegment({ service: "Website" })}>
+          <span>Digital growth</span>
+          <strong>Website / SEO</strong>
+          <small>Sales list for web and visibility campaigns.</small>
+        </button>
+      </section>
 
       <div className="business-admin-grid talent-admin-grid">
         <form className="card form talent-form-card business-form-card" onSubmit={saveLead}>
@@ -359,6 +485,9 @@ export default function AdminBusinessLeads() {
               </div>
             </div>
             <p>Personalise with <strong>{"{{companyName}}"}</strong>, <strong>{"{{contactName}}"}</strong>, <strong>{"{{category}}"}</strong>, <strong>{"{{city}}"}</strong> and <strong>{"{{postcode}}"}</strong>.</p>
+            <select className="crm-preset-select" value={campaignPreset} onChange={(e) => applyCampaignPreset(e.target.value)}>
+              {businessTemplatePresets.map((preset) => <option key={preset.label}>{preset.label}</option>)}
+            </select>
             <input placeholder="Email subject" value={outreach.subject} onChange={(e) => setOutreach({ ...outreach, subject: e.target.value })} required />
             <textarea rows="8" value={outreach.message} onChange={(e) => setOutreach({ ...outreach, message: e.target.value })} required />
             <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount}>
@@ -407,6 +536,21 @@ export default function AdminBusinessLeads() {
           <button className="button">Apply Filters</button>
           <button className="button secondary" type="button" onClick={resetFilters}>Reset</button>
         </form>
+      </section>
+
+      <section className={`crm-selection-bar${selectedCount ? " active" : ""}`}>
+        <div>
+          <strong>{selectedCount ? `${selectedCount} selected` : "Sales action bar"}</strong>
+          <span>{selectedCount ? "Move selected companies through the pipeline or send a targeted campaign." : "Select companies from the table to start an outreach or update their pipeline stage."}</span>
+        </div>
+        <div className="crm-selection-actions">
+          <button className="button secondary small" type="button" onClick={selectVisible} disabled={!leads.length}>Select visible</button>
+          <button className="button secondary small" type="button" onClick={clearSelection} disabled={!selectedCount}>Clear</button>
+          <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} disabled={!selectedCount}>
+            {statuses.map((item) => <option key={item}>{item}</option>)}
+          </select>
+          <button className="button small" type="button" onClick={updateSelectedStatus} disabled={!selectedCount}>Update stage</button>
+        </div>
       </section>
 
       <div className="table-wrap talent-table business-table">

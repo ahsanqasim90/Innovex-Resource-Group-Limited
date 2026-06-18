@@ -421,4 +421,21 @@ router.post("/outreach", async (req, res, next) => {
   }
 });
 
+router.patch("/bulk-status", async (req, res, next) => {
+  try {
+    const leadIds = Array.isArray(req.body.leadIds) ? req.body.leadIds.slice(0, 500) : [];
+    requireFields(req.body, ["status"]);
+    if (!leadIds.length) return res.status(400).json({ message: "Select at least one business lead" });
+
+    const update = { status: req.body.status };
+    if (req.body.status === "Contacted") update.lastContactedAt = new Date();
+
+    const result = await BusinessLead.updateMany({ _id: { $in: leadIds } }, { $set: update });
+    const updated = result.modifiedCount || result.matchedCount || 0;
+    res.json({ updated, message: `Updated ${updated} business lead${updated === 1 ? "" : "s"}.` });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
