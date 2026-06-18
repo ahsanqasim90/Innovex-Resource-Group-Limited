@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { api } from "../../api/client.js";
+import { canViewFinance } from "../../auth/permissions.js";
 import StatusMessage from "../../components/StatusMessage.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 import InterviewDetails from "./interviews/InterviewDetails.jsx";
 import InterviewForm, { emptyInterview, toInterviewForm } from "./interviews/InterviewForm.jsx";
 import InterviewList from "./interviews/InterviewList.jsx";
 
 export default function AdminInterviews() {
+  const { user } = useAuth();
+  const showFinance = canViewFinance(user);
   const [interviews, setInterviews] = useState([]);
   const [form, setForm] = useState(emptyInterview);
   const [filters, setFilters] = useState({ search: "", status: "", date: "", jobTitle: "", selected: "" });
@@ -18,6 +22,7 @@ export default function AdminInterviews() {
     total: interviews.length,
     pending: interviews.filter((item) => item.interviewStatus === "Pending").length,
     completed: interviews.filter((item) => item.interviewStatus === "Completed").length,
+    awaiting: interviews.filter((item) => item.candidateSelected === "Pending").length,
     revenue: interviews.reduce((sum, item) => sum + Number(item.revenue || 0), 0)
   };
 
@@ -88,11 +93,11 @@ export default function AdminInterviews() {
         <div className="interview-summary-card"><span>Total bookings</span><strong>{summary.total}</strong></div>
         <div className="interview-summary-card"><span>Pending interviews</span><strong>{summary.pending}</strong></div>
         <div className="interview-summary-card"><span>Completed</span><strong>{summary.completed}</strong></div>
-        <div className="interview-summary-card highlight"><span>Revenue</span><strong>£{summary.revenue.toLocaleString()}</strong></div>
+        <div className="interview-summary-card highlight"><span>{showFinance ? "Revenue" : "Awaiting outcome"}</span><strong>{showFinance ? `\u00a3${summary.revenue.toLocaleString()}` : summary.awaiting}</strong></div>
       </div>
       <div className="interview-admin-grid">
         <InterviewForm form={form} setForm={setForm} editing={editing} saving={saving} onSubmit={save} onCancel={() => { setEditing(null); setForm(emptyInterview); }} />
-        <InterviewDetails interview={selected} outcomeSaving={outcomeSaving} onOutcomeSave={saveOutcome} />
+        <InterviewDetails interview={selected} outcomeSaving={outcomeSaving} onOutcomeSave={saveOutcome} showFinance={showFinance} />
       </div>
       <div className="card filters interview-filters" style={{ marginTop: 24 }}>
         <div className="filter-heading">
@@ -111,7 +116,7 @@ export default function AdminInterviews() {
         </div>
       </div>
       <div style={{ marginTop: 24 }}>
-        <InterviewList interviews={interviews} onEdit={edit} onDelete={remove} onSelect={setSelected} selectedId={selected?._id} />
+        <InterviewList interviews={interviews} onEdit={edit} onDelete={remove} onSelect={setSelected} selectedId={selected?._id} showFinance={showFinance} />
       </div>
     </>
   );

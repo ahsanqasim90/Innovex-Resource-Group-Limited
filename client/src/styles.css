@@ -4375,6 +4375,39 @@ tbody tr:hover td {
 .dashboard-section-card .table-wrap {
   box-shadow: none;
 }
+.activity-log-grid {
+  display: grid;
+  gap: 12px;
+}
+.activity-log-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #d7eaed;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.13), transparent 32%),
+    #ffffff;
+}
+.activity-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  background: #e6f7f4;
+  color: var(--blue);
+}
+.activity-log-card strong {
+  color: var(--teal);
+}
+.activity-log-card p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: .9rem;
+}
 .chatbot-widget {
   position: fixed;
   right: clamp(18px, 3vw, 34px);

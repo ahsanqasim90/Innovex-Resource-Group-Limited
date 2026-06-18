@@ -93,6 +93,10 @@ export function hasPermission(user, permission) {
   return action === "view" && permissions.includes(`${moduleName}.manage`);
 }
 
+export function canViewFinance(user) {
+  return ["admin", "super_admin"].includes(user?.role);
+}
+
 export function safeUser(user) {
   const permissions = effectivePermissions(user);
   const isOwner = ["admin", "super_admin"].includes(user.role);
@@ -102,6 +106,7 @@ export function safeUser(user) {
     email: user.email,
     role: user.role,
     permissions,
+    canViewFinance: isOwner,
     canCopyData: isOwner ? true : Boolean(user.canCopyData),
     isActive: user.isActive
   };

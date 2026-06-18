@@ -16,7 +16,7 @@ function toOutcomeForm(interview) {
   };
 }
 
-export default function InterviewOutcomePanel({ interview, saving, onSave }) {
+export default function InterviewOutcomePanel({ interview, saving, onSave, showFinance = false }) {
   const [form, setForm] = useState(toOutcomeForm(interview));
   const selected = form.candidateSelected === "Yes";
   const rejected = form.candidateSelected === "No";
@@ -29,7 +29,13 @@ export default function InterviewOutcomePanel({ interview, saving, onSave }) {
 
   async function submit(event) {
     event.preventDefault();
-    await onSave(form);
+    const payload = showFinance ? form : {
+      candidateSelected: form.candidateSelected,
+      feedback: form.feedback,
+      shiftType: form.shiftType,
+      placementDate: form.placementDate
+    };
+    await onSave(payload);
   }
 
   return (
@@ -47,7 +53,7 @@ export default function InterviewOutcomePanel({ interview, saving, onSave }) {
         </select>
       </label>
       {rejected && <textarea placeholder="Feedback if not selected" value={form.feedback} onChange={(e) => setForm({ ...form, feedback: e.target.value })} />}
-      {selected && (
+      {selected && showFinance && (
         <>
           <div className="form-grid">
             <label><span>Pay rate / salary</span><input type="number" min="0" step="0.01" placeholder="e.g. 17" value={form.selectedPayRate} onChange={(e) => setForm({ ...form, selectedPayRate: e.target.value })} /></label>
@@ -63,6 +69,11 @@ export default function InterviewOutcomePanel({ interview, saving, onSave }) {
           </div>
           <PlacementRevenueCalculator form={form} />
         </>
+      )}
+      {selected && !showFinance && (
+        <div className="restricted-finance-note">
+          Placement finance is restricted to owner accounts. You can save the candidate outcome here.
+        </div>
       )}
       <SubmitButton loading={saving} loadingText="Saving outcome...">Save Outcome</SubmitButton>
     </form>

@@ -2,6 +2,8 @@ import express from "express";
 import Course from "../models/Course.js";
 import TrainingBooking from "../models/TrainingBooking.js";
 import { protect, requirePermission } from "../middleware/auth.js";
+import { canViewFinance } from "../config/permissions.js";
+import { logActivity } from "../services/activityLogService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 import { sendTrainingEnquiryEmail } from "../services/emailService.js";
 
@@ -25,6 +27,7 @@ const fields = [
   "notes",
   "trainer"
 ];
+const financeFields = ["quotedPrice", "actualTrainerCost", "otherExpenses", "paymentStatus"];
 
 function escapeRegex(value = "") {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -71,7 +74,7 @@ async function normalizeSelectedCourses(selectedCourses = []) {
   }).filter(Boolean);
 }
 
-async function toPayload(body) {
+async function toPayload(body, user) {
   const payload = pick(body, fields);
   if (payload.selectedCourses !== undefined) {
     payload.selectedCourses = await normalizeSelectedCourses(payload.selectedCourses);
@@ -88,7 +91,25 @@ async function toPayload(body) {
       fee: numberValue(payload.trainer.fee, 0)
     };
   }
+  if (user && !canViewFinance(user)) {
+    financeFields.forEach((field) => delete payload[field]);
+    if (payload.trainer) {
+      delete payload.trainer.fee;
+      delete payload.trainer.paymentStatus;
+    }
+  }
   return payload;
+}
+
+function sanitizeBooking(booking, user) {
+  if (canViewFinance(user)) return booking;
+  const item = booking?.toObject ? booking.toObject() : { ...booking };
+  [...financeFields, "profit"].forEach((field) => delete item[field]);
+  if (item.trainer) {
+    delete item.trainer.fee;
+    delete item.trainer.paymentStatus;
+  }
+  return item;
 }
 
 async function dashboardStats() {
@@ -163,7 +184,15 @@ router.use(protect, requirePermission("trainingBookings.view"));
 
 router.get("/stats/dashboard", async (req, res, next) => {
   try {
-    res.json(await dashboardStats());
+    const stats = await dashboardStats();
+    if (!canViewFinance(req.user)) {
+      delete stats.totalQuotedRevenue;
+      delete stats.totalTrainerCosts;
+      delete stats.totalTrainingProfit;
+      stats.trainingReminders = stats.trainingReminders.map((item) => sanitizeBooking(item, req.user));
+      stats.recentTrainingBookings = stats.recentTrainingBookings.map((item) => sanitizeBooking(item, req.user));
+    }
+    res.json(stats);
   } catch (error) {
     next(error);
   }
@@ -172,7 +201,7 @@ router.get("/stats/dashboard", async (req, res, next) => {
 router.get("/reminders/upcoming", async (req, res, next) => {
   try {
     const stats = await dashboardStats();
-    res.json(stats.trainingReminders);
+    res.json(canViewFinance(req.user) ? stats.trainingReminders : stats.trainingReminders.map((item) => sanitizeBooking(item, req.user)));
   } catch (error) {
     next(error);
   }
@@ -199,7 +228,7 @@ router.get("/", async (req, res, next) => {
       ];
     }
     const bookings = await TrainingBooking.find(filter).sort({ trainingDate: -1, trainingStartTime: -1, createdAt: -1 });
-    res.json(bookings);
+    res.json(bookings.map((item) => sanitizeBooking(item, req.user)));
   } catch (error) {
     next(error);
   }
@@ -209,7 +238,7 @@ router.get("/:id", async (req, res, next) => {
   try {
     const booking = await TrainingBooking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: "Training booking not found" });
-    res.json(booking);
+    res.json(sanitizeBooking(booking, req.user));
   } catch (error) {
     next(error);
   }
@@ -222,8 +251,16 @@ router.post("/", async (req, res, next) => {
     if (!req.body.selectedCourses?.length) {
       return res.status(400).json({ message: "At least one course is required" });
     }
-    const booking = await TrainingBooking.create(await toPayload(req.body));
-    res.status(201).json(booking);
+    const booking = await TrainingBooking.create(await toPayload(req.body, req.user));
+    await logActivity(req, {
+      module: "Training Bookings",
+      action: "Created",
+      entityType: "TrainingBooking",
+      entityId: booking._id,
+      summary: `Created training booking for ${booking.clientName}`,
+      metadata: { courses: booking.selectedCourses?.map((course) => course.title), trainingDate: booking.trainingDate }
+    });
+    res.status(201).json(sanitizeBooking(booking, req.user));
   } catch (error) {
     next(error);
   }
@@ -234,9 +271,25 @@ router.put("/:id", async (req, res, next) => {
     if (req.body.email) validateEmail(req.body.email);
     const booking = await TrainingBooking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: "Training booking not found" });
-    Object.assign(booking, await toPayload(req.body));
+    const payload = await toPayload(req.body, req.user);
+    if (!canViewFinance(req.user) && payload.trainer) {
+      payload.trainer = {
+        ...payload.trainer,
+        fee: booking.trainer?.fee || 0,
+        paymentStatus: booking.trainer?.paymentStatus || "Pending"
+      };
+    }
+    Object.assign(booking, payload);
     await booking.save();
-    res.json(booking);
+    await logActivity(req, {
+      module: "Training Bookings",
+      action: "Updated",
+      entityType: "TrainingBooking",
+      entityId: booking._id,
+      summary: `Updated training booking for ${booking.clientName}`,
+      metadata: { bookingStatus: booking.bookingStatus, courses: booking.selectedCourses?.map((course) => course.title) }
+    });
+    res.json(sanitizeBooking(booking, req.user));
   } catch (error) {
     next(error);
   }
@@ -246,6 +299,14 @@ router.delete("/:id", async (req, res, next) => {
   try {
     const booking = await TrainingBooking.findByIdAndDelete(req.params.id);
     if (!booking) return res.status(404).json({ message: "Training booking not found" });
+    await logActivity(req, {
+      module: "Training Bookings",
+      action: "Deleted",
+      entityType: "TrainingBooking",
+      entityId: booking._id,
+      summary: `Deleted training booking for ${booking.clientName}`,
+      metadata: { bookingStatus: booking.bookingStatus, trainingDate: booking.trainingDate }
+    });
     res.json({ message: "Training booking deleted" });
   } catch (error) {
     next(error);

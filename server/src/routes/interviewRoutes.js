@@ -1,6 +1,8 @@
 import express from "express";
 import Interview from "../models/Interview.js";
 import { protect, requirePermission } from "../middleware/auth.js";
+import { canViewFinance } from "../config/permissions.js";
+import { logActivity } from "../services/activityLogService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 import { runInterviewReminders } from "../services/interviewReminderService.js";
 
@@ -30,7 +32,9 @@ const fields = [
   "percentage"
 ];
 
-function toPayload(body) {
+const financeFields = ["selectedPayRate", "hoursPerWeek", "placementType", "flatFeeAmount", "percentage"];
+
+function toPayload(body, user) {
   const payload = pick(body, fields);
   ["reminderEmailEnabled"].forEach((field) => {
     if (payload[field] !== undefined) payload[field] = payload[field] === true || payload[field] === "true";
@@ -41,7 +45,17 @@ function toPayload(body) {
   ["placementDate"].forEach((field) => {
     if (payload[field] === "") delete payload[field];
   });
+  if (!canViewFinance(user)) {
+    financeFields.forEach((field) => delete payload[field]);
+  }
   return payload;
+}
+
+function sanitizeInterview(interview, user) {
+  if (canViewFinance(user)) return interview;
+  const item = interview?.toObject ? interview.toObject() : { ...interview };
+  [...financeFields, "revenue"].forEach((field) => delete item[field]);
+  return item;
 }
 
 function makeDateFilter(date) {
@@ -88,7 +102,12 @@ router.use(protect, requirePermission("interviews.view"));
 
 router.get("/stats/dashboard", async (req, res, next) => {
   try {
-    res.json(await dashboardStats());
+    const stats = await dashboardStats();
+    if (!canViewFinance(req.user)) {
+      delete stats.totalRevenue;
+      stats.recentInterviews = stats.recentInterviews.map((item) => sanitizeInterview(item, req.user));
+    }
+    res.json(stats);
   } catch (error) {
     next(error);
   }
@@ -113,7 +132,7 @@ router.get("/", async (req, res, next) => {
     }
 
     const interviews = await Interview.find(filter).sort({ interviewDate: -1, interviewTime: -1, createdAt: -1 });
-    res.json(interviews);
+    res.json(interviews.map((item) => sanitizeInterview(item, req.user)));
   } catch (error) {
     next(error);
   }
@@ -123,7 +142,7 @@ router.get("/:id", async (req, res, next) => {
   try {
     const interview = await Interview.findById(req.params.id);
     if (!interview) return res.status(404).json({ message: "Interview not found" });
-    res.json(interview);
+    res.json(sanitizeInterview(interview, req.user));
   } catch (error) {
     next(error);
   }
@@ -133,8 +152,16 @@ router.post("/", async (req, res, next) => {
   try {
     requireFields(req.body, ["candidateName", "candidateEmail", "candidatePhone", "jobTitle", "clientName", "interviewDate", "interviewTime"]);
     validateEmail(req.body.candidateEmail);
-    const interview = await Interview.create(toPayload(req.body));
-    res.status(201).json(interview);
+    const interview = await Interview.create(toPayload(req.body, req.user));
+    await logActivity(req, {
+      module: "Interviews",
+      action: "Created",
+      entityType: "Interview",
+      entityId: interview._id,
+      summary: `Booked interview for ${interview.candidateName} with ${interview.clientName}`,
+      metadata: { jobTitle: interview.jobTitle, interviewDate: interview.interviewDate, interviewTime: interview.interviewTime }
+    });
+    res.status(201).json(sanitizeInterview(interview, req.user));
   } catch (error) {
     next(error);
   }
@@ -145,9 +172,17 @@ router.put("/:id", async (req, res, next) => {
     if (req.body.candidateEmail) validateEmail(req.body.candidateEmail);
     const interview = await Interview.findById(req.params.id);
     if (!interview) return res.status(404).json({ message: "Interview not found" });
-    Object.assign(interview, toPayload(req.body));
+    Object.assign(interview, toPayload(req.body, req.user));
     await interview.save();
-    res.json(interview);
+    await logActivity(req, {
+      module: "Interviews",
+      action: "Updated",
+      entityType: "Interview",
+      entityId: interview._id,
+      summary: `Updated interview for ${interview.candidateName}`,
+      metadata: { jobTitle: interview.jobTitle, candidateSelected: interview.candidateSelected, interviewStatus: interview.interviewStatus }
+    });
+    res.json(sanitizeInterview(interview, req.user));
   } catch (error) {
     next(error);
   }
@@ -157,6 +192,14 @@ router.delete("/:id", async (req, res, next) => {
   try {
     const interview = await Interview.findByIdAndDelete(req.params.id);
     if (!interview) return res.status(404).json({ message: "Interview not found" });
+    await logActivity(req, {
+      module: "Interviews",
+      action: "Deleted",
+      entityType: "Interview",
+      entityId: interview._id,
+      summary: `Deleted interview for ${interview.candidateName}`,
+      metadata: { jobTitle: interview.jobTitle, clientName: interview.clientName }
+    });
     res.json({ message: "Interview deleted" });
   } catch (error) {
     next(error);

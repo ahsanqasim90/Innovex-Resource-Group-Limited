@@ -10,13 +10,13 @@ function outcomeLabel(value) {
   return "Awaiting outcome";
 }
 
-export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSave }) {
+export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSave, showFinance = false }) {
   if (!interview) {
     return (
       <div className="card interview-detail-empty">
         <span className="profile-avatar empty">IR</span>
         <h3>Select an interview</h3>
-        <p className="muted">Choose a booking from the table. Outcome and placement tracking will appear here after you select a candidate.</p>
+        <p className="muted">Choose a booking from the table. Outcome tracking will appear here after you select a candidate.</p>
       </div>
     );
   }
@@ -44,7 +44,7 @@ export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSa
         <div><span>Interview</span><strong>{dateOnly(interview.interviewDate)}</strong></div>
         <div><span>Time</span><strong>{interview.interviewTime || "-"}</strong></div>
         <div><span>Type</span><strong>{interview.interviewType}</strong></div>
-        <div><span>Revenue</span><strong>£{Number(interview.revenue || 0).toLocaleString()}</strong></div>
+        {showFinance && <div><span>Revenue</span><strong>{`\u00a3${Number(interview.revenue || 0).toLocaleString()}`}</strong></div>}
       </div>
 
       <div className="contact-strip">
@@ -58,7 +58,7 @@ export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSa
         <div className="feedback-note"><strong>Feedback</strong><p>{interview.feedback}</p></div>
       )}
 
-      <InterviewOutcomePanel interview={interview} saving={outcomeSaving} onSave={onOutcomeSave} />
+      <InterviewOutcomePanel interview={interview} saving={outcomeSaving} onSave={onOutcomeSave} showFinance={showFinance} />
     </aside>
   );
 }

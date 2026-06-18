@@ -2,6 +2,7 @@ import express from "express";
 import Meeting from "../models/Meeting.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
+import { logActivity } from "../services/activityLogService.js";
 import { runMeetingReminders } from "../services/meetingReminderService.js";
 
 const router = express.Router();
@@ -137,6 +138,14 @@ router.post("/", async (req, res, next) => {
       });
     }
     const meeting = await Meeting.create(payload);
+    await logActivity(req, {
+      module: "Meetings",
+      action: "Created",
+      entityType: "Meeting",
+      entityId: meeting._id,
+      summary: `Booked ${meeting.meetingTitle} with ${meeting.attendeeName}`,
+      metadata: { companyName: meeting.companyName, meetingDate: meeting.meetingDate, meetingTime: meeting.meetingTime }
+    });
     res.status(201).json(meeting);
   } catch (error) {
     next(error);
@@ -158,6 +167,14 @@ router.put("/:id", async (req, res, next) => {
     }
     Object.assign(meeting, payload);
     await meeting.save();
+    await logActivity(req, {
+      module: "Meetings",
+      action: "Updated",
+      entityType: "Meeting",
+      entityId: meeting._id,
+      summary: `Updated ${meeting.meetingTitle} with ${meeting.attendeeName}`,
+      metadata: { companyName: meeting.companyName, meetingStatus: meeting.meetingStatus }
+    });
     res.json(meeting);
   } catch (error) {
     next(error);
@@ -168,6 +185,14 @@ router.delete("/:id", async (req, res, next) => {
   try {
     const meeting = await Meeting.findByIdAndDelete(req.params.id);
     if (!meeting) return res.status(404).json({ message: "Meeting not found" });
+    await logActivity(req, {
+      module: "Meetings",
+      action: "Deleted",
+      entityType: "Meeting",
+      entityId: meeting._id,
+      summary: `Deleted ${meeting.meetingTitle} with ${meeting.attendeeName}`,
+      metadata: { companyName: meeting.companyName, meetingDate: meeting.meetingDate }
+    });
     res.json({ message: "Meeting deleted" });
   } catch (error) {
     next(error);

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, CircleDollarSign, GraduationCap, Mail, Phone, TrendingUp, Users } from "lucide-react";
 import { api } from "../../api/client.js";
+import { canViewFinance } from "../../auth/permissions.js";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const emptyBooking = {
   clientName: "",
@@ -21,18 +23,11 @@ const emptyBooking = {
   paymentStatus: "Pending",
   bookingStatus: "Enquiry",
   notes: "",
-  trainer: {
-    name: "",
-    phone: "",
-    email: "",
-    fee: "",
-    paymentStatus: "Pending",
-    notes: ""
-  }
+  trainer: { name: "", phone: "", email: "", fee: "", paymentStatus: "Pending", notes: "" }
 };
 
 function money(value) {
-  return `£${Number(value || 0).toLocaleString()}`;
+  return `\u00a3${Number(value || 0).toLocaleString()}`;
 }
 
 function dateInput(value) {
@@ -49,14 +44,13 @@ function toBookingForm(booking = {}) {
     ...booking,
     selectedCourses: booking.selectedCourses?.map((item) => item.course || item._id || item) || [],
     trainingDate: dateInput(booking.trainingDate),
-    trainer: {
-      ...emptyBooking.trainer,
-      ...(booking.trainer || {})
-    }
+    trainer: { ...emptyBooking.trainer, ...(booking.trainer || {}) }
   };
 }
 
 export default function AdminTrainingBookings() {
+  const { user } = useAuth();
+  const showFinance = canViewFinance(user);
   const [bookings, setBookings] = useState([]);
   const [courses, setCourses] = useState([]);
   const [form, setForm] = useState(emptyBooking);
@@ -70,13 +64,15 @@ export default function AdminTrainingBookings() {
   const summary = useMemo(() => ({
     total: bookings.length,
     upcoming: bookings.filter((item) => new Date(item.trainingDate) >= new Date() && !["Cancelled", "Completed"].includes(item.bookingStatus)).length,
+    delegates: bookings.reduce((sum, item) => sum + Number(item.numberOfDelegates || 0), 0),
     revenue: bookings.reduce((sum, item) => sum + Number(item.quotedPrice || 0), 0),
     trainerCosts: bookings.reduce((sum, item) => sum + Number(item.actualTrainerCost || 0), 0),
     profit: bookings.reduce((sum, item) => sum + Number(item.profit || 0), 0)
   }), [bookings]);
 
   function loadBookings() {
-    const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
+    const allowedFilters = showFinance ? filters : { ...filters, paymentStatus: "" };
+    const query = new URLSearchParams(Object.entries(allowedFilters).filter(([, value]) => value)).toString();
     api(`/training-bookings${query ? `?${query}` : ""}`)
       .then(setBookings)
       .catch((error) => setStatus({ type: "error", message: error.message }));
@@ -100,7 +96,7 @@ export default function AdminTrainingBookings() {
     const selectedCourseDocs = courses.filter((course) => selectedCourses.includes(course._id));
     const quotedPrice = form.quotedPrice || selectedCourseDocs.reduce((sum, course) => sum + Number(course.defaultSellingPrice || 0), 0);
     const actualTrainerCost = form.actualTrainerCost || selectedCourseDocs.reduce((sum, course) => sum + Number(course.defaultTrainerCost || 0), 0);
-    setForm({ ...form, selectedCourses, quotedPrice, actualTrainerCost });
+    setForm({ ...form, selectedCourses, quotedPrice: showFinance ? quotedPrice : form.quotedPrice, actualTrainerCost: showFinance ? actualTrainerCost : form.actualTrainerCost });
   }
 
   async function save(event) {
@@ -157,9 +153,10 @@ export default function AdminTrainingBookings() {
       <div className="training-summary-grid">
         <div className="training-summary-card"><GraduationCap /><span>Total bookings</span><strong>{summary.total}</strong></div>
         <div className="training-summary-card"><CalendarClock /><span>Upcoming sessions</span><strong>{summary.upcoming}</strong></div>
-        <div className="training-summary-card"><CircleDollarSign /><span>Quoted revenue</span><strong>{money(summary.revenue)}</strong></div>
-        <div className="training-summary-card"><Users /><span>Trainer costs</span><strong>{money(summary.trainerCosts)}</strong></div>
-        <div className="training-summary-card highlight"><TrendingUp /><span>Total profit</span><strong>{money(summary.profit)}</strong></div>
+        <div className="training-summary-card"><Users /><span>Total delegates</span><strong>{summary.delegates}</strong></div>
+        {showFinance && <div className="training-summary-card"><CircleDollarSign /><span>Quoted revenue</span><strong>{money(summary.revenue)}</strong></div>}
+        {showFinance && <div className="training-summary-card"><Users /><span>Trainer costs</span><strong>{money(summary.trainerCosts)}</strong></div>}
+        {showFinance && <div className="training-summary-card highlight"><TrendingUp /><span>Total profit</span><strong>{money(summary.profit)}</strong></div>}
       </div>
 
       <div className="training-admin-grid">
@@ -191,7 +188,7 @@ export default function AdminTrainingBookings() {
                   <input type="checkbox" checked={form.selectedCourses.includes(course._id)} onChange={() => toggleCourse(course._id)} />
                   <strong>{course.title}</strong>
                   <span>{course.category} - {course.duration}</span>
-                  <small>{money(course.defaultSellingPrice)} selling / {money(course.defaultTrainerCost)} trainer</small>
+                  {showFinance && <small>{money(course.defaultSellingPrice)} selling / {money(course.defaultTrainerCost)} trainer</small>}
                 </label>
               ))}
             </div>
@@ -205,7 +202,7 @@ export default function AdminTrainingBookings() {
               <input type="time" value={form.trainingEndTime} onChange={(e) => setForm({ ...form, trainingEndTime: e.target.value })} />
               <input type="number" min="1" placeholder="Number of delegates" value={form.numberOfDelegates} onChange={(e) => setForm({ ...form, numberOfDelegates: e.target.value })} />
               <select value={form.bookingStatus} onChange={(e) => setForm({ ...form, bookingStatus: e.target.value })}><option>Enquiry</option><option>Quoted</option><option>Confirmed</option><option>Completed</option><option>Cancelled</option></select>
-              <select value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}><option>Pending</option><option>Deposit Paid</option><option>Fully Paid</option><option>Cancelled</option></select>
+              {showFinance && <select value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}><option>Pending</option><option>Deposit Paid</option><option>Fully Paid</option><option>Cancelled</option></select>}
             </div>
           </div>
 
@@ -215,21 +212,23 @@ export default function AdminTrainingBookings() {
               <input placeholder="Trainer name" value={form.trainer.name} onChange={(e) => setForm({ ...form, trainer: { ...form.trainer, name: e.target.value } })} />
               <input placeholder="Trainer phone" value={form.trainer.phone} onChange={(e) => setForm({ ...form, trainer: { ...form.trainer, phone: e.target.value } })} />
               <input type="email" placeholder="Trainer email" value={form.trainer.email} onChange={(e) => setForm({ ...form, trainer: { ...form.trainer, email: e.target.value } })} />
-              <input type="number" min="0" step="0.01" placeholder="Trainer fee" value={form.trainer.fee} onChange={(e) => setForm({ ...form, trainer: { ...form.trainer, fee: e.target.value }, actualTrainerCost: e.target.value || form.actualTrainerCost })} />
-              <select value={form.trainer.paymentStatus} onChange={(e) => setForm({ ...form, trainer: { ...form.trainer, paymentStatus: e.target.value } })}><option>Pending</option><option>Paid</option></select>
+              {showFinance && <input type="number" min="0" step="0.01" placeholder="Trainer fee" value={form.trainer.fee} onChange={(e) => setForm({ ...form, trainer: { ...form.trainer, fee: e.target.value }, actualTrainerCost: e.target.value || form.actualTrainerCost })} />}
+              {showFinance && <select value={form.trainer.paymentStatus} onChange={(e) => setForm({ ...form, trainer: { ...form.trainer, paymentStatus: e.target.value } })}><option>Pending</option><option>Paid</option></select>}
             </div>
             <textarea placeholder="Trainer notes" value={form.trainer.notes} onChange={(e) => setForm({ ...form, trainer: { ...form.trainer, notes: e.target.value } })} />
           </div>
 
-          <div className="training-finance-panel">
-            <h3>Financial summary</h3>
-            <div className="form-grid">
-              <input type="number" min="0" step="0.01" placeholder="Quoted price" value={form.quotedPrice} onChange={(e) => setForm({ ...form, quotedPrice: e.target.value })} />
-              <input type="number" min="0" step="0.01" placeholder="Actual trainer cost" value={form.actualTrainerCost} onChange={(e) => setForm({ ...form, actualTrainerCost: e.target.value })} />
-              <input type="number" min="0" step="0.01" placeholder="Other expenses" value={form.otherExpenses} onChange={(e) => setForm({ ...form, otherExpenses: e.target.value })} />
-              <div className="profit-preview"><span>Auto profit</span><strong>{money(profit)}</strong></div>
+          {showFinance && (
+            <div className="training-finance-panel">
+              <h3>Financial summary</h3>
+              <div className="form-grid">
+                <input type="number" min="0" step="0.01" placeholder="Quoted price" value={form.quotedPrice} onChange={(e) => setForm({ ...form, quotedPrice: e.target.value })} />
+                <input type="number" min="0" step="0.01" placeholder="Actual trainer cost" value={form.actualTrainerCost} onChange={(e) => setForm({ ...form, actualTrainerCost: e.target.value })} />
+                <input type="number" min="0" step="0.01" placeholder="Other expenses" value={form.otherExpenses} onChange={(e) => setForm({ ...form, otherExpenses: e.target.value })} />
+                <div className="profit-preview"><span>Auto profit</span><strong>{money(profit)}</strong></div>
+              </div>
             </div>
-          </div>
+          )}
 
           <textarea placeholder="Booking notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           <SubmitButton loading={saving} loadingText="Saving booking...">{editing ? "Update Booking" : "Create Booking"}</SubmitButton>
@@ -242,31 +241,33 @@ export default function AdminTrainingBookings() {
               <p className="muted">{selected.selectedCourses?.map((course) => course.title).join(", ") || "Training booking"}</p>
               <div className="interview-chip-row">
                 <span className="status-chip">{selected.bookingStatus}</span>
-                <span className="status-chip gold">{selected.paymentStatus}</span>
+                {showFinance && <span className="status-chip gold">{selected.paymentStatus}</span>}
               </div>
               <div className="interview-mini-grid">
                 <div><span>Date</span><strong>{dateLabel(selected.trainingDate)}</strong></div>
                 <div><span>Time</span><strong>{selected.trainingStartTime}{selected.trainingEndTime ? ` - ${selected.trainingEndTime}` : ""}</strong></div>
                 <div><span>Delegates</span><strong>{selected.numberOfDelegates}</strong></div>
-                <div><span>Profit</span><strong>{money(selected.profit)}</strong></div>
+                {showFinance && <div><span>Profit</span><strong>{money(selected.profit)}</strong></div>}
               </div>
-              <div className="training-money-grid">
-                <div><span>Quoted</span><strong>{money(selected.quotedPrice)}</strong></div>
-                <div><span>Trainer cost</span><strong>{money(selected.actualTrainerCost)}</strong></div>
-                <div><span>Expenses</span><strong>{money(selected.otherExpenses)}</strong></div>
-                <div><span>Final profit</span><strong>{money(selected.profit)}</strong></div>
-              </div>
+              {showFinance && (
+                <div className="training-money-grid">
+                  <div><span>Quoted</span><strong>{money(selected.quotedPrice)}</strong></div>
+                  <div><span>Trainer cost</span><strong>{money(selected.actualTrainerCost)}</strong></div>
+                  <div><span>Expenses</span><strong>{money(selected.otherExpenses)}</strong></div>
+                  <div><span>Final profit</span><strong>{money(selected.profit)}</strong></div>
+                </div>
+              )}
               <div className="contact-strip">
                 <a href={`mailto:${selected.email}`}><Mail size={15} /> {selected.email}</a>
                 {selected.phone && <a href={`tel:${selected.phone}`}><Phone size={15} /> {selected.phone}</a>}
-                {selected.trainer?.name && <span>Trainer: {selected.trainer.name} ({selected.trainer.paymentStatus})</span>}
+                {selected.trainer?.name && <span>Trainer: {selected.trainer.name}{showFinance && selected.trainer.paymentStatus ? ` (${selected.trainer.paymentStatus})` : ""}</span>}
               </div>
             </>
           ) : (
             <div className="interview-detail-empty">
               <GraduationCap size={34} />
               <h3>Select a booking</h3>
-              <p className="muted">Choose a booking from the table to view client, trainer and finance details.</p>
+              <p className="muted">Choose a booking from the table to view client, trainer and schedule details.</p>
             </div>
           )}
         </aside>
@@ -276,7 +277,7 @@ export default function AdminTrainingBookings() {
         <div className="form-grid">
           <input placeholder="Search client, contact, course, or trainer" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
           <select value={filters.bookingStatus} onChange={(e) => setFilters({ ...filters, bookingStatus: e.target.value })}><option value="">All booking statuses</option><option>Enquiry</option><option>Quoted</option><option>Confirmed</option><option>Completed</option><option>Cancelled</option></select>
-          <select value={filters.paymentStatus} onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}><option value="">All payment statuses</option><option>Pending</option><option>Deposit Paid</option><option>Fully Paid</option><option>Cancelled</option></select>
+          {showFinance && <select value={filters.paymentStatus} onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}><option value="">All payment statuses</option><option>Pending</option><option>Deposit Paid</option><option>Fully Paid</option><option>Cancelled</option></select>}
           <select value={filters.course} onChange={(e) => setFilters({ ...filters, course: e.target.value })}><option value="">All courses</option>{courses.map((course) => <option value={course._id} key={course._id}>{course.title}</option>)}</select>
           <input type="date" value={filters.dateFrom} onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })} />
           <input type="date" value={filters.dateTo} onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })} />
@@ -286,7 +287,7 @@ export default function AdminTrainingBookings() {
 
       <div className="table-wrap training-table" style={{ marginTop: 24 }}>
         <table>
-          <thead><tr><th>Client</th><th>Courses</th><th>Training</th><th>Status</th><th>Payment</th><th>Revenue</th><th>Profit</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Client</th><th>Courses</th><th>Training</th><th>Status</th>{showFinance && <><th>Payment</th><th>Revenue</th><th>Profit</th></>}<th>Actions</th></tr></thead>
           <tbody>
             {bookings.map((booking) => (
               <tr key={booking._id} className={selected?._id === booking._id ? "selected-row" : ""}>
@@ -294,9 +295,7 @@ export default function AdminTrainingBookings() {
                 <td>{booking.selectedCourses?.map((course) => course.title).join(", ")}</td>
                 <td>{dateLabel(booking.trainingDate)}<br /><span className="muted">{booking.trainingStartTime}{booking.trainingEndTime ? ` - ${booking.trainingEndTime}` : ""}</span></td>
                 <td><span className="status-chip table-chip">{booking.bookingStatus}</span></td>
-                <td>{booking.paymentStatus}</td>
-                <td>{money(booking.quotedPrice)}</td>
-                <td>{money(booking.profit)}</td>
+                {showFinance && <><td>{booking.paymentStatus}</td><td>{money(booking.quotedPrice)}</td><td>{money(booking.profit)}</td></>}
                 <td className="action-cell"><div className="compact-actions"><button className="button secondary small" onClick={() => setSelected(booking)}>View</button><button className="button small" onClick={() => edit(booking)}>Edit</button><button className="button small" onClick={() => remove(booking._id)}>Delete</button></div></td>
               </tr>
             ))}

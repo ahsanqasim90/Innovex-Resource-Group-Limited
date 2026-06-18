@@ -52,3 +52,7 @@ export function hasPermission(user, permission) {
   if (["admin", "super_admin"].includes(user?.role)) return true;
   return Boolean(user?.permissions?.includes(permission));
 }
+
+export function canViewFinance(user) {
+  return Boolean(user?.canViewFinance || ["admin", "super_admin"].includes(user?.role));
+}

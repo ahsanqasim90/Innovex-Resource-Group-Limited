@@ -7,9 +7,12 @@ import {
   LineChart,
   ShieldCheck,
   TrendingUp,
+  UserCheck,
   UsersRound
 } from "lucide-react";
 import { api } from "../../api/client.js";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { canViewFinance } from "../../auth/permissions.js";
 
 function money(value) {
   return `\u00a3${Number(value || 0).toLocaleString()}`;
@@ -35,15 +38,21 @@ function DashboardSection({ title, subtitle, children }) {
 }
 
 export default function Dashboard() {
-  const [data, setData] = useState({ stats: {}, recentApplications: [], recentInterviews: [], recentMeetings: [], trainingReminders: [], recentTrainingBookings: [] });
+  const { user } = useAuth();
+  const showFinance = canViewFinance(user);
+  const [data, setData] = useState({ stats: {}, recentApplications: [], recentInterviews: [], recentMeetings: [], trainingReminders: [], recentTrainingBookings: [], recentActivityLogs: [] });
   useEffect(() => {
     api("/dashboard/stats").then(setData).catch(() => {});
   }, []);
   const stats = data.stats || {};
-  const heroMetrics = [
+  const heroMetrics = showFinance ? [
     ["Total revenue", money(stats.totalRevenue), LineChart],
     ["Training profit", money(stats.totalTrainingProfit), TrendingUp],
     ["Live jobs", stats.activeJobs ?? 0, BriefcaseBusiness]
+  ] : [
+    ["Live jobs", stats.activeJobs ?? 0, BriefcaseBusiness],
+    ["Pending interviews", stats.pendingInterviews ?? 0, CalendarClock],
+    ["Applications", stats.applications ?? 0, UsersRound]
   ];
   const metricGroups = [
     {
@@ -73,14 +82,16 @@ export default function Dashboard() {
     },
     {
       title: "Training performance",
-      description: "Courses, bookings and training financials.",
+      description: showFinance ? "Courses, bookings and training financials." : "Courses, bookings and upcoming training activity.",
       Icon: GraduationCap,
       metrics: [
         ["Training bookings", stats.totalTrainingBookings],
         ["Upcoming training", stats.upcomingTrainingSessions],
+        ...(showFinance ? [
         ["Training revenue", money(stats.totalQuotedRevenue)],
         ["Trainer costs", money(stats.totalTrainerCosts)],
         ["Training profit", money(stats.totalTrainingProfit)]
+        ] : [])
       ]
     },
     {
@@ -90,7 +101,7 @@ export default function Dashboard() {
       metrics: [
         ["Partners", stats.partners],
         ["Pending reviews", stats.pendingReviews],
-        ["Total revenue", money(stats.totalRevenue)]
+        ...(showFinance ? [["Total revenue", money(stats.totalRevenue)]] : [["New messages", stats.messages]])
       ]
     }
   ];
@@ -104,7 +115,7 @@ export default function Dashboard() {
           <div>
             <span className="eyebrow">Innovex Resource Group Limited</span>
             <h1><LayoutDashboard size={30} /> Operations Dashboard</h1>
-            <p>Track recruitment, interviews, meetings, training revenue and client activity from one professional admin workspace.</p>
+            <p>{showFinance ? "Track recruitment, interviews, meetings, training revenue and client activity from one professional admin workspace." : "Track recruitment, interviews, meetings, training and client activity from one professional admin workspace."}</p>
           </div>
         </div>
         <div className="dashboard-hero-metrics">
@@ -153,17 +164,33 @@ export default function Dashboard() {
           </div>
         </DashboardSection>
       )}
-      <DashboardSection title="Recent training bookings" subtitle="Latest training enquiries, confirmed sessions and profit overview.">
+      {showFinance && (data.recentActivityLogs || []).length > 0 && (
+        <DashboardSection title="Team activity log" subtitle="Recent actions completed by admin users and employees.">
+          <div className="activity-log-grid">
+            {(data.recentActivityLogs || []).map((item) => (
+              <article className="activity-log-card" key={item._id}>
+                <span className="activity-icon"><UserCheck size={18} /></span>
+                <div>
+                  <strong>{item.summary}</strong>
+                  <p>{item.actor?.name || "Team member"} • {item.module} • {new Date(item.createdAt).toLocaleString("en-GB")}</p>
+                </div>
+                <span className="status-chip table-chip">{item.action}</span>
+              </article>
+            ))}
+          </div>
+        </DashboardSection>
+      )}
+      <DashboardSection title="Recent training bookings" subtitle={showFinance ? "Latest training enquiries, confirmed sessions and profit overview." : "Latest training enquiries, confirmed sessions and course activity."}>
         <div className="table-wrap">
-          <table><thead><tr><th>Client</th><th>Courses</th><th>Date</th><th>Status</th><th>Payment</th><th>Profit</th></tr></thead><tbody>
-            {(data.recentTrainingBookings || []).map((item) => <tr key={item._id}><td>{item.clientName}<br /><span className="muted">{item.contactPersonName}</span></td><td>{item.selectedCourses?.map((course) => course.title).join(", ")}</td><td>{dateLabel(item.trainingDate)}<br /><span className="muted">{item.trainingStartTime}</span></td><td>{item.bookingStatus}</td><td>{item.paymentStatus}</td><td>{money(item.profit)}</td></tr>)}
+          <table><thead><tr><th>Client</th><th>Courses</th><th>Date</th><th>Status</th>{showFinance && <><th>Payment</th><th>Profit</th></>}</tr></thead><tbody>
+            {(data.recentTrainingBookings || []).map((item) => <tr key={item._id}><td>{item.clientName}<br /><span className="muted">{item.contactPersonName}</span></td><td>{item.selectedCourses?.map((course) => course.title).join(", ")}</td><td>{dateLabel(item.trainingDate)}<br /><span className="muted">{item.trainingStartTime}</span></td><td>{item.bookingStatus}</td>{showFinance && <><td>{item.paymentStatus}</td><td>{money(item.profit)}</td></>}</tr>)}
           </tbody></table>
         </div>
       </DashboardSection>
-      <DashboardSection title="Recent interviews" subtitle="Candidate interviews, client details and placement revenue.">
+      <DashboardSection title="Recent interviews" subtitle={showFinance ? "Candidate interviews, client details and placement revenue." : "Candidate interviews, client details and outcomes."}>
         <div className="table-wrap">
-          <table><thead><tr><th>Candidate</th><th>Job / Client</th><th>Interview</th><th>Status</th><th>Outcome</th><th>Revenue</th></tr></thead><tbody>
-            {(data.recentInterviews || []).map((item) => <tr key={item._id}><td>{item.candidateName}<br /><span className="muted">{item.candidateEmail}</span></td><td>{item.jobTitle}<br /><span className="muted">{item.clientName}</span></td><td>{new Date(item.interviewDate).toLocaleDateString()}<br /><span className="muted">{item.interviewTime}</span></td><td>{item.interviewStatus}</td><td>{item.candidateSelected}</td><td>{money(item.revenue)}</td></tr>)}
+          <table><thead><tr><th>Candidate</th><th>Job / Client</th><th>Interview</th><th>Status</th><th>Outcome</th>{showFinance && <th>Revenue</th>}</tr></thead><tbody>
+            {(data.recentInterviews || []).map((item) => <tr key={item._id}><td>{item.candidateName}<br /><span className="muted">{item.candidateEmail}</span></td><td>{item.jobTitle}<br /><span className="muted">{item.clientName}</span></td><td>{new Date(item.interviewDate).toLocaleDateString()}<br /><span className="muted">{item.interviewTime}</span></td><td>{item.interviewStatus}</td><td>{item.candidateSelected}</td>{showFinance && <td>{money(item.revenue)}</td>}</tr>)}
           </tbody></table>
         </div>
       </DashboardSection>

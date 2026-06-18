@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookOpenCheck, CircleDollarSign, Clock, FileBadge } from "lucide-react";
 import { api } from "../../api/client.js";
+import { canViewFinance } from "../../auth/permissions.js";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const emptyCourse = {
   title: "",
@@ -20,6 +22,8 @@ function money(value) {
 }
 
 export default function AdminCourses() {
+  const { user } = useAuth();
+  const showFinance = canViewFinance(user);
   const [courses, setCourses] = useState([]);
   const [form, setForm] = useState(emptyCourse);
   const [filters, setFilters] = useState({ search: "", status: "", category: "" });
@@ -101,7 +105,7 @@ export default function AdminCourses() {
         <div className="training-summary-card"><BookOpenCheck /><span>Total courses</span><strong>{summary.total}</strong></div>
         <div className="training-summary-card"><Clock /><span>Active courses</span><strong>{summary.active}</strong></div>
         <div className="training-summary-card"><FileBadge /><span>Certificates included</span><strong>{summary.certificate}</strong></div>
-        <div className="training-summary-card highlight"><CircleDollarSign /><span>Average selling price</span><strong>{money(summary.averagePrice)}</strong></div>
+        {showFinance && <div className="training-summary-card highlight"><CircleDollarSign /><span>Average selling price</span><strong>{money(summary.averagePrice)}</strong></div>}
       </div>
 
       <form className="card form training-form course-editor-card" onSubmit={save}>
@@ -117,8 +121,8 @@ export default function AdminCourses() {
           <input placeholder="Course category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required />
           <input placeholder="Duration" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} required />
           <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option>Active</option><option>Inactive</option></select>
-          <input type="number" min="0" step="0.01" placeholder="Default selling price" value={form.defaultSellingPrice} onChange={(e) => setForm({ ...form, defaultSellingPrice: e.target.value })} />
-          <input type="number" min="0" step="0.01" placeholder="Default trainer cost" value={form.defaultTrainerCost} onChange={(e) => setForm({ ...form, defaultTrainerCost: e.target.value })} />
+          {showFinance && <input type="number" min="0" step="0.01" placeholder="Default selling price" value={form.defaultSellingPrice} onChange={(e) => setForm({ ...form, defaultSellingPrice: e.target.value })} />}
+          {showFinance && <input type="number" min="0" step="0.01" placeholder="Default trainer cost" value={form.defaultTrainerCost} onChange={(e) => setForm({ ...form, defaultTrainerCost: e.target.value })} />}
         </div>
         <label className="checkbox-line"><input type="checkbox" checked={form.certificateIncluded} onChange={(e) => setForm({ ...form, certificateIncluded: e.target.checked })} /> Certificate included</label>
         <textarea placeholder="Course description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
@@ -154,8 +158,8 @@ export default function AdminCourses() {
                 <p>{course.description}</p>
                 <div className="course-admin-meta">
                   <div><span>Duration</span><strong>{course.duration}</strong></div>
-                  <div><span>Selling price</span><strong>{money(course.defaultSellingPrice)}</strong></div>
-                  <div><span>Trainer cost</span><strong>{money(course.defaultTrainerCost)}</strong></div>
+                  {showFinance && <div><span>Selling price</span><strong>{money(course.defaultSellingPrice)}</strong></div>}
+                  {showFinance && <div><span>Trainer cost</span><strong>{money(course.defaultTrainerCost)}</strong></div>}
                   <div><span>Certificate</span><strong>{course.certificateIncluded ? "Included" : "No"}</strong></div>
                 </div>
                 <div className="course-admin-actions">
