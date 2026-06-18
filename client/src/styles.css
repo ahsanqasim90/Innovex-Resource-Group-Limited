@@ -2903,6 +2903,266 @@ tbody tr:hover td {
   color: var(--muted);
   font-weight: 850;
 }
+.talent-crm-hero {
+  position: relative;
+  overflow: hidden;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, .46fr);
+  padding: clamp(26px, 4vw, 42px);
+  border: 1px solid rgba(159,210,219,.75);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(244,185,66,.26), transparent 28%),
+    radial-gradient(circle at 4% 100%, rgba(118,207,214,.22), transparent 32%),
+    linear-gradient(135deg, #ffffff 0%, #f7fcfc 52%, #fff7dd 100%);
+}
+.talent-crm-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  background: linear-gradient(90deg, var(--teal), #76cfd6, var(--gold));
+}
+.talent-hero-copy,
+.talent-command-card {
+  position: relative;
+  z-index: 1;
+}
+.talent-hero-copy p {
+  max-width: 760px;
+  line-height: 1.75;
+}
+.talent-workflow-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.talent-workflow-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border: 1px solid rgba(11,95,117,.1);
+  border-radius: 999px;
+  background: rgba(255,255,255,.8);
+  color: var(--teal);
+  font-size: .84rem;
+  font-weight: 950;
+  box-shadow: 0 10px 24px rgba(6,63,79,.06);
+}
+.talent-command-card {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  padding: 24px;
+  border: 1px solid rgba(244,185,66,.55);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.26), transparent 36%),
+    linear-gradient(180deg, rgba(255,255,255,.92), rgba(246,252,252,.88));
+  box-shadow: 0 22px 60px rgba(6,63,79,.1);
+}
+.talent-command-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 17px;
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  color: white;
+  box-shadow: 0 14px 28px rgba(6,63,79,.18);
+}
+.talent-command-card > span,
+.talent-section-heading .eyebrow {
+  color: var(--blue);
+  font-size: .78rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.talent-command-card strong {
+  color: var(--teal);
+  font-size: 1.25rem;
+}
+.talent-command-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.talent-command-mini {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.talent-command-mini span {
+  padding: 11px;
+  border-radius: 16px;
+  background: #e6f7f4;
+  color: var(--teal);
+  font-weight: 950;
+  text-align: center;
+}
+.talent-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 24px;
+}
+.talent-kpi-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 18px;
+  min-height: 132px;
+  padding: 18px;
+  border: 1px solid rgba(199,228,232,.9);
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff, #fbfefe);
+  box-shadow: 0 18px 42px rgba(6,63,79,.07);
+}
+.talent-kpi-card::after {
+  content: "";
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  right: -58px;
+  top: -60px;
+  border-radius: 50%;
+  background: rgba(118,207,214,.18);
+}
+.talent-kpi-card.gold::after { background: rgba(244,185,66,.2); }
+.talent-kpi-card.success::after { background: rgba(63,181,144,.18); }
+.talent-kpi-card.purple::after { background: rgba(111,118,255,.12); }
+.talent-kpi-card div,
+.talent-panel-heading,
+.candidate-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.talent-kpi-card svg {
+  color: var(--blue);
+}
+.talent-kpi-card span {
+  color: var(--muted);
+  font-weight: 900;
+}
+.talent-kpi-card strong {
+  position: relative;
+  z-index: 1;
+  color: var(--teal);
+  font-size: clamp(1.55rem, 2.4vw, 2.25rem);
+  letter-spacing: -.03em;
+}
+.talent-form-card {
+  position: relative;
+  overflow: hidden;
+  border-top: 5px solid var(--teal);
+  box-shadow: 0 24px 62px rgba(6,63,79,.08);
+}
+.talent-form-card .admin-form-title p,
+.talent-match-card .admin-form-title p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.talent-panel-heading > span {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  border-radius: 17px;
+  background: #e6f7f4;
+  color: var(--blue);
+}
+.talent-panel-heading h2,
+.talent-panel-heading p {
+  margin: 0;
+}
+.talent-import-card,
+.talent-outreach-card,
+.talent-match-card,
+.talent-filter-card {
+  box-shadow: 0 20px 54px rgba(6,63,79,.07);
+}
+.talent-import-card,
+.talent-outreach-card {
+  border-radius: 26px;
+}
+.talent-outreach-card textarea {
+  min-height: 190px;
+  font-size: .92rem;
+  line-height: 1.55;
+}
+.talent-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.talent-section-heading .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.talent-section-heading h2 {
+  margin: 6px 0 0;
+  color: var(--teal);
+  font-size: clamp(1.35rem, 2.3vw, 2rem);
+}
+.talent-section-heading strong {
+  padding: 9px 13px;
+  border-radius: 999px;
+  background: var(--mint);
+  color: var(--teal);
+  font-weight: 950;
+}
+.talent-table {
+  border-radius: 26px;
+  border: 1px solid #c7e4e8;
+  box-shadow: 0 24px 64px rgba(6,63,79,.08);
+}
+.talent-table table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.talent-table thead th {
+  background: linear-gradient(180deg, #eefafa, #e5f5f7);
+  color: var(--teal);
+  font-size: .76rem;
+  letter-spacing: .08em;
+}
+.talent-table tbody td {
+  vertical-align: middle;
+}
+.talent-table tbody tr {
+  transition: background .18s ease, transform .18s ease;
+}
+.talent-table tbody tr:hover td {
+  background: #f6fcfc;
+}
+.candidate-avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  color: white;
+  font-weight: 950;
+}
+.candidate-cell strong,
+.candidate-cell .muted {
+  display: block;
+}
+.candidate-cell .muted {
+  margin-top: 3px;
+  max-width: 300px;
+  overflow-wrap: anywhere;
+}
 .course-summary-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }

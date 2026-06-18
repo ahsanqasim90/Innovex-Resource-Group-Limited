@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  CheckCircle2,
+  Database,
+  FileUp,
+  Filter,
   Mail,
   MapPin,
+  MessageSquareText,
   Search,
+  Send,
   Sparkles,
+  Target,
   UploadCloud,
+  UserCheck,
   UserPlus,
   UsersRound
 } from "lucide-react";
@@ -251,35 +259,49 @@ export default function AdminTalentPool() {
   }
 
   const summaryCards = [
-    ["Total candidates", stats.total || 0],
-    ["Available", stats.available || 0],
-    ["Contacted", stats.contacted || 0],
-    ["Interested", stats.interested || 0],
-    ["Shortlisted", stats.shortlisted || 0],
-    ["Placed", stats.placed || 0]
+    { label: "Total candidates", value: stats.total || 0, Icon: Database, tone: "primary" },
+    { label: "Available", value: stats.available || 0, Icon: CheckCircle2, tone: "success" },
+    { label: "Contacted", value: stats.contacted || 0, Icon: Send, tone: "blue" },
+    { label: "Interested", value: stats.interested || 0, Icon: MessageSquareText, tone: "gold" },
+    { label: "Shortlisted", value: stats.shortlisted || 0, Icon: Target, tone: "purple" },
+    { label: "Placed", value: stats.placed || 0, Icon: UserCheck, tone: "success" }
   ];
 
   return (
     <>
-      <section className="talent-hero">
-        <div>
+      <section className="talent-hero talent-crm-hero">
+        <div className="talent-hero-copy">
           <span className="eyebrow">Recruitment CRM</span>
           <h1><UsersRound size={30} /> Talent Pool</h1>
-          <p>Import, search, match and contact candidates from one professional recruitment workspace.</p>
+          <p>Manage high-volume healthcare candidates from one clean workspace: import records, match people to vacancies, and send personalised outreach without jumping back into spreadsheets.</p>
+          <div className="talent-workflow-strip" aria-label="Talent pool workflow">
+            <span><FileUp size={16} /> Import</span>
+            <span><Search size={16} /> Search</span>
+            <span><Target size={16} /> Match</span>
+            <span><Mail size={16} /> Outreach</span>
+          </div>
         </div>
-        <div className="talent-hero-note">
-          <Sparkles size={22} />
+        <div className="talent-command-card">
+          <div className="talent-command-icon"><Sparkles size={22} /></div>
+          <span>CRM workspace</span>
           <strong>Built for 40k+ candidate records</strong>
-          <span>Paginated search, bulk import and smart matching.</span>
+          <p>Fast paginated search, smart matching and controlled bulk email workflows.</p>
+          <div className="talent-command-mini">
+            <span>{Number(stats.available || 0).toLocaleString()} available</span>
+            <span>{Number(selectedCount || 0).toLocaleString()} selected</span>
+          </div>
         </div>
       </section>
 
       <StatusMessage status={status} />
 
-      <div className="training-summary-grid talent-summary-grid">
-        {summaryCards.map(([label, value]) => (
-          <article className="training-summary-card" key={label}>
-            <span>{label}</span>
+      <div className="talent-summary-grid">
+        {summaryCards.map(({ label, value, Icon, tone }) => (
+          <article className={`talent-kpi-card ${tone}`} key={label}>
+            <div>
+              <Icon size={20} />
+              <span>{label}</span>
+            </div>
             <strong>{Number(value || 0).toLocaleString()}</strong>
           </article>
         ))}
@@ -290,6 +312,7 @@ export default function AdminTalentPool() {
           <div className="admin-form-title">
             <span><UserPlus size={18} /> Candidate profile</span>
             <h2>{editing ? "Edit candidate" : "Add candidate"}</h2>
+            <p>Add a single candidate manually when they come through WhatsApp, LinkedIn, email or a direct referral.</p>
           </div>
           <div className="form-grid">
             <input placeholder="Candidate name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -325,17 +348,27 @@ export default function AdminTalentPool() {
 
         <aside className="talent-side-stack">
           <form className="card talent-import-card" onSubmit={importCsv}>
-            <UploadCloud size={28} />
-            <h2>Import candidate CSV</h2>
-            <p>Export your sheet as CSV. Accepted headers include name, email, phone/number, postcode, role, visa status, availability, shift, pay and notes. Email spacing is cleaned automatically; if a row still needs attention, the importer will show the exact row number.</p>
+            <div className="talent-panel-heading">
+              <span><UploadCloud size={22} /></span>
+              <div>
+                <h2>Import candidate CSV</h2>
+                <p>Upload spreadsheet exports into your CRM library.</p>
+              </div>
+            </div>
+            <p>Accepted headers include name, email, phone/number, postcode, role, visa status, availability, shift, pay and notes. Email spacing is cleaned automatically; if a row needs attention, the exact row number will show.</p>
             <input name="file" type="file" accept=".csv,text/csv" />
             <SubmitButton loading={importing} loadingText="Importing candidates...">Import CSV</SubmitButton>
           </form>
 
           <form className="card talent-outreach-card" onSubmit={sendOutreach}>
-            <Mail size={28} />
-            <h2>Personalised outreach</h2>
-            <p>{selectedCount} candidate{selectedCount === 1 ? "" : "s"} selected. Use <strong>{"{{name}}"}</strong>, <strong>{"{{jobTitle}}"}</strong> and <strong>{"{{location}}"}</strong>.</p>
+            <div className="talent-panel-heading">
+              <span><Mail size={22} /></span>
+              <div>
+                <h2>Personalised outreach</h2>
+                <p>{selectedCount} candidate{selectedCount === 1 ? "" : "s"} selected for this campaign.</p>
+              </div>
+            </div>
+            <p>Use <strong>{"{{name}}"}</strong>, <strong>{"{{jobTitle}}"}</strong> and <strong>{"{{location}}"}</strong> to keep emails personal at scale.</p>
             <input placeholder="Email subject" value={outreach.subject} onChange={(e) => setOutreach({ ...outreach, subject: e.target.value })} required />
             <textarea rows="8" value={outreach.message} onChange={(e) => setOutreach({ ...outreach, message: e.target.value })} required />
             <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount}>
@@ -350,6 +383,7 @@ export default function AdminTalentPool() {
         <div className="admin-form-title">
           <span><Sparkles size={18} /> Smart matching</span>
           <h2>Find candidates for a vacancy</h2>
+          <p>Choose a vacancy or enter a role/location manually to surface suitable people quickly.</p>
         </div>
         <form className="form-grid talent-match-form" onSubmit={runMatch}>
           <select value={selectedJobId} onChange={(e) => {
@@ -377,7 +411,7 @@ export default function AdminTalentPool() {
               <article className="talent-match-item" key={candidate._id}>
                 <div>
                   <strong>{candidate.name}</strong>
-                  <span>{candidate.desiredRole || "Role not set"} · {candidate.postcode || candidate.city || "Location not set"}</span>
+                  <span>{candidate.desiredRole || "Role not set"} &middot; {candidate.postcode || candidate.city || "Location not set"}</span>
                 </div>
                 <div className="talent-score">{candidate.matchScore}%</div>
                 <button className="button small secondary" type="button" onClick={() => selectMatch(candidate)}>Select</button>
@@ -388,6 +422,13 @@ export default function AdminTalentPool() {
       </section>
 
       <section className="card filters talent-filter-card">
+        <div className="talent-section-heading">
+          <div>
+            <span className="eyebrow"><Filter size={15} /> Candidate search</span>
+            <h2>Search and segment the pool</h2>
+          </div>
+          <strong>{Number(pagination.total || 0).toLocaleString()} records</strong>
+        </div>
         <form className="form-grid" onSubmit={applyFilters}>
           <label className="filter-field">
             <span>Search</span>
@@ -439,7 +480,15 @@ export default function AdminTalentPool() {
             ) : candidates.length ? candidates.map((candidate) => (
               <tr key={candidate._id}>
                 <td><input type="checkbox" checked={selectedIds.includes(candidate._id)} onChange={() => toggleSelected(candidate._id)} /></td>
-                <td><strong>{candidate.name}</strong><br /><span className="muted">{candidate.email || "No email"} · {candidate.phone || "No phone"}</span></td>
+                <td>
+                  <div className="candidate-cell">
+                    <span className="candidate-avatar">{String(candidate.name || "?").slice(0, 1).toUpperCase()}</span>
+                    <div>
+                      <strong>{candidate.name}</strong>
+                      <span className="muted">{candidate.email || "No email"} &middot; {candidate.phone || "No phone"}</span>
+                    </div>
+                  </div>
+                </td>
                 <td>{candidate.desiredRole || "-"}<br /><span className="muted">{candidate.postcode || candidate.city || "-"}</span></td>
                 <td>{candidate.visaStatus || "-"}<br /><span className="muted">{candidate.availability || candidate.shiftPreference || "-"}</span></td>
                 <td><span className="status-chip table-chip">{candidate.status}</span></td>
@@ -458,7 +507,7 @@ export default function AdminTalentPool() {
 
       <div className="talent-pagination">
         <button className="button secondary" disabled={pagination.page <= 1} onClick={() => load(pagination.page - 1)}>Previous</button>
-        <span>Page {pagination.page} of {pagination.pages} · {Number(pagination.total || 0).toLocaleString()} candidates</span>
+        <span>Page {pagination.page} of {pagination.pages} &middot; {Number(pagination.total || 0).toLocaleString()} candidates</span>
         <button className="button secondary" disabled={pagination.page >= pagination.pages} onClick={() => load(pagination.page + 1)}>Next</button>
       </div>
     </>
