@@ -5260,6 +5260,16 @@ tbody tr:hover td {
 .calls-config-card.pending {
   border-color: rgba(244, 185, 66, .55);
 }
+.call-config-warning {
+  margin: 2px 0 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(244, 185, 66, .42);
+  border-radius: 16px;
+  background: #fff9e8;
+  color: #7a4a00 !important;
+  font-size: .86rem !important;
+  line-height: 1.45 !important;
+}
 .call-number-toolbar {
   display: flex;
   align-items: center;
@@ -5348,6 +5358,52 @@ tbody tr:hover td {
     radial-gradient(circle at 100% 0%, rgba(244,185,66,.16), transparent 40%),
     #ffffff;
 }
+.call-provider-card {
+  display: grid;
+  gap: 7px;
+  margin-top: 4px;
+  padding: 14px;
+  border: 1px solid rgba(29, 158, 117, .24);
+  border-radius: 18px;
+  background: #f4fbfa;
+  color: var(--teal);
+}
+.call-provider-card.error {
+  border-color: rgba(153, 27, 27, .22);
+  background: #fff4f4;
+  color: #991b1b;
+}
+.call-provider-card span {
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.call-provider-card strong {
+  font-size: .95rem;
+  line-height: 1.45;
+}
+.call-provider-card p {
+  margin: 0;
+  color: inherit;
+  opacity: .82;
+  font-size: .86rem;
+}
+.call-provider-card summary {
+  cursor: pointer;
+  font-weight: 900;
+}
+.call-provider-card pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(0, 64, 78, .08);
+  color: #082f36;
+  font-size: .78rem;
+  white-space: pre-wrap;
+}
 .calls-filter-card {
   margin-bottom: 22px;
 }
@@ -5392,6 +5448,17 @@ tbody tr:hover td {
 .call-status-chip.queued {
   background: #fff4d6;
   color: #92400e;
+}
+.call-provider-note {
+  display: block;
+  max-width: 260px;
+  margin-top: 8px;
+  color: #7a4a00;
+  font-size: .76rem;
+  line-height: 1.35;
+}
+.call-status-chip.failed + .call-provider-note {
+  color: #991b1b;
 }
 .call-action-button {
   display: inline-flex;

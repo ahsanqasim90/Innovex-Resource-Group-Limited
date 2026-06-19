@@ -44,6 +44,7 @@ const callLogSchema = new mongoose.Schema(
     yay: {
       requestPayload: { type: mongoose.Schema.Types.Mixed, default: {} },
       responsePayload: { type: mongoose.Schema.Types.Mixed, default: {} },
+      attempts: { type: mongoose.Schema.Types.Mixed, default: [] },
       requestUrl: { type: String, default: "" },
       requestStatus: { type: Number },
       configured: { type: Boolean, default: false },

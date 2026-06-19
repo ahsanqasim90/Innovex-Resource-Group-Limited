@@ -357,7 +357,10 @@ export default function AdminTalentPool() {
           notes: `Call started from Talent Pool for ${candidate.desiredRole || "candidate profile"}.`
         }
       });
-      setStatus({ message: result.yay?.message || "Candidate call logged." });
+      setStatus({
+        type: result.yay?.ok || result.yay?.skipped ? "success" : "error",
+        message: result.yay?.message || "Candidate call logged."
+      });
       await load(pagination.page);
       loadStats();
     } catch (error) {

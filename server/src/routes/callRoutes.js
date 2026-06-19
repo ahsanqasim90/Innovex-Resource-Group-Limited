@@ -179,6 +179,7 @@ router.post("/start", async (req, res, next) => {
     call.yay = {
       requestPayload: yayResult.payload || {},
       responsePayload: yayResult.responsePayload || {},
+      attempts: yayResult.attempts || [],
       requestUrl: yayResult.url || "",
       requestStatus: yayResult.status,
       configured: Boolean(yayResult.configured),

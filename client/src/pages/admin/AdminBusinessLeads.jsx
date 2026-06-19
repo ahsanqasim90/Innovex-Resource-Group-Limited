@@ -385,7 +385,10 @@ export default function AdminBusinessLeads() {
           notes: `Call started from Business Leads for ${lead.category || "lead follow-up"}.`
         }
       });
-      setStatus({ message: result.yay?.message || "Business call logged." });
+      setStatus({
+        type: result.yay?.ok || result.yay?.skipped ? "success" : "error",
+        message: result.yay?.message || "Business call logged."
+      });
       await load(pagination.page);
       loadStats();
     } catch (error) {

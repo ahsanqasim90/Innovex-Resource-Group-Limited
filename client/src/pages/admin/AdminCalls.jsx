@@ -29,6 +29,16 @@ function dateInput(value) {
   return date.toISOString().slice(0, 16);
 }
 
+function prettyJson(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
 export default function AdminCalls() {
   const [calls, setCalls] = useState([]);
   const [stats, setStats] = useState({});
@@ -92,7 +102,10 @@ export default function AdminCalls() {
         method: "POST",
         body: { ...form, targetType: "Manual" }
       });
-      setStatus({ message: result.yay?.message || "Call logged." });
+      setStatus({
+        type: result.yay?.ok || result.yay?.skipped ? "success" : "error",
+        message: result.yay?.message || "Call logged."
+      });
       setForm(emptyManualCall);
       await load(1);
       loadStats();
@@ -175,7 +188,10 @@ export default function AdminCalls() {
           <Settings size={22} />
           <span>{config.configured ? "Yay API ready" : "Yay API setup required"}</span>
           <strong>{config.configured ? "Click-to-call enabled" : "CRM logging only"}</strong>
-          <p>{config.configured ? `Endpoint: ${config.callPath}` : "Add Yay credentials in Vercel environment variables to activate outbound calls."}</p>
+          <p>{config.configured ? `Endpoints: ${(config.callPaths || [config.callPath]).join(" + ")}` : "Add Yay credentials in Vercel environment variables to activate outbound calls."}</p>
+          {config.configured && !config.hasRingSource && (
+            <p className="call-config-warning">Yay usually needs a SIP user UUID, hunt group UUID, call route UUID, or exact payload template before the phone can ring.</p>
+          )}
           <button className="button small secondary" type="button" onClick={testConnection} disabled={!config.configured || testingConnection}>
             {testingConnection ? "Testing..." : "Test Yay Connection"}
           </button>
@@ -254,6 +270,17 @@ export default function AdminCalls() {
             </label>
           </div>
           <textarea disabled={!editing} rows="4" placeholder="Outcome notes" value={editing?.notes || ""} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} />
+          {selectedCall?.yay?.message && (
+            <div className={`call-provider-card ${selectedCall.status === "Failed" ? "error" : ""}`}>
+              <span>Yay provider response</span>
+              <strong>{selectedCall.yay.message}</strong>
+              <p>Status: {selectedCall.yay.requestStatus || "-"} {selectedCall.yay.requestUrl ? `| ${selectedCall.yay.requestUrl}` : ""}</p>
+              <details>
+                <summary>View technical response</summary>
+                <pre>{prettyJson(selectedCall.yay.attempts?.length ? selectedCall.yay.attempts : selectedCall.yay.responsePayload)}</pre>
+              </details>
+            </div>
+          )}
           <div className="actions">
             <SubmitButton loading={saving} loadingText="Saving outcome..." disabled={!editing}>Save Outcome</SubmitButton>
             {editing && <button type="button" className="button secondary" onClick={() => setEditing(null)}>Cancel</button>}
@@ -325,7 +352,10 @@ export default function AdminCalls() {
                 <td><strong>{call.targetName}</strong><br /><span className="muted">{call.targetPhone}</span></td>
                 <td>{call.sourceModule}<br /><span className="muted">{call.targetType}</span></td>
                 <td>{call.outboundCallerId || "-"}</td>
-                <td><span className={`call-status-chip ${call.status.toLowerCase().replace(/\s+/g, "-")}`}>{call.status}</span></td>
+                <td>
+                  <span className={`call-status-chip ${call.status.toLowerCase().replace(/\s+/g, "-")}`}>{call.status}</span>
+                  {call.yay?.message && <small className="call-provider-note">{call.yay.message}</small>}
+                </td>
                 <td>{call.outcome}</td>
                 <td>{dateTime(call.followUpAt)}</td>
                 <td>{call.initiatedBy?.name || "Team"}<br /><span className="muted">{call.initiatedBy?.role || ""}</span></td>
