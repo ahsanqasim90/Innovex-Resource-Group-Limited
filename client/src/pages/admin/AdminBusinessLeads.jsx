@@ -272,6 +272,10 @@ export default function AdminBusinessLeads() {
       ];
       if (result.duplicatesMerged) parts.push(`${Number(result.duplicatesMerged).toLocaleString()} duplicate company rows merged.`);
       if (result.skipped) parts.push(`${Number(result.skipped).toLocaleString()} empty rows skipped.`);
+      if (result.invalidEmailsIgnored) {
+        parts.push(`${Number(result.invalidEmailsIgnored).toLocaleString()} invalid email value${result.invalidEmailsIgnored === 1 ? "" : "s"} ignored.`);
+        if (result.invalidEmailExamples?.length) parts.push(`Examples: ${result.invalidEmailExamples.join("; ")}.`);
+      }
       setStatus({ message: parts.join(" ") });
       event.currentTarget.reset();
       await load(1);

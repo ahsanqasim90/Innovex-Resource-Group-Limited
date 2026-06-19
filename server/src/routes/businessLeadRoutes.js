@@ -23,6 +23,30 @@ const leadFields = [
   "notes"
 ];
 
+const categoryAliases = {
+  carehome: "Care Home",
+  carehomes: "Care Home",
+  nursinghome: "Care Home",
+  nursinghomes: "Care Home",
+  childrenhome: "Children Home",
+  childrenshome: "Children Home",
+  childrenhomes: "Children Home",
+  childrenshomes: "Children Home",
+  supportedliving: "Supported Living",
+  healthcarecompany: "Healthcare Company",
+  healthcare: "Healthcare Company",
+  websitelead: "Website Lead",
+  webdevelopment: "Website Lead",
+  webdevelopmentseo: "Website Lead",
+  seolead: "SEO Lead",
+  seo: "SEO Lead",
+  traininglead: "Training Lead",
+  courses: "Training Lead",
+  compliancelead: "Compliance Lead",
+  compliance: "Compliance Lead",
+  other: "Other"
+};
+
 const headerMap = {
   company: "companyName",
   companyname: "companyName",
@@ -35,6 +59,10 @@ const headerMap = {
   category: "category",
   type: "category",
   niche: "category",
+  sector: "category",
+  leadtype: "category",
+  organisationtype: "category",
+  organizationtype: "category",
   contact: "contactName",
   contactname: "contactName",
   manager: "contactName",
@@ -94,12 +122,21 @@ function cleanEmail(value = "") {
   return String(value).replace(/\s+/g, "").trim().toLowerCase();
 }
 
+function normalizeCategory(value = "") {
+  return categoryAliases[normalizeHeader(value)] || "";
+}
+
+function looksLikeUkPostcode(value = "") {
+  const cleaned = String(value || "").toUpperCase().replace(/\s+/g, "");
+  return /^[A-Z]{1,2}\d[A-Z\d]?\d[A-Z]{2}$/.test(cleaned);
+}
+
 function splitList(value = "") {
   if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
   return String(value || "").split(/[;,|]/).map((item) => item.trim()).filter(Boolean);
 }
 
-function parseEmails(input = {}) {
+function rawEmailValues(input = {}) {
   const values = [];
   if (Array.isArray(input.emails)) {
     input.emails.forEach((item) => values.push(typeof item === "string" ? item : item?.email));
@@ -109,9 +146,12 @@ function parseEmails(input = {}) {
   ["email", "email1", "email2", "email3", "email4", "email5"].forEach((field) => {
     if (input[field]) values.push(...splitList(input[field]));
   });
+  return values.map((item) => String(item || "").trim()).filter(Boolean);
+}
 
+function parseEmails(input = {}) {
   const seen = new Set();
-  return values
+  return rawEmailValues(input)
     .map(cleanEmail)
     .filter(Boolean)
     .map((email, index) => {
@@ -125,6 +165,10 @@ function parseEmails(input = {}) {
       return { email, label: index === 0 ? "Primary" : `Email ${index + 1}`, primary: index === 0 };
     })
     .filter(Boolean);
+}
+
+function invalidEmailValues(input = {}) {
+  return rawEmailValues(input).filter((email) => !parseEmails({ emails: email }).length);
 }
 
 function parseCsvLine(line) {
@@ -194,6 +238,20 @@ function parseCsv(buffer) {
 
 function sanitizeLead(input, options = {}) {
   const data = pick(input, leadFields);
+  const categoryFromInput = normalizeCategory(data.category);
+  const categoryFromPostcode = normalizeCategory(data.postcode);
+
+  if (categoryFromInput) {
+    data.category = categoryFromInput;
+  } else if (data.category && !categoryFromInput) {
+    data.category = "Other";
+  }
+
+  if (categoryFromPostcode && !looksLikeUkPostcode(data.postcode)) {
+    data.category = categoryFromPostcode;
+    data.postcode = "";
+  }
+
   if (data.postcode) {
     data.postcode = cleanPostcode(data.postcode);
     data.postcodePrefix = postcodePrefix(data.postcode);
@@ -201,15 +259,6 @@ function sanitizeLead(input, options = {}) {
   if (data.companyName) data.companyKey = normalizeCompany(data.companyName);
   if (data.emails || input.email || input.email1 || input.email2 || input.email3 || input.email4 || input.email5) {
     data.emails = parseEmails(input);
-    const invalidEmails = [
-      ...splitList(input.emails),
-      ...["email", "email1", "email2", "email3", "email4", "email5"].flatMap((field) => splitList(input[field]))
-    ].filter((email) => email && !parseEmails({ emails: email }).length);
-    if (invalidEmails.length && options.rowNumber) {
-      const error = new Error(`Row ${options.rowNumber}: Invalid email found (${invalidEmails[0]})`);
-      error.statusCode = 400;
-      throw error;
-    }
   }
   if (data.serviceInterests !== undefined) data.serviceInterests = splitList(data.serviceInterests);
   return data;
@@ -329,11 +378,20 @@ router.post("/import", uploadBusinessLeadCsv.single("file"), async (req, res, ne
     const leadsByKey = new Map();
     let skipped = 0;
     let duplicatesMerged = 0;
+    let invalidEmailsIgnored = 0;
+    const invalidEmailExamples = [];
 
     for (const row of rows) {
       if (!row.companyName && !row.phone && !row.postcode && !row.emails && !row.email1) {
         skipped += 1;
         continue;
+      }
+      const invalidEmails = invalidEmailValues(row);
+      if (invalidEmails.length) {
+        invalidEmailsIgnored += invalidEmails.length;
+        invalidEmails.slice(0, 3).forEach((email) => {
+          if (invalidEmailExamples.length < 8) invalidEmailExamples.push(`Row ${row.__rowNumber}: ${email}`);
+        });
       }
       const data = sanitizeLead({ category: defaultCategory, source: "CSV Import", ...row }, { rowNumber: row.__rowNumber });
       if (!data.companyName) data.companyName = data.emails?.[0]?.email || data.phone || "Unnamed company";
@@ -382,6 +440,8 @@ router.post("/import", uploadBusinessLeadCsv.single("file"), async (req, res, ne
       updated,
       duplicatesMerged,
       skipped,
+      invalidEmailsIgnored,
+      invalidEmailExamples,
       message: "Business lead import completed"
     });
   } catch (error) {

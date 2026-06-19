@@ -78,7 +78,7 @@ export const uploadBusinessLeadCsv = multer({
       cb(null, true);
       return;
     }
-    cb(new Error("Business lead import must be a CSV file"));
+    cb(new Error("Business lead import must be a CSV file. In Excel, use Save As or Export as CSV UTF-8, then upload that CSV."));
   }
 });
 
