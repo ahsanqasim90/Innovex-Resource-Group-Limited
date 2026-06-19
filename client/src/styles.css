@@ -5479,6 +5479,7 @@ tbody tr:hover td {
 .calls-api-banner {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 14px 16px;
   border: 1px solid rgba(244, 185, 66, .48);
@@ -5489,12 +5490,44 @@ tbody tr:hover td {
   color: #7a4a00;
   font-weight: 850;
 }
+.calls-api-banner.configured {
+  border-color: rgba(29, 158, 117, .26);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(29, 158, 117, .12), transparent 32%),
+    #f4fbfa;
+  color: var(--teal);
+}
+.calls-api-banner > div {
+  display: grid;
+  gap: 3px;
+}
 .calls-api-banner strong,
 .calls-api-banner span {
-  color: #7a4a00;
+  color: inherit;
 }
 .calls-api-banner span {
   font-weight: 750;
+}
+.calls-api-banner button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--teal);
+  color: white;
+  cursor: pointer;
+  font-weight: 950;
+  padding: 11px 18px;
+  white-space: nowrap;
+  transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+}
+.calls-api-banner button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(6,63,79,.12);
+}
+.calls-api-banner button:disabled {
+  cursor: not-allowed;
+  opacity: .62;
+  transform: none;
+  box-shadow: none;
 }
 .calls-stat-grid-compact {
   margin-bottom: 0;

@@ -102,6 +102,7 @@ export default function AdminCalls() {
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const callerOptions = useMemo(() => {
     const allowed = Array.isArray(config.allowedCallerIds) ? config.allowedCallerIds.filter(Boolean) : [];
@@ -206,6 +207,18 @@ export default function AdminCalls() {
     }
   }
 
+  async function testConnection() {
+    setTesting(true);
+    try {
+      const result = await api("/calls/config/test", { method: "POST" });
+      setStatus({ type: "success", message: result.message || "Yay API connection verified." });
+    } catch (error) {
+      setStatus({ type: "error", message: error.message || "Yay API connection test failed." });
+    } finally {
+      setTesting(false);
+    }
+  }
+
   async function saveOutcome(event) {
     event.preventDefault();
     if (!editing?._id) return;
@@ -255,12 +268,19 @@ export default function AdminCalls() {
 
   return (
     <div className="admin-calls-page">
-      {!config.configured && (
-        <div className="calls-api-banner">
-          <strong>Yay API setup required</strong>
-          <span>Add credentials to Vercel environment variables to activate outbound calls. Currently in CRM logging mode only.</span>
+      <div className={`calls-api-banner ${config.configured ? "configured" : ""}`}>
+        <div>
+          <strong>{config.configured ? "Yay API diagnostic" : "Yay API setup required"}</strong>
+          <span>
+            {config.configured
+              ? "Test credentials, API password and allowed IP before placing another call."
+              : "Add credentials to Vercel environment variables to activate outbound calls. Currently in CRM logging mode only."}
+          </span>
         </div>
-      )}
+        <button type="button" onClick={testConnection} disabled={testing}>
+          {testing ? "Testing..." : "Test Yay connection"}
+        </button>
+      </div>
 
       <StatusMessage status={status} />
 

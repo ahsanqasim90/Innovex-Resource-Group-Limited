@@ -63,6 +63,13 @@ Backend: `http://localhost:5000/api/health`
 - Store uploaded files on durable private storage for production, or mount `server/uploads` on persistent disk.
 - Add email delivery to `contactRoutes.js` if live notifications are required.
 
+## Yay.com Call Centre Notes
+
+- Set the `YAY_*` environment variables from `server/.env.example` in Vercel before using `/admin/calls`.
+- Yay API requests require `X-Auth-Reseller`, `X-Auth-User`, `X-Auth-Password`, and a `User-Agent`.
+- If Yay returns `401` on Vercel, check the Yay API password and the Yay dashboard API allowed IP ranges. Vercel serverless outbound IPs are not fixed, so a locked IP allow-list can block otherwise valid credentials.
+- Use the Call Centre "Test Yay connection" button before placing test calls so failed API auth checks do not create extra call logs.
+
 ## SEO & Deployment Checklist
 
 - Deploy frontend with SPA fallback enabled. Netlify-style `_redirects` is included in `client/public`.

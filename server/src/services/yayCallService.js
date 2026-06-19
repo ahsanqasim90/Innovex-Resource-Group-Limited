@@ -2,6 +2,7 @@ const DEFAULT_API_BASE = "https://api.yay.com";
 const DEFAULT_CALL_PATH = "/call";
 const DEFAULT_FALLBACK_CALL_PATH = "/outbound-call";
 const DEFAULT_AUTH_TEST_PATH = "/authenticated";
+const DEFAULT_USER_AGENT = "InnovexResourceGroupCRM/1.0";
 
 function trimSlash(value = "") {
   return String(value || "").replace(/\/+$/, "");
@@ -83,6 +84,30 @@ function providerMessage(payload) {
   return JSON.stringify(payload).replace(/\s+/g, " ").trim().slice(0, 280);
 }
 
+function yayAuthHeaders() {
+  return {
+    "X-Auth-Reseller": compact(process.env.YAY_AUTH_RESELLER),
+    "X-Auth-User": compact(process.env.YAY_AUTH_USER),
+    "X-Auth-Password": compact(process.env.YAY_AUTH_PASSWORD),
+    "User-Agent": compact(process.env.YAY_USER_AGENT) || DEFAULT_USER_AGENT
+  };
+}
+
+function yayFailureMessage(status, payload, fallback = "Yay rejected outbound call") {
+  const detail = providerMessage(payload);
+
+  if (status === 401) {
+    return `${fallback} (401): authentication failed. Check YAY_AUTH_RESELLER, YAY_AUTH_USER, YAY_AUTH_PASSWORD/API password, and Yay API Allowed IP ranges. If this is hosted on Vercel, allow all IPv4 addresses in Yay or move the API to a server with a fixed outbound IP.`;
+  }
+
+  if (status === 403) {
+    return `${fallback} (403): Yay blocked the request. Check API permissions, allowed IP ranges, and whether the selected caller ID is allowed on your Yay account.`;
+  }
+
+  const statusLabel = status ? ` (${status})` : "";
+  return `${fallback}${statusLabel}${detail ? `: ${detail}` : "."}`;
+}
+
 export function yayConfigStatus() {
   const configured = Boolean(
     process.env.YAY_AUTH_RESELLER &&
@@ -96,6 +121,7 @@ export function yayConfigStatus() {
     callPath: leadSlash(process.env.YAY_CLICK_TO_CALL_PATH || DEFAULT_CALL_PATH),
     callPaths: callPaths(process.env.YAY_CLICK_TO_CALL_PATH || DEFAULT_CALL_PATH),
     authTestPath: leadSlash(process.env.YAY_AUTH_TEST_PATH || DEFAULT_AUTH_TEST_PATH),
+    hasUserAgent: Boolean(process.env.YAY_USER_AGENT || DEFAULT_USER_AGENT),
     hasSipUser: Boolean(process.env.YAY_SIP_USER_UUID),
     hasHuntGroup: Boolean(process.env.YAY_HUNT_GROUP_UUID),
     hasAgentExtension: Boolean(process.env.YAY_AGENT_EXTENSION),
@@ -106,6 +132,8 @@ export function yayConfigStatus() {
     hasRingSource: Boolean(
       process.env.YAY_SIP_USER_UUID ||
       process.env.YAY_HUNT_GROUP_UUID ||
+      process.env.YAY_AGENT_EXTENSION ||
+      process.env.YAY_HUNT_GROUP_EXTENSION ||
       process.env.YAY_CALL_ROUTE_UUID ||
       process.env.YAY_CLICK_TO_CALL_PAYLOAD_TEMPLATE
     )
@@ -126,15 +154,10 @@ export async function testYayConnection() {
   const url = `${config.apiBase}${config.authTestPath}`;
   const response = await fetch(url, {
     method: "GET",
-    headers: {
-      "X-Auth-Reseller": process.env.YAY_AUTH_RESELLER,
-      "X-Auth-User": process.env.YAY_AUTH_USER,
-      "X-Auth-Password": process.env.YAY_AUTH_PASSWORD
-    }
+    headers: yayAuthHeaders()
   });
 
   const responsePayload = await parseYayResponse(response);
-  const detail = providerMessage(responsePayload);
 
   return {
     configured: true,
@@ -142,7 +165,7 @@ export async function testYayConnection() {
     status: response.status,
     url,
     responsePayload,
-    message: response.ok ? "Yay API connection verified." : `Yay API connection test failed${detail ? `: ${detail}` : "."}`
+    message: response.ok ? "Yay API connection verified." : yayFailureMessage(response.status, responsePayload, "Yay API connection test failed")
   };
 }
 
@@ -202,9 +225,7 @@ export async function startYayOutboundCall({ phone, targetName, callerId }) {
         method,
         headers: {
           "Content-Type": "application/json",
-          "X-Auth-Reseller": process.env.YAY_AUTH_RESELLER,
-          "X-Auth-User": process.env.YAY_AUTH_USER,
-          "X-Auth-Password": process.env.YAY_AUTH_PASSWORD
+          ...yayAuthHeaders()
         },
         body: JSON.stringify(payload)
       });
@@ -240,8 +261,6 @@ export async function startYayOutboundCall({ phone, targetName, callerId }) {
   }
 
   const lastAttempt = attempts[attempts.length - 1] || {};
-  const detail = providerMessage(lastAttempt.responsePayload);
-  const statusLabel = lastAttempt.status ? ` (${lastAttempt.status})` : "";
 
   return {
     configured: true,
@@ -251,6 +270,6 @@ export async function startYayOutboundCall({ phone, targetName, callerId }) {
     payload,
     responsePayload: lastAttempt.responsePayload || {},
     attempts,
-    message: `Yay rejected outbound call${statusLabel}${detail ? `: ${detail}` : "."}`
+    message: yayFailureMessage(lastAttempt.status, lastAttempt.responsePayload, "Yay rejected outbound call")
   };
 }
