@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import BusinessLead from "../models/BusinessLead.js";
 import CallLog from "../models/CallLog.js";
 import Candidate from "../models/Candidate.js";
+import { allowedCallerIdsForUser, outboundCallerIds, resolveCallerIdForUser } from "../config/calling.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../services/activityLogService.js";
 import { normalizePhone, startYayOutboundCall, testYayConnection, yayConfigStatus } from "../services/yayCallService.js";
@@ -81,7 +82,11 @@ async function markTargetContacted(target) {
 }
 
 router.get("/config/status", (req, res) => {
-  res.json(yayConfigStatus());
+  res.json({
+    ...yayConfigStatus(),
+    companyCallerIds: outboundCallerIds(),
+    allowedCallerIds: allowedCallerIdsForUser(req.user)
+  });
 });
 
 router.post("/config/test", async (req, res, next) => {
@@ -144,6 +149,7 @@ router.post("/start", async (req, res, next) => {
   try {
     const target = await resolveTarget(req.body);
     const phone = normalizePhone(target.targetPhone);
+    const outboundCallerId = resolveCallerIdForUser(req.user, req.body.outboundCallerId || req.body.callerId);
     requireFields({ targetName: target.targetName, targetPhone: phone }, ["targetName", "targetPhone"]);
 
     const call = await CallLog.create({
@@ -151,6 +157,7 @@ router.post("/start", async (req, res, next) => {
       targetId: target.targetId,
       targetName: target.targetName,
       targetPhone: phone,
+      outboundCallerId,
       sourceModule: target.sourceModule,
       status: "Queued",
       notes: req.body.notes,
@@ -159,7 +166,7 @@ router.post("/start", async (req, res, next) => {
 
     let yayResult;
     try {
-      yayResult = await startYayOutboundCall({ phone, targetName: target.targetName });
+      yayResult = await startYayOutboundCall({ phone, targetName: target.targetName, callerId: outboundCallerId });
     } catch (error) {
       yayResult = {
         ok: false,
@@ -186,7 +193,7 @@ router.post("/start", async (req, res, next) => {
       entityType: "CallLog",
       entityId: call._id,
       summary: `${req.user.name} started a call to ${target.targetName}`,
-      metadata: { targetType: target.targetType, targetPhone: phone, yayConfigured: Boolean(yayResult.configured) }
+      metadata: { targetType: target.targetType, targetPhone: phone, outboundCallerId, yayConfigured: Boolean(yayResult.configured) }
     });
 
     res.status(201).json({ call, yay: yayResult });

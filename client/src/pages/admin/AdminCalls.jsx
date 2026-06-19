@@ -7,6 +7,7 @@ import SubmitButton from "../../components/SubmitButton.jsx";
 const emptyManualCall = {
   targetName: "",
   targetPhone: "",
+  outboundCallerId: "",
   sourceModule: "Manual CRM Call",
   notes: ""
 };
@@ -68,7 +69,14 @@ export default function AdminCalls() {
 
   function loadStats() {
     api("/calls/stats/summary").then(setStats).catch(() => {});
-    api("/calls/config/status").then(setConfig).catch(() => {});
+    api("/calls/config/status")
+      .then((data) => {
+        setConfig(data);
+        if (!form.outboundCallerId && data.allowedCallerIds?.length) {
+          setForm((current) => ({ ...current, outboundCallerId: current.outboundCallerId || data.allowedCallerIds[0] }));
+        }
+      })
+      .catch(() => {});
   }
 
   useEffect(() => {
@@ -203,6 +211,12 @@ export default function AdminCalls() {
               <input value={form.targetPhone} onChange={(e) => setForm({ ...form, targetPhone: e.target.value })} placeholder="+44..." required />
             </label>
             <label className="filter-field">
+              <span>Call from</span>
+              <select value={form.outboundCallerId} onChange={(e) => setForm({ ...form, outboundCallerId: e.target.value })} required>
+                {(config.allowedCallerIds || []).map((callerId) => <option key={callerId} value={callerId}>{callerId}</option>)}
+              </select>
+            </label>
+            <label className="filter-field">
               <span>Source / context</span>
               <input value={form.sourceModule} onChange={(e) => setForm({ ...form, sourceModule: e.target.value })} />
             </label>
@@ -294,6 +308,7 @@ export default function AdminCalls() {
             <tr>
               <th>Contact</th>
               <th>Source</th>
+              <th>From</th>
               <th>Status</th>
               <th>Outcome</th>
               <th>Follow-up</th>
@@ -304,11 +319,12 @@ export default function AdminCalls() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="8">Loading calls...</td></tr>
+              <tr><td colSpan="9">Loading calls...</td></tr>
             ) : calls.length ? calls.map((call) => (
               <tr key={call._id}>
                 <td><strong>{call.targetName}</strong><br /><span className="muted">{call.targetPhone}</span></td>
                 <td>{call.sourceModule}<br /><span className="muted">{call.targetType}</span></td>
+                <td>{call.outboundCallerId || "-"}</td>
                 <td><span className={`call-status-chip ${call.status.toLowerCase().replace(/\s+/g, "-")}`}>{call.status}</span></td>
                 <td>{call.outcome}</td>
                 <td>{dateTime(call.followUpAt)}</td>
@@ -320,7 +336,7 @@ export default function AdminCalls() {
                 </td>
               </tr>
             )) : (
-              <tr><td colSpan="8">No calls found.</td></tr>
+              <tr><td colSpan="9">No calls found.</td></tr>
             )}
           </tbody>
         </table>

@@ -11,6 +11,7 @@ const emptyForm = {
   password: "",
   role: "viewer",
   permissions: rolePresets.viewer,
+  outboundCallerIds: [],
   canCopyData: false,
   isActive: true
 };
@@ -34,7 +35,8 @@ function toForm(user) {
     ...user,
     id: user.id || user._id,
     password: "",
-    permissions: user.permissions || []
+    permissions: user.permissions || [],
+    outboundCallerIds: user.assignedOutboundCallerIds || user.outboundCallerIds || []
   };
 }
 
@@ -44,6 +46,7 @@ export default function AdminTeam() {
   const [editing, setEditing] = useState(null);
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [outboundCallerIds, setOutboundCallerIds] = useState([]);
 
   async function load() {
     try {
@@ -55,6 +58,9 @@ export default function AdminTeam() {
 
   useEffect(() => {
     load();
+    api("/users/permission-options")
+      .then((data) => setOutboundCallerIds(data.outboundCallerIds || []))
+      .catch(() => {});
   }, []);
 
   function setRole(role) {
@@ -66,6 +72,13 @@ export default function AdminTeam() {
       ? form.permissions.filter((item) => item !== permission)
       : [...form.permissions, permission];
     setForm({ ...form, permissions });
+  }
+
+  function toggleCallerId(callerId) {
+    const nextCallerIds = form.outboundCallerIds.includes(callerId)
+      ? form.outboundCallerIds.filter((item) => item !== callerId)
+      : [...form.outboundCallerIds, callerId];
+    setForm({ ...form, outboundCallerIds: nextCallerIds });
   }
 
   async function save(event) {
@@ -148,6 +161,19 @@ export default function AdminTeam() {
               Allow copy/context-menu access
             </label>
           </div>
+          <div className="team-caller-options">
+            <h3>Outbound caller numbers</h3>
+            <p>Assign which Innovex phone numbers this employee can use when placing CRM calls.</p>
+            <div className="caller-checkbox-grid">
+              {outboundCallerIds.map((callerId) => (
+                <label key={callerId}>
+                  <input type="checkbox" checked={form.outboundCallerIds.includes(callerId)} onChange={() => toggleCallerId(callerId)} />
+                  <span>{callerId}</span>
+                </label>
+              ))}
+              {!outboundCallerIds.length && <span className="muted">Add YAY_OUTBOUND_NUMBERS in Vercel to enable caller assignment.</span>}
+            </div>
+          </div>
           <div className="permission-grid">
             {permissionGroups.map((group) => (
               <section className="permission-group" key={group.label}>
@@ -182,6 +208,7 @@ export default function AdminTeam() {
               <th>Team member</th>
               <th>Role</th>
               <th>Permissions</th>
+              <th>Caller numbers</th>
               <th>Copy access</th>
               <th>Status</th>
               <th>Actions</th>
@@ -193,6 +220,7 @@ export default function AdminTeam() {
                 <td><strong>{user.name}</strong><br /><span className="muted">{user.email}</span></td>
                 <td>{roleLabel(user.role)}</td>
                 <td>{user.permissions?.length || 0} modules</td>
+                <td>{user.outboundCallerIds?.length ? user.outboundCallerIds.join(", ") : "None assigned"}</td>
                 <td>{user.canCopyData ? "Allowed" : "Restricted"}</td>
                 <td><span className="status-chip table-chip">{user.isActive ? "Active" : "Suspended"}</span></td>
                 <td className="actions compact-actions">
@@ -201,7 +229,7 @@ export default function AdminTeam() {
                 </td>
               </tr>
             ))}
-            {!users.length && <tr><td colSpan="6">No team members found.</td></tr>}
+            {!users.length && <tr><td colSpan="7">No team members found.</td></tr>}
           </tbody>
         </table>
       </div>

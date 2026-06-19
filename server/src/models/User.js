@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema(
       default: "viewer"
     },
     permissions: [{ type: String, trim: true }],
+    outboundCallerIds: [{ type: String, trim: true }],
     canCopyData: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true }
   },

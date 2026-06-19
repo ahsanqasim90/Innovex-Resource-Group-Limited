@@ -143,6 +143,8 @@ export default function AdminTalentPool() {
   const [campaignPreset, setCampaignPreset] = useState(candidateTemplatePresets[0].label);
   const [bulkStatus, setBulkStatus] = useState("Contacted");
   const [sending, setSending] = useState(false);
+  const [callConfig, setCallConfig] = useState({ allowedCallerIds: [] });
+  const [selectedOutboundCallerId, setSelectedOutboundCallerId] = useState("");
 
   const selectedCount = selectedIds.length;
   const selectedJob = useMemo(() => jobs.find((job) => job._id === selectedJobId), [jobs, selectedJobId]);
@@ -178,6 +180,12 @@ export default function AdminTalentPool() {
     load();
     loadStats();
     api("/jobs?admin=true").then(setJobs).catch(() => {});
+    api("/calls/config/status")
+      .then((data) => {
+        setCallConfig(data);
+        setSelectedOutboundCallerId(data.allowedCallerIds?.[0] || "");
+      })
+      .catch(() => {});
   }, []);
 
   async function saveCandidate(event) {
@@ -345,6 +353,7 @@ export default function AdminTalentPool() {
         body: {
           targetType: "Candidate",
           targetId: candidate._id,
+          outboundCallerId: selectedOutboundCallerId,
           notes: `Call started from Talent Pool for ${candidate.desiredRole || "candidate profile"}.`
         }
       });
@@ -402,6 +411,18 @@ export default function AdminTalentPool() {
       </section>
 
       <StatusMessage status={status} />
+
+      {callConfig.allowedCallerIds?.length > 0 && (
+        <section className="call-number-toolbar">
+          <div>
+            <span className="eyebrow"><PhoneCall size={14} /> Outbound calling</span>
+            <strong>Calling from</strong>
+          </div>
+          <select value={selectedOutboundCallerId} onChange={(event) => setSelectedOutboundCallerId(event.target.value)}>
+            {callConfig.allowedCallerIds.map((callerId) => <option key={callerId} value={callerId}>{callerId}</option>)}
+          </select>
+        </section>
+      )}
 
       <div className="talent-summary-grid">
         {summaryCards.map(({ label, value, Icon, tone }) => (

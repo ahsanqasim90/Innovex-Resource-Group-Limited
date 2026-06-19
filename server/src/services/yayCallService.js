@@ -18,7 +18,7 @@ export function normalizePhone(value = "") {
 
 function replaceTemplate(value, tokens) {
   if (typeof value === "string") {
-    return value.replace(/\{\{\s*(phone|targetName|sipUserUuid|huntGroupUuid|callerId|callRouteUuid)\s*\}\}/gi, (_, key) => tokens[key] || "");
+    return value.replace(/\{\{\s*(phone|targetName|sipUserUuid|huntGroupUuid|callerId|callRouteUuid|agentExtension|huntGroupExtension)\s*\}\}/gi, (_, key) => tokens[key] || "");
   }
   if (Array.isArray(value)) return value.map((item) => replaceTemplate(item, tokens));
   if (value && typeof value === "object") {
@@ -27,7 +27,7 @@ function replaceTemplate(value, tokens) {
   return value;
 }
 
-function buildDefaultPayload({ phone, targetName }) {
+function buildDefaultPayload({ phone, targetName, callerId }) {
   const payload = {
     destination: phone,
     target_name: targetName
@@ -35,7 +35,9 @@ function buildDefaultPayload({ phone, targetName }) {
 
   if (process.env.YAY_SIP_USER_UUID) payload.sip_user_uuid = process.env.YAY_SIP_USER_UUID;
   if (process.env.YAY_HUNT_GROUP_UUID) payload.hunt_group_uuid = process.env.YAY_HUNT_GROUP_UUID;
-  if (process.env.YAY_CALLER_ID) payload.caller_id = process.env.YAY_CALLER_ID;
+  if (process.env.YAY_AGENT_EXTENSION) payload.agent_extension = process.env.YAY_AGENT_EXTENSION;
+  if (process.env.YAY_HUNT_GROUP_EXTENSION) payload.hunt_group_extension = process.env.YAY_HUNT_GROUP_EXTENSION;
+  if (callerId || process.env.YAY_CALLER_ID) payload.caller_id = callerId || process.env.YAY_CALLER_ID;
   if (process.env.YAY_CALL_ROUTE_UUID) payload.call_route_uuid = process.env.YAY_CALL_ROUTE_UUID;
 
   return payload;
@@ -55,6 +57,8 @@ export function yayConfigStatus() {
     authTestPath: leadSlash(process.env.YAY_AUTH_TEST_PATH || DEFAULT_AUTH_TEST_PATH),
     hasSipUser: Boolean(process.env.YAY_SIP_USER_UUID),
     hasHuntGroup: Boolean(process.env.YAY_HUNT_GROUP_UUID),
+    hasAgentExtension: Boolean(process.env.YAY_AGENT_EXTENSION),
+    hasHuntGroupExtension: Boolean(process.env.YAY_HUNT_GROUP_EXTENSION),
     hasCallerId: Boolean(process.env.YAY_CALLER_ID)
   };
 }
@@ -95,7 +99,7 @@ export async function testYayConnection() {
   };
 }
 
-export async function startYayOutboundCall({ phone, targetName }) {
+export async function startYayOutboundCall({ phone, targetName, callerId }) {
   const cleanPhone = normalizePhone(phone);
   const config = yayConfigStatus();
 
@@ -121,11 +125,13 @@ export async function startYayOutboundCall({ phone, targetName }) {
     targetName: targetName || "",
     sipUserUuid: process.env.YAY_SIP_USER_UUID || "",
     huntGroupUuid: process.env.YAY_HUNT_GROUP_UUID || "",
-    callerId: process.env.YAY_CALLER_ID || "",
-    callRouteUuid: process.env.YAY_CALL_ROUTE_UUID || ""
+    callerId: callerId || process.env.YAY_CALLER_ID || "",
+    callRouteUuid: process.env.YAY_CALL_ROUTE_UUID || "",
+    agentExtension: process.env.YAY_AGENT_EXTENSION || "",
+    huntGroupExtension: process.env.YAY_HUNT_GROUP_EXTENSION || ""
   };
 
-  let payload = buildDefaultPayload({ phone: cleanPhone, targetName });
+  let payload = buildDefaultPayload({ phone: cleanPhone, targetName, callerId });
   if (process.env.YAY_CLICK_TO_CALL_PAYLOAD_TEMPLATE) {
     payload = replaceTemplate(JSON.parse(process.env.YAY_CLICK_TO_CALL_PAYLOAD_TEMPLATE), tokens);
   }

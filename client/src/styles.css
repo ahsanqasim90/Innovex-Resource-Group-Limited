@@ -3762,6 +3762,43 @@ tbody tr:hover td {
   color: var(--teal);
   font-weight: 900;
 }
+.team-caller-options {
+  margin: 12px 0 18px;
+  padding: 18px;
+  border: 1px solid rgba(244, 185, 66, .42);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244, 185, 66, .18), transparent 38%),
+    linear-gradient(135deg, #ffffff, #f8fdfd);
+}
+.team-caller-options h3 {
+  margin: 0 0 5px;
+  color: var(--teal);
+  font-size: 1rem;
+}
+.team-caller-options p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: .92rem;
+}
+.caller-checkbox-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.caller-checkbox-grid label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid rgba(0, 80, 65, .18);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--teal);
+  font-weight: 950;
+  box-shadow: 0 10px 22px rgba(0, 64, 78, .05);
+}
 .permission-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5223,6 +5260,43 @@ tbody tr:hover td {
 .calls-config-card.pending {
   border-color: rgba(244, 185, 66, .55);
 }
+.call-number-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(199, 228, 232, .95);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244, 185, 66, .16), transparent 35%),
+    #ffffff;
+  box-shadow: 0 14px 34px rgba(0, 64, 78, .06);
+}
+.call-number-toolbar div {
+  display: grid;
+  gap: 4px;
+}
+.call-number-toolbar .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.call-number-toolbar strong {
+  color: var(--teal);
+  font-size: 1.08rem;
+}
+.call-number-toolbar select {
+  width: min(100%, 260px);
+  min-height: 46px;
+  border-radius: 999px;
+  border: 1px solid #d5e9ec;
+  background: #f8fdfd;
+  color: var(--teal);
+  font-weight: 950;
+  padding: 0 18px;
+}
 .calls-stat-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -5434,6 +5508,8 @@ tbody tr:hover td {
   .crm-selection-bar { align-items: stretch; flex-direction: column; }
   .crm-selection-actions { justify-content: stretch; }
   .crm-selection-actions select, .crm-selection-actions .button { width: 100%; }
+  .call-number-toolbar { align-items: stretch; flex-direction: column; }
+  .call-number-toolbar select { width: 100%; }
   .admin-top { align-items: stretch; flex-direction: column; }
   .dashboard-hero-brand, .dashboard-section-head { align-items: flex-start; flex-direction: column; }
   .dashboard-logo-panel { width: 82px; height: 82px; flex-basis: 82px; }

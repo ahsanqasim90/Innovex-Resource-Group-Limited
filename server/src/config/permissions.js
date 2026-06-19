@@ -1,3 +1,5 @@
+import { allowedCallerIdsForUser } from "./calling.js";
+
 export const permissionGroups = [
   {
     label: "Core workspace",
@@ -111,6 +113,8 @@ export function safeUser(user) {
     permissions,
     canViewFinance: isOwner,
     canCopyData: isOwner ? true : Boolean(user.canCopyData),
+    outboundCallerIds: allowedCallerIdsForUser(user),
+    assignedOutboundCallerIds: Array.isArray(user.outboundCallerIds) ? user.outboundCallerIds : [],
     isActive: user.isActive
   };
 }

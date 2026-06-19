@@ -21,6 +21,7 @@ const callLogSchema = new mongoose.Schema(
     targetId: { type: mongoose.Schema.Types.ObjectId, index: true },
     targetName: { type: String, required: true, trim: true },
     targetPhone: { type: String, required: true, trim: true },
+    outboundCallerId: { type: String, trim: true, index: true },
     sourceModule: { type: String, trim: true, default: "Calls" },
     provider: { type: String, default: "Yay.com" },
     direction: { type: String, enum: ["Outbound", "Inbound"], default: "Outbound" },

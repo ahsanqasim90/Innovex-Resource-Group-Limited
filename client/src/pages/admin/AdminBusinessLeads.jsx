@@ -186,6 +186,8 @@ export default function AdminBusinessLeads() {
   const [outreach, setOutreach] = useState(emailTemplate);
   const [campaignPreset, setCampaignPreset] = useState(businessTemplatePresets[0].label);
   const [bulkStatus, setBulkStatus] = useState("Contacted");
+  const [callConfig, setCallConfig] = useState({ allowedCallerIds: [] });
+  const [selectedOutboundCallerId, setSelectedOutboundCallerId] = useState("");
 
   const selectedCount = selectedIds.length;
   const selectedService = useMemo(() => filters.service || importCategory || "Recruitment", [filters.service, importCategory]);
@@ -220,6 +222,12 @@ export default function AdminBusinessLeads() {
   useEffect(() => {
     load();
     loadStats();
+    api("/calls/config/status")
+      .then((data) => {
+        setCallConfig(data);
+        setSelectedOutboundCallerId(data.allowedCallerIds?.[0] || "");
+      })
+      .catch(() => {});
   }, []);
 
   async function saveLead(event) {
@@ -373,6 +381,7 @@ export default function AdminBusinessLeads() {
         body: {
           targetType: "BusinessLead",
           targetId: lead._id,
+          outboundCallerId: selectedOutboundCallerId,
           notes: `Call started from Business Leads for ${lead.category || "lead follow-up"}.`
         }
       });
@@ -420,6 +429,18 @@ export default function AdminBusinessLeads() {
       </section>
 
       <StatusMessage status={status} />
+
+      {callConfig.allowedCallerIds?.length > 0 && (
+        <section className="call-number-toolbar">
+          <div>
+            <span className="eyebrow"><PhoneCall size={14} /> Outbound calling</span>
+            <strong>Calling from</strong>
+          </div>
+          <select value={selectedOutboundCallerId} onChange={(event) => setSelectedOutboundCallerId(event.target.value)}>
+            {callConfig.allowedCallerIds.map((callerId) => <option key={callerId} value={callerId}>{callerId}</option>)}
+          </select>
+        </section>
+      )}
 
       <div className="talent-summary-grid">
         {summaryCards.map(({ label, value, Icon, tone }) => (

@@ -1,5 +1,6 @@
 import express from "express";
 import User from "../models/User.js";
+import { outboundCallerIds } from "../config/calling.js";
 import { allPermissions, permissionGroups, rolePresets, safeUser } from "../config/permissions.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
@@ -13,13 +14,26 @@ function cleanPermissions(input = []) {
   return Array.from(new Set(input.filter((permission) => allPermissions.includes(permission))));
 }
 
+function cleanCallerIds(input = []) {
+  if (!Array.isArray(input)) return [];
+  const allowed = outboundCallerIds();
+  return Array.from(
+    new Set(
+      input
+        .map((number) => String(number || "").replace(/[^\d+]/g, "").trim())
+        .filter((number) => allowed.includes(number))
+    )
+  );
+}
+
 function userPayload(input, existingUser = null) {
-  const data = pick(input, ["name", "email", "role", "permissions", "canCopyData", "isActive"]);
+  const data = pick(input, ["name", "email", "role", "permissions", "outboundCallerIds", "canCopyData", "isActive"]);
   if (data.email) {
     validateEmail(data.email);
     data.email = data.email.toLowerCase();
   }
   if (data.permissions) data.permissions = cleanPermissions(data.permissions);
+  if (data.outboundCallerIds) data.outboundCallerIds = cleanCallerIds(data.outboundCallerIds);
   if (data.role && rolePresets[data.role] && !input.permissions) data.permissions = rolePresets[data.role];
   if (existingUser?.role === "admin" && data.role && data.role !== "admin") {
     const error = new Error("Primary admin role cannot be downgraded from this panel");
@@ -30,7 +44,7 @@ function userPayload(input, existingUser = null) {
 }
 
 router.get("/permission-options", (req, res) => {
-  res.json({ permissionGroups, rolePresets });
+  res.json({ permissionGroups, rolePresets, outboundCallerIds: outboundCallerIds() });
 });
 
 router.get("/", async (req, res, next) => {
