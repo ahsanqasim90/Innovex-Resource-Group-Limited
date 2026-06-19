@@ -24,6 +24,7 @@ import AdminApplications from "./pages/admin/AdminApplications.jsx";
 import AdminCvs from "./pages/admin/AdminCvs.jsx";
 import AdminTalentPool from "./pages/admin/AdminTalentPool.jsx";
 import AdminBusinessLeads from "./pages/admin/AdminBusinessLeads.jsx";
+import AdminCalls from "./pages/admin/AdminCalls.jsx";
 import AdminInterviews from "./pages/admin/AdminInterviews.jsx";
 import AdminMeetings from "./pages/admin/AdminMeetings.jsx";
 import AdminTrainingBookings from "./pages/admin/AdminTrainingBookings.jsx";
@@ -89,6 +90,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="cv-uploads" element={<RequirePermission permission="cvs.view"><AdminCvs /></RequirePermission>} />
             <Route path="talent-pool" element={<RequirePermission permission="talentPool.view"><AdminTalentPool /></RequirePermission>} />
             <Route path="business-leads" element={<RequirePermission permission="businessLeads.view"><AdminBusinessLeads /></RequirePermission>} />
+            <Route path="calls" element={<RequirePermission permission="calls.view"><AdminCalls /></RequirePermission>} />
             <Route path="interviews" element={<RequirePermission permission="interviews.view"><AdminInterviews /></RequirePermission>} />
             <Route path="meetings" element={<RequirePermission permission="meetings.view"><AdminMeetings /></RequirePermission>} />
             <Route path="courses" element={<RequirePermission permission="courses.view"><AdminCourses /></RequirePermission>} />

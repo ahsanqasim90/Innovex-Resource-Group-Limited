@@ -12,6 +12,7 @@ export const permissionGroups = [
     label: "Recruitment CRM",
     permissions: [
       ["talentPool.view", "Talent Pool"],
+      ["calls.view", "Call Centre"],
       ["interviews.view", "Interviews"],
       ["meetings.view", "Meetings"]
     ]
@@ -40,8 +41,8 @@ export const permissionGroups = [
 ];
 
 export const rolePresets = {
-  recruitment: ["dashboard.view", "jobs.view", "applications.view", "cvs.view", "talentPool.view", "interviews.view", "meetings.view"],
-  sales: ["dashboard.view", "businessLeads.view", "meetings.view", "courses.view", "trainingBookings.view"],
+  recruitment: ["dashboard.view", "jobs.view", "applications.view", "cvs.view", "talentPool.view", "calls.view", "interviews.view", "meetings.view"],
+  sales: ["dashboard.view", "businessLeads.view", "calls.view", "meetings.view", "courses.view", "trainingBookings.view"],
   training: ["dashboard.view", "courses.view", "trainingBookings.view", "meetings.view", "businessLeads.view"],
   marketing: ["dashboard.view", "businessLeads.view", "blogs.view", "testimonials.view", "partners.view", "contacts.view"],
   viewer: ["dashboard.view"]

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ArrowUpRight, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, GraduationCap, LayoutDashboard, LogOut, MessageSquare, ShieldCheck, Store, Upload, UserCog, UsersRound } from "lucide-react";
+import { ArrowUpRight, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, GraduationCap, LayoutDashboard, LogOut, MessageSquare, PhoneCall, ShieldCheck, Store, Upload, UserCog, UsersRound } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { hasPermission } from "../auth/permissions.js";
@@ -11,6 +11,7 @@ const links = [
   ["/admin/cv-uploads", "CV Uploads", Upload, "cvs.view"],
   ["/admin/talent-pool", "Talent Pool", UsersRound, "talentPool.view"],
   ["/admin/business-leads", "Business Leads", Store, "businessLeads.view"],
+  ["/admin/calls", "Call Centre", PhoneCall, "calls.view"],
   ["/admin/interviews", "Interviews", CalendarCheck, "interviews.view"],
   ["/admin/meetings", "Meetings", CalendarClock, "meetings.view"],
   ["/admin/courses", "Courses", BookOpenCheck, "courses.view"],

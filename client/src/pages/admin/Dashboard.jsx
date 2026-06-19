@@ -77,7 +77,9 @@ export default function Dashboard() {
         ["Pending interviews", stats.pendingInterviews],
         ["Selected candidates", stats.selectedCandidates],
         ["Rejected candidates", stats.rejectedCandidates],
-        ["Upcoming meetings", stats.upcomingMeetings]
+        ["Upcoming meetings", stats.upcomingMeetings],
+        ["Calls today", stats.todayCalls],
+        ["Call backs due", stats.followUpsDue]
       ]
     },
     {
@@ -198,6 +200,14 @@ export default function Dashboard() {
         <div className="table-wrap">
           <table><thead><tr><th>Attendee</th><th>Company</th><th>Meeting</th><th>Date</th><th>Status</th></tr></thead><tbody>
             {(data.recentMeetings || []).map((item) => <tr key={item._id}><td>{item.attendeeName}<br /><span className="muted">{item.attendeeEmail || item.attendeePhone || "No contact added"}</span></td><td>{item.companyName}</td><td>{item.meetingTitle}<br /><span className="muted">{item.meetingPurpose}</span></td><td>{new Date(item.meetingDate).toLocaleDateString()}<br /><span className="muted">{item.meetingTime}</span></td><td>{item.meetingStatus}</td></tr>)}
+          </tbody></table>
+        </div>
+      </DashboardSection>
+      <DashboardSection title="Recent calls" subtitle="Latest candidate and client call activity from the CRM dialler.">
+        <div className="table-wrap">
+          <table><thead><tr><th>Contact</th><th>Source</th><th>Status</th><th>Outcome</th><th>Owner</th><th>Date</th></tr></thead><tbody>
+            {(data.recentCalls || []).map((item) => <tr key={item._id}><td>{item.targetName}<br /><span className="muted">{item.targetPhone}</span></td><td>{item.sourceModule}</td><td>{item.status}</td><td>{item.outcome}</td><td>{item.initiatedBy?.name || "Team"}</td><td>{new Date(item.createdAt).toLocaleDateString("en-GB")}<br /><span className="muted">{new Date(item.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span></td></tr>)}
+            {!(data.recentCalls || []).length && <tr><td colSpan="6">No calls logged yet.</td></tr>}
           </tbody></table>
         </div>
       </DashboardSection>

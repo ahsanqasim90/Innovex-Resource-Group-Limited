@@ -10,6 +10,7 @@ import {
   Mail,
   MapPin,
   MessageSquareText,
+  PhoneCall,
   Search,
   Send,
   UploadCloud
@@ -361,6 +362,28 @@ export default function AdminBusinessLeads() {
     }
   }
 
+  async function startLeadCall(lead) {
+    if (!lead.phone) {
+      setStatus({ type: "error", message: "This business lead does not have a phone number." });
+      return;
+    }
+    try {
+      const result = await api("/calls/start", {
+        method: "POST",
+        body: {
+          targetType: "BusinessLead",
+          targetId: lead._id,
+          notes: `Call started from Business Leads for ${lead.category || "lead follow-up"}.`
+        }
+      });
+      setStatus({ message: result.yay?.message || "Business call logged." });
+      await load(pagination.page);
+      loadStats();
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    }
+  }
+
   const summaryCards = [
     { label: "Total companies", value: stats.total || 0, Icon: Database, tone: "primary" },
     { label: "Care homes", value: stats.careHomes || 0, Icon: Building2, tone: "success" },
@@ -588,6 +611,7 @@ export default function AdminBusinessLeads() {
                 <td><span className="status-chip table-chip">{lead.status}</span></td>
                 <td>{formatDate(lead.lastContactedAt)}</td>
                 <td className="actions compact-actions">
+                  <button className="button small call-action-button" onClick={() => startLeadCall(lead)} disabled={!lead.phone}><PhoneCall size={14} /> Call</button>
                   <button className="button small" onClick={() => { setEditing(lead._id); setForm(leadToForm(lead)); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</button>
                   <button className="button secondary small" onClick={() => removeLead(lead._id)}>Delete</button>
                 </td>

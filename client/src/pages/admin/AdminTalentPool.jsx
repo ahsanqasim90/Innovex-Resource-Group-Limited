@@ -7,6 +7,7 @@ import {
   Mail,
   MapPin,
   MessageSquareText,
+  PhoneCall,
   Search,
   Send,
   Sparkles,
@@ -333,6 +334,28 @@ export default function AdminTalentPool() {
     }
   }
 
+  async function startCandidateCall(candidate) {
+    if (!candidate.phone) {
+      setStatus({ type: "error", message: "This candidate does not have a phone number." });
+      return;
+    }
+    try {
+      const result = await api("/calls/start", {
+        method: "POST",
+        body: {
+          targetType: "Candidate",
+          targetId: candidate._id,
+          notes: `Call started from Talent Pool for ${candidate.desiredRole || "candidate profile"}.`
+        }
+      });
+      setStatus({ message: result.yay?.message || "Candidate call logged." });
+      await load(pagination.page);
+      loadStats();
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    }
+  }
+
   function applyFilters(event) {
     event.preventDefault();
     load(1, filters);
@@ -621,6 +644,7 @@ export default function AdminTalentPool() {
                 <td><span className="status-chip table-chip">{candidate.status}</span></td>
                 <td>{formatDate(candidate.lastContactedAt)}</td>
                 <td className="actions compact-actions">
+                  <button className="button small call-action-button" onClick={() => startCandidateCall(candidate)} disabled={!candidate.phone}><PhoneCall size={14} /> Call</button>
                   <button className="button small" onClick={() => { setEditing(candidate._id); setForm(fromCandidate(candidate)); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</button>
                   <button className="button secondary small" onClick={() => removeCandidate(candidate._id)}>Delete</button>
                 </td>

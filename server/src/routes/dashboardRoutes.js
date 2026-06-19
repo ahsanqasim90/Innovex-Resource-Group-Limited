@@ -1,6 +1,7 @@
 import express from "express";
 import Application from "../models/Application.js";
 import Candidate from "../models/Candidate.js";
+import CallLog from "../models/CallLog.js";
 import ContactMessage from "../models/ContactMessage.js";
 import CvUpload from "../models/CvUpload.js";
 import ActivityLog from "../models/ActivityLog.js";
@@ -65,6 +66,9 @@ router.get("/stats", async (req, res, next) => {
       totalCandidates,
       availableCandidates,
       interestedTalent,
+      todayCalls,
+      followUpsDue,
+      recentCalls,
       recentActivityLogs
     ] = await Promise.all([
       Job.countDocuments({ isActive: true }),
@@ -101,6 +105,15 @@ router.get("/stats", async (req, res, next) => {
       Candidate.countDocuments(),
       Candidate.countDocuments({ status: "Available" }),
       Candidate.countDocuments({ status: "Interested" }),
+      CallLog.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
+      CallLog.countDocuments({
+        followUpAt: {
+          $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          $lt: new Date(new Date().setHours(24, 0, 0, 0))
+        },
+        outcome: "Call Back"
+      }),
+      CallLog.find().sort({ createdAt: -1 }).limit(6),
       showFinance ? ActivityLog.find().sort({ createdAt: -1 }).limit(10) : Promise.resolve([])
     ]);
 
@@ -120,7 +133,9 @@ router.get("/stats", async (req, res, next) => {
       upcomingTrainingSessions,
       totalCandidates,
       availableCandidates,
-      interestedTalent
+      interestedTalent,
+      todayCalls,
+      followUpsDue
     };
 
     if (showFinance) {
@@ -135,6 +150,7 @@ router.get("/stats", async (req, res, next) => {
       recentApplications,
       recentInterviews: showFinance ? recentInterviews : recentInterviews.map(stripInterviewFinance),
       recentMeetings,
+      recentCalls,
       trainingReminders: showFinance ? trainingReminders : trainingReminders.map(stripTrainingFinance),
       recentTrainingBookings: showFinance ? recentTrainingBookings : recentTrainingBookings.map(stripTrainingFinance),
       recentActivityLogs
