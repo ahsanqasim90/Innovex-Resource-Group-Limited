@@ -40,6 +40,7 @@ export default function AdminCalls() {
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
 
   const selectedCall = useMemo(() => calls.find((call) => call._id === editing?._id) || editing, [calls, editing]);
 
@@ -123,6 +124,19 @@ export default function AdminCalls() {
     }
   }
 
+  async function testConnection() {
+    setTestingConnection(true);
+    try {
+      const result = await api("/calls/config/test", { method: "POST" });
+      setStatus({ message: result.message || "Yay API connection verified." });
+      loadStats();
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    } finally {
+      setTestingConnection(false);
+    }
+  }
+
   function applyFilters(event) {
     event.preventDefault();
     load(1, filters);
@@ -154,6 +168,9 @@ export default function AdminCalls() {
           <span>{config.configured ? "Yay API ready" : "Yay API setup required"}</span>
           <strong>{config.configured ? "Click-to-call enabled" : "CRM logging only"}</strong>
           <p>{config.configured ? `Endpoint: ${config.callPath}` : "Add Yay credentials in Vercel environment variables to activate outbound calls."}</p>
+          <button className="button small secondary" type="button" onClick={testConnection} disabled={!config.configured || testingConnection}>
+            {testingConnection ? "Testing..." : "Test Yay Connection"}
+          </button>
         </aside>
       </section>
 

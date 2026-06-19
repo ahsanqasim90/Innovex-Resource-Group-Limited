@@ -5,7 +5,7 @@ import CallLog from "../models/CallLog.js";
 import Candidate from "../models/Candidate.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../services/activityLogService.js";
-import { normalizePhone, startYayOutboundCall, yayConfigStatus } from "../services/yayCallService.js";
+import { normalizePhone, startYayOutboundCall, testYayConnection, yayConfigStatus } from "../services/yayCallService.js";
 import { pick, requireFields } from "../utils.js";
 
 const router = express.Router();
@@ -82,6 +82,15 @@ async function markTargetContacted(target) {
 
 router.get("/config/status", (req, res) => {
   res.json(yayConfigStatus());
+});
+
+router.post("/config/test", async (req, res, next) => {
+  try {
+    const result = await testYayConnection();
+    res.status(result.ok ? 200 : 400).json(result);
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get("/stats/summary", async (req, res, next) => {

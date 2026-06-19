@@ -1,5 +1,6 @@
 const DEFAULT_API_BASE = "https://api.yay.com";
 const DEFAULT_CALL_PATH = "/call";
+const DEFAULT_AUTH_TEST_PATH = "/authenticated";
 
 function trimSlash(value = "") {
   return String(value || "").replace(/\/+$/, "");
@@ -51,9 +52,46 @@ export function yayConfigStatus() {
     configured,
     apiBase: trimSlash(process.env.YAY_API_BASE_URL || DEFAULT_API_BASE),
     callPath: leadSlash(process.env.YAY_CLICK_TO_CALL_PATH || DEFAULT_CALL_PATH),
+    authTestPath: leadSlash(process.env.YAY_AUTH_TEST_PATH || DEFAULT_AUTH_TEST_PATH),
     hasSipUser: Boolean(process.env.YAY_SIP_USER_UUID),
     hasHuntGroup: Boolean(process.env.YAY_HUNT_GROUP_UUID),
     hasCallerId: Boolean(process.env.YAY_CALLER_ID)
+  };
+}
+
+export async function testYayConnection() {
+  const config = yayConfigStatus();
+
+  if (!config.configured) {
+    return {
+      configured: false,
+      ok: false,
+      message: "Yay API credentials are not configured yet."
+    };
+  }
+
+  const url = `${config.apiBase}${config.authTestPath}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "X-Auth-Reseller": process.env.YAY_AUTH_RESELLER,
+      "X-Auth-User": process.env.YAY_AUTH_USER,
+      "X-Auth-Password": process.env.YAY_AUTH_PASSWORD
+    }
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const responsePayload = contentType.includes("application/json")
+    ? await response.json().catch(() => ({}))
+    : await response.text().catch(() => "");
+
+  return {
+    configured: true,
+    ok: response.ok,
+    status: response.status,
+    url,
+    responsePayload,
+    message: response.ok ? "Yay API connection verified." : "Yay API connection test failed."
   };
 }
 
