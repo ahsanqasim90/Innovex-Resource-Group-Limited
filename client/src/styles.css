@@ -5469,6 +5469,298 @@ tbody tr:hover td {
   opacity: .5;
   cursor: not-allowed;
 }
+.admin-content:has(.admin-calls-page) {
+  padding: 1.25rem;
+}
+.admin-calls-page {
+  display: grid;
+  gap: 1rem;
+}
+.calls-api-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(244, 185, 66, .48);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244, 185, 66, .16), transparent 32%),
+    #fff9e8;
+  color: #7a4a00;
+  font-weight: 850;
+}
+.calls-api-banner strong,
+.calls-api-banner span {
+  color: #7a4a00;
+}
+.calls-api-banner span {
+  font-weight: 750;
+}
+.calls-stat-grid-compact {
+  margin-bottom: 0;
+}
+.calls-stat-card-compact {
+  min-height: 112px;
+  align-content: center;
+}
+.calls-stat-card-compact.success strong,
+.calls-stat-card-compact.success svg {
+  color: #166534;
+}
+.calls-stat-card-compact.danger strong,
+.calls-stat-card-compact.danger svg {
+  color: #991b1b;
+}
+.calls-dialer-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+.dialpad-card {
+  overflow: hidden;
+  border: 1px solid #d4e8eb;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 18px 46px rgba(6,63,79,.08);
+}
+.dialpad-header {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.18), transparent 38%),
+    linear-gradient(155deg, var(--teal), var(--blue));
+  color: white;
+}
+.dialpad-header label {
+  display: grid;
+  gap: 7px;
+  color: #d6edf1;
+}
+.dialpad-header label span {
+  color: #d6edf1;
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.dialpad-header select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 14px;
+  background: rgba(255,255,255,.1);
+  color: white;
+  font-weight: 900;
+  padding: 0 12px;
+}
+.dialpad-header select option {
+  color: var(--teal);
+}
+.dialpad-display {
+  display: grid;
+  gap: 6px;
+  min-height: 92px;
+  place-items: center;
+  padding: 14px 10px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 20px;
+  background: rgba(255,255,255,.08);
+  text-align: center;
+}
+.dialpad-display strong {
+  color: white;
+  font-size: 1.22rem;
+  letter-spacing: .06em;
+  line-height: 1.2;
+}
+.dialpad-display .muted-display {
+  color: #bde4e9;
+}
+.dialpad-display span {
+  color: var(--gold);
+  font-size: .78rem;
+  font-weight: 900;
+}
+.dialpad-keys {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.08), transparent 35%),
+    #fbfefe;
+}
+.dialpad-key {
+  display: grid;
+  gap: 2px;
+  min-height: 54px;
+  place-items: center;
+  border: 1px solid #d6e9ed;
+  border-radius: 16px;
+  background: #f8fdfd;
+  color: var(--teal);
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+.dialpad-key:hover {
+  transform: translateY(-2px);
+  border-color: rgba(11,95,117,.32);
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(6,63,79,.08);
+}
+.dialpad-key:active {
+  transform: translateY(0);
+}
+.dialpad-key strong {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.dialpad-key span {
+  color: var(--muted);
+  font-size: .6rem;
+  font-weight: 950;
+  letter-spacing: .06em;
+}
+.dialpad-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  padding: 0 16px 14px;
+  background: #fbfefe;
+}
+.dialpad-action-button,
+.dialpad-call-button {
+  display: grid;
+  min-height: 46px;
+  place-items: center;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+}
+.dialpad-action-button {
+  border: 1px solid #d6e9ed;
+  background: #ffffff;
+  color: var(--teal);
+}
+.dialpad-call-button {
+  border: 0;
+  background: var(--gold);
+  color: #10242c;
+  box-shadow: 0 12px 24px rgba(244,185,66,.22);
+}
+.dialpad-action-button:hover,
+.dialpad-call-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(6,63,79,.08);
+}
+.dialpad-call-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+  transform: none;
+  box-shadow: none;
+}
+.dialpad-source-field {
+  padding: 0 16px 18px;
+  background: #fbfefe;
+}
+.calls-outcome-modern {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border-top: 0 !important;
+}
+.calls-panel-header {
+  display: grid;
+  gap: 7px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #d6e9ed;
+}
+.calls-panel-header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--teal);
+  font-size: 1.22rem;
+  font-weight: 950;
+}
+.calls-panel-header p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.calls-selected-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid #d6e9ed;
+  border-radius: 16px;
+  background: #f8fdfd;
+}
+.calls-selected-summary strong {
+  color: var(--teal);
+}
+.calls-selected-summary span {
+  color: var(--muted);
+  font-weight: 750;
+}
+.calls-outcome-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.calls-history-card {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 24px;
+}
+.calls-history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.calls-history-heading h2 {
+  margin: 5px 0 0;
+  color: var(--teal);
+}
+.calls-history-heading .badge {
+  white-space: nowrap;
+}
+.calls-history-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+.calls-filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.calls-filter-actions .button {
+  min-width: 160px;
+}
+.calls-history-table {
+  box-shadow: none;
+}
+.calls-history-table table {
+  min-width: 980px;
+}
+.calls-history-table thead th {
+  background: var(--teal);
+  color: white;
+}
+.call-source-text {
+  color: var(--blue);
+  font-weight: 900;
+}
+.calls-pagination {
+  margin-top: 0;
+}
 .chatbot-reset {
   display: inline-flex;
   align-items: center;
@@ -5509,6 +5801,7 @@ tbody tr:hover td {
 }
 @media (max-width: 900px) {
   .hero, .footer, .admin-shell, .compliance-card, .job-detail-card, .digital-showcase, .blog-hero, .blog-card.featured, .blog-detail-hero, .blog-article-shell, .partners-hero, .testimonial-hero-card, .recruitment-quality-card, .about-snapshot-card, .dashboard-hero, .dashboard-kpi-grid, .talent-hero, .courses-hero, .course-enquiry-layout, .training-home-card, .calls-hero, .calls-workspace-grid { grid-template-columns: 1fr; }
+  .calls-dialer-grid, .calls-history-filters { grid-template-columns: 1fr; }
   .jobs-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .interview-admin-grid, .meeting-admin-grid, .training-admin-grid, .talent-admin-grid, .team-admin-grid { grid-template-columns: 1fr; }
   .interview-detail, .blog-cta-card { position: static; }
@@ -5537,6 +5830,9 @@ tbody tr:hover td {
 
 @media (max-width: 620px) {
   .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid, .testimonial-stats-grid, .testimonial-review-grid, .faq-grid, .training-summary-grid, .training-reminder-grid, .course-select-grid, .training-money-grid, .course-admin-grid, .course-admin-meta, .dashboard-hero-metrics, .dashboard-kpi-list, .talent-summary-grid, .talent-match-grid, .crm-segment-grid, .permission-grid, .public-course-grid, .public-course-loading, .training-process-grid, .public-course-meta, .course-stats-row, .admin-jobs-stats, .calls-stat-grid { grid-template-columns: 1fr; }
+  .calls-outcome-fields { grid-template-columns: 1fr; }
+  .calls-api-banner, .calls-history-heading, .calls-filter-actions { align-items: stretch; flex-direction: column; }
+  .calls-filter-actions .button { width: 100%; }
   .admin-job-form-head { flex-direction: column; }
   .admin-job-submit-row { justify-content: stretch; }
   .admin-job-submit-row .button { width: 100%; }
