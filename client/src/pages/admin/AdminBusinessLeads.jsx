@@ -188,6 +188,8 @@ export default function AdminBusinessLeads() {
   const [bulkStatus, setBulkStatus] = useState("Contacted");
   const [callConfig, setCallConfig] = useState({ allowedCallerIds: [] });
   const [selectedOutboundCallerId, setSelectedOutboundCallerId] = useState("");
+  const [senderAccounts, setSenderAccounts] = useState([]);
+  const [selectedSenderEmail, setSelectedSenderEmail] = useState("");
 
   const selectedCount = selectedIds.length;
   const selectedService = useMemo(() => filters.service || importCategory || "Recruitment", [filters.service, importCategory]);
@@ -226,6 +228,13 @@ export default function AdminBusinessLeads() {
       .then((data) => {
         setCallConfig(data);
         setSelectedOutboundCallerId(data.allowedCallerIds?.[0] || "");
+      })
+      .catch(() => {});
+    api("/emails/senders")
+      .then((data) => {
+        const senders = data.senders || [];
+        setSenderAccounts(senders);
+        setSelectedSenderEmail(senders[0]?.address || "");
       })
       .catch(() => {});
   }, []);
@@ -297,7 +306,8 @@ export default function AdminBusinessLeads() {
           leadIds: selectedIds,
           service: selectedService,
           subject: outreach.subject,
-          message: outreach.message
+          message: outreach.message,
+          fromEmail: selectedSenderEmail
         }
       });
       setStatus({ message: `${result.message}${result.failed?.length ? ` Failed: ${result.failed.length}.` : ""}` });
@@ -536,12 +546,21 @@ export default function AdminBusinessLeads() {
               </div>
             </div>
             <p>Personalise with <strong>{"{{companyName}}"}</strong>, <strong>{"{{contactName}}"}</strong>, <strong>{"{{category}}"}</strong>, <strong>{"{{city}}"}</strong> and <strong>{"{{postcode}}"}</strong>.</p>
+            <label className="outreach-sender-field">
+              <span>Send from</span>
+              <select value={selectedSenderEmail} onChange={(e) => setSelectedSenderEmail(e.target.value)} required>
+                {senderAccounts.map((sender) => (
+                  <option key={sender.address} value={sender.address}>{sender.label} - {sender.address}</option>
+                ))}
+              </select>
+            </label>
+            {!senderAccounts.length && <p className="muted">No sender mailbox is assigned to this account yet.</p>}
             <select className="crm-preset-select" value={campaignPreset} onChange={(e) => applyCampaignPreset(e.target.value)}>
               {businessTemplatePresets.map((preset) => <option key={preset.label}>{preset.label}</option>)}
             </select>
             <input placeholder="Email subject" value={outreach.subject} onChange={(e) => setOutreach({ ...outreach, subject: e.target.value })} required />
             <textarea rows="8" value={outreach.message} onChange={(e) => setOutreach({ ...outreach, message: e.target.value })} required />
-            <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount}>
+            <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount || !selectedSenderEmail}>
               {sending && <span className="button-spinner" aria-hidden="true" />}
               <span>{sending ? "Sending emails..." : "Send Business Emails"}</span>
             </button>

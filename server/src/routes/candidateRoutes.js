@@ -1,6 +1,7 @@
 import express from "express";
 import Candidate from "../models/Candidate.js";
 import Job from "../models/Job.js";
+import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { uploadCandidateCsv } from "../middleware/upload.js";
 import { sendCandidateOutreachEmail } from "../services/emailService.js";
@@ -403,6 +404,12 @@ router.post("/outreach", async (req, res, next) => {
     const candidateIds = Array.isArray(req.body.candidateIds) ? req.body.candidateIds.slice(0, 100) : [];
     requireFields(req.body, ["subject", "message"]);
     if (!candidateIds.length) return res.status(400).json({ message: "Select at least one candidate" });
+    const allowedSenders = allowedSenderAccountsForUser(req.user);
+    const fromEmail = String(req.body.fromEmail || allowedSenders[0]?.address || "").toLowerCase().trim();
+    if (!fromEmail) return res.status(400).json({ message: "No sender mailbox is assigned to your account" });
+    if (fromEmail && !canUseSender(req.user, fromEmail)) {
+      return res.status(403).json({ message: "You are not allowed to send from this mailbox" });
+    }
 
     const job = req.body.jobId ? await Job.findById(req.body.jobId).lean() : null;
     const candidates = await Candidate.find({ _id: { $in: candidateIds }, email: { $ne: "" }, status: { $ne: "Do Not Contact" } });
@@ -413,7 +420,7 @@ router.post("/outreach", async (req, res, next) => {
       const subject = applyTemplate(req.body.subject, candidate, job || req.body);
       const message = applyTemplate(req.body.message, candidate, job || req.body);
       try {
-        const result = await sendCandidateOutreachEmail({ candidate, subject, message });
+        const result = await sendCandidateOutreachEmail({ candidate, subject, message, fromEmail });
         if (result.sent) sent += 1;
         else failed.push({ id: candidate._id, reason: result.reason });
         candidate.status = candidate.status === "Available" ? "Contacted" : candidate.status;

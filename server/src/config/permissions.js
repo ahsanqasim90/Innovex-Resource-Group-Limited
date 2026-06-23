@@ -23,6 +23,7 @@ export const permissionGroups = [
     label: "Sales and growth",
     permissions: [
       ["businessLeads.view", "Business Leads"],
+      ["emails.view", "Email Centre"],
       ["courses.view", "Courses"],
       ["trainingBookings.view", "Training Bookings"]
     ]
@@ -60,6 +61,7 @@ export const rolePresets = {
   sales: [
     "dashboard.view",
     "businessLeads.view",
+    "emails.view",
     "calls.view",
     "meetings.view",
     "courses.view",
@@ -75,6 +77,7 @@ export const rolePresets = {
   marketing: [
     "dashboard.view",
     "businessLeads.view",
+    "emails.view",
     "blogs.view",
     "testimonials.view",
     "partners.view",
@@ -115,6 +118,7 @@ export function safeUser(user) {
     canCopyData: isOwner ? true : Boolean(user.canCopyData),
     outboundCallerIds: allowedCallerIdsForUser(user),
     assignedOutboundCallerIds: Array.isArray(user.outboundCallerIds) ? user.outboundCallerIds : [],
+    assignedSenderEmails: Array.isArray(user.assignedSenderEmails) ? user.assignedSenderEmails : [],
     isActive: user.isActive
   };
 }

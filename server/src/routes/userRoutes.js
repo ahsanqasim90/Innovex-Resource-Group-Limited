@@ -1,6 +1,7 @@
 import express from "express";
 import User from "../models/User.js";
 import { outboundCallerIds } from "../config/calling.js";
+import { publicEmailAccounts } from "../config/emailAccounts.js";
 import { allPermissions, permissionGroups, rolePresets, safeUser } from "../config/permissions.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
@@ -26,14 +27,27 @@ function cleanCallerIds(input = []) {
   );
 }
 
+function cleanSenderEmails(input = []) {
+  if (!Array.isArray(input)) return [];
+  const allowed = publicEmailAccounts().map((account) => account.address);
+  return Array.from(
+    new Set(
+      input
+        .map((email) => String(email || "").toLowerCase().trim())
+        .filter((email) => allowed.includes(email))
+    )
+  );
+}
+
 function userPayload(input, existingUser = null) {
-  const data = pick(input, ["name", "email", "role", "permissions", "outboundCallerIds", "canCopyData", "isActive"]);
+  const data = pick(input, ["name", "email", "role", "permissions", "outboundCallerIds", "assignedSenderEmails", "canCopyData", "isActive"]);
   if (data.email) {
     validateEmail(data.email);
     data.email = data.email.toLowerCase();
   }
   if (data.permissions) data.permissions = cleanPermissions(data.permissions);
   if (data.outboundCallerIds) data.outboundCallerIds = cleanCallerIds(data.outboundCallerIds);
+  if (data.assignedSenderEmails) data.assignedSenderEmails = cleanSenderEmails(data.assignedSenderEmails);
   if (data.role && rolePresets[data.role] && !input.permissions) data.permissions = rolePresets[data.role];
   if (existingUser?.role === "admin" && data.role && data.role !== "admin") {
     const error = new Error("Primary admin role cannot be downgraded from this panel");
@@ -44,7 +58,7 @@ function userPayload(input, existingUser = null) {
 }
 
 router.get("/permission-options", (req, res) => {
-  res.json({ permissionGroups, rolePresets, outboundCallerIds: outboundCallerIds() });
+  res.json({ permissionGroups, rolePresets, outboundCallerIds: outboundCallerIds(), senderAccounts: publicEmailAccounts() });
 });
 
 router.get("/", async (req, res, next) => {

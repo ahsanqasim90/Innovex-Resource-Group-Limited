@@ -1,5 +1,6 @@
 import express from "express";
 import BusinessLead from "../models/BusinessLead.js";
+import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { uploadBusinessLeadCsv } from "../middleware/upload.js";
 import { sendBusinessLeadOutreachEmail } from "../services/emailService.js";
@@ -454,6 +455,12 @@ router.post("/outreach", async (req, res, next) => {
     const leadIds = Array.isArray(req.body.leadIds) ? req.body.leadIds.slice(0, 100) : [];
     requireFields(req.body, ["subject", "message"]);
     if (!leadIds.length) return res.status(400).json({ message: "Select at least one business lead" });
+    const allowedSenders = allowedSenderAccountsForUser(req.user);
+    const fromEmail = String(req.body.fromEmail || allowedSenders[0]?.address || "").toLowerCase().trim();
+    if (!fromEmail) return res.status(400).json({ message: "No sender mailbox is assigned to your account" });
+    if (fromEmail && !canUseSender(req.user, fromEmail)) {
+      return res.status(403).json({ message: "You are not allowed to send from this mailbox" });
+    }
 
     const leads = await BusinessLead.find({ _id: { $in: leadIds }, status: { $ne: "Do Not Contact" } });
     let sent = 0;
@@ -462,7 +469,7 @@ router.post("/outreach", async (req, res, next) => {
     for (const lead of leads) {
       const subject = applyTemplate(req.body.subject, lead);
       const message = applyTemplate(req.body.message, lead);
-      const result = await sendBusinessLeadOutreachEmail({ lead, subject, message });
+      const result = await sendBusinessLeadOutreachEmail({ lead, subject, message, fromEmail });
       if (result.sent) {
         const sentTo = lead.emails.map((item) => item.email).filter(Boolean);
         lead.status = "Contacted";

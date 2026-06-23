@@ -145,6 +145,8 @@ export default function AdminTalentPool() {
   const [sending, setSending] = useState(false);
   const [callConfig, setCallConfig] = useState({ allowedCallerIds: [] });
   const [selectedOutboundCallerId, setSelectedOutboundCallerId] = useState("");
+  const [senderAccounts, setSenderAccounts] = useState([]);
+  const [selectedSenderEmail, setSelectedSenderEmail] = useState("");
 
   const selectedCount = selectedIds.length;
   const selectedJob = useMemo(() => jobs.find((job) => job._id === selectedJobId), [jobs, selectedJobId]);
@@ -184,6 +186,13 @@ export default function AdminTalentPool() {
       .then((data) => {
         setCallConfig(data);
         setSelectedOutboundCallerId(data.allowedCallerIds?.[0] || "");
+      })
+      .catch(() => {});
+    api("/emails/senders")
+      .then((data) => {
+        const senders = data.senders || [];
+        setSenderAccounts(senders);
+        setSelectedSenderEmail(senders[0]?.address || "");
       })
       .catch(() => {});
   }, []);
@@ -284,7 +293,8 @@ export default function AdminTalentPool() {
           jobTitle: selectedJob?.title || matchRole,
           location: selectedJob?.location || matchPostcode,
           subject: outreach.subject,
-          message: outreach.message
+          message: outreach.message,
+          fromEmail: selectedSenderEmail
         }
       });
       setStatus({ message: `${result.message}${result.failed?.length ? ` Failed: ${result.failed.length}.` : ""}` });
@@ -524,12 +534,21 @@ export default function AdminTalentPool() {
               </div>
             </div>
             <p>Use <strong>{"{{name}}"}</strong>, <strong>{"{{jobTitle}}"}</strong> and <strong>{"{{location}}"}</strong> to keep emails personal at scale.</p>
+            <label className="outreach-sender-field">
+              <span>Send from</span>
+              <select value={selectedSenderEmail} onChange={(e) => setSelectedSenderEmail(e.target.value)} required>
+                {senderAccounts.map((sender) => (
+                  <option key={sender.address} value={sender.address}>{sender.label} - {sender.address}</option>
+                ))}
+              </select>
+            </label>
+            {!senderAccounts.length && <p className="muted">No sender mailbox is assigned to this account yet.</p>}
             <select className="crm-preset-select" value={campaignPreset} onChange={(e) => applyCampaignPreset(e.target.value)}>
               {candidateTemplatePresets.map((preset) => <option key={preset.label}>{preset.label}</option>)}
             </select>
             <input placeholder="Email subject" value={outreach.subject} onChange={(e) => setOutreach({ ...outreach, subject: e.target.value })} required />
             <textarea rows="8" value={outreach.message} onChange={(e) => setOutreach({ ...outreach, message: e.target.value })} required />
-            <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount}>
+            <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount || !selectedSenderEmail}>
               {sending && <span className="button-spinner" aria-hidden="true" />}
               <span>{sending ? "Sending emails..." : "Send Personalised Emails"}</span>
             </button>

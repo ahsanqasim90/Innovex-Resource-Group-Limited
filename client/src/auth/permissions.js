@@ -21,6 +21,7 @@ export const permissionGroups = [
     label: "Sales and growth",
     permissions: [
       ["businessLeads.view", "Business Leads"],
+      ["emails.view", "Email Centre"],
       ["courses.view", "Courses"],
       ["trainingBookings.view", "Training Bookings"]
     ]
@@ -42,9 +43,9 @@ export const permissionGroups = [
 
 export const rolePresets = {
   recruitment: ["dashboard.view", "jobs.view", "applications.view", "cvs.view", "talentPool.view", "calls.view", "interviews.view", "meetings.view"],
-  sales: ["dashboard.view", "businessLeads.view", "calls.view", "meetings.view", "courses.view", "trainingBookings.view"],
+  sales: ["dashboard.view", "businessLeads.view", "emails.view", "calls.view", "meetings.view", "courses.view", "trainingBookings.view"],
   training: ["dashboard.view", "courses.view", "trainingBookings.view", "meetings.view", "businessLeads.view"],
-  marketing: ["dashboard.view", "businessLeads.view", "blogs.view", "testimonials.view", "partners.view", "contacts.view"],
+  marketing: ["dashboard.view", "businessLeads.view", "emails.view", "blogs.view", "testimonials.view", "partners.view", "contacts.view"],
   viewer: ["dashboard.view"]
 };
 

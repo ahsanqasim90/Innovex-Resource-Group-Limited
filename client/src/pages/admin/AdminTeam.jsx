@@ -12,6 +12,7 @@ const emptyForm = {
   role: "viewer",
   permissions: rolePresets.viewer,
   outboundCallerIds: [],
+  assignedSenderEmails: [],
   canCopyData: false,
   isActive: true
 };
@@ -36,7 +37,8 @@ function toForm(user) {
     id: user.id || user._id,
     password: "",
     permissions: user.permissions || [],
-    outboundCallerIds: user.assignedOutboundCallerIds || user.outboundCallerIds || []
+    outboundCallerIds: user.assignedOutboundCallerIds || user.outboundCallerIds || [],
+    assignedSenderEmails: user.assignedSenderEmails || []
   };
 }
 
@@ -47,6 +49,7 @@ export default function AdminTeam() {
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
   const [outboundCallerIds, setOutboundCallerIds] = useState([]);
+  const [senderAccounts, setSenderAccounts] = useState([]);
 
   async function load() {
     try {
@@ -59,7 +62,10 @@ export default function AdminTeam() {
   useEffect(() => {
     load();
     api("/users/permission-options")
-      .then((data) => setOutboundCallerIds(data.outboundCallerIds || []))
+      .then((data) => {
+        setOutboundCallerIds(data.outboundCallerIds || []);
+        setSenderAccounts(data.senderAccounts || []);
+      })
       .catch(() => {});
   }, []);
 
@@ -79,6 +85,13 @@ export default function AdminTeam() {
       ? form.outboundCallerIds.filter((item) => item !== callerId)
       : [...form.outboundCallerIds, callerId];
     setForm({ ...form, outboundCallerIds: nextCallerIds });
+  }
+
+  function toggleSenderEmail(email) {
+    const nextSenders = form.assignedSenderEmails.includes(email)
+      ? form.assignedSenderEmails.filter((item) => item !== email)
+      : [...form.assignedSenderEmails, email];
+    setForm({ ...form, assignedSenderEmails: nextSenders });
   }
 
   async function save(event) {
@@ -174,6 +187,19 @@ export default function AdminTeam() {
               {!outboundCallerIds.length && <span className="muted">Add YAY_OUTBOUND_NUMBERS in Vercel to enable caller assignment.</span>}
             </div>
           </div>
+          <div className="team-caller-options">
+            <h3>Email sender mailboxes</h3>
+            <p>Choose which Innovex email addresses this employee can send from inside the CRM.</p>
+            <div className="caller-checkbox-grid">
+              {senderAccounts.map((sender) => (
+                <label key={sender.address}>
+                  <input type="checkbox" checked={form.assignedSenderEmails.includes(sender.address)} onChange={() => toggleSenderEmail(sender.address)} />
+                  <span>{sender.label} - {sender.address}</span>
+                </label>
+              ))}
+              {!senderAccounts.length && <span className="muted">Configure SMTP_INFO and SMTP_MARK environment variables to enable sender assignment.</span>}
+            </div>
+          </div>
           <div className="permission-grid">
             {permissionGroups.map((group) => (
               <section className="permission-group" key={group.label}>
@@ -209,6 +235,7 @@ export default function AdminTeam() {
               <th>Role</th>
               <th>Permissions</th>
               <th>Caller numbers</th>
+              <th>Sender emails</th>
               <th>Copy access</th>
               <th>Status</th>
               <th>Actions</th>
@@ -221,6 +248,7 @@ export default function AdminTeam() {
                 <td>{roleLabel(user.role)}</td>
                 <td>{user.permissions?.length || 0} modules</td>
                 <td>{user.outboundCallerIds?.length ? user.outboundCallerIds.join(", ") : "None assigned"}</td>
+                <td>{user.assignedSenderEmails?.length ? user.assignedSenderEmails.join(", ") : ["admin", "super_admin"].includes(user.role) ? "All configured" : "None assigned"}</td>
                 <td>{user.canCopyData ? "Allowed" : "Restricted"}</td>
                 <td><span className="status-chip table-chip">{user.isActive ? "Active" : "Suspended"}</span></td>
                 <td className="actions compact-actions">
@@ -229,7 +257,7 @@ export default function AdminTeam() {
                 </td>
               </tr>
             ))}
-            {!users.length && <tr><td colSpan="7">No team members found.</td></tr>}
+            {!users.length && <tr><td colSpan="8">No team members found.</td></tr>}
           </tbody>
         </table>
       </div>

@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema(
     },
     permissions: [{ type: String, trim: true }],
     outboundCallerIds: [{ type: String, trim: true }],
+    assignedSenderEmails: [{ type: String, trim: true, lowercase: true }],
     canCopyData: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true }
   },

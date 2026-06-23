@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { findEmailAccount } from "../config/emailAccounts.js";
 
 const recipient = process.env.CONTACT_TO_EMAIL || "info@innovexresourcegroup.co.uk";
 
@@ -6,16 +7,34 @@ function hasSmtpConfig() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
-function makeTransporter() {
-  return nodemailer.createTransport({
+function makeTransporter(account = null) {
+  const config = account || {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: process.env.SMTP_SECURE === "true",
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  };
+
+  return nodemailer.createTransport({
+    host: config.host,
+    port: Number(config.port || 587),
+    secure: config.secure === true || config.secure === "true",
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
+      user: config.user,
+      pass: config.pass
     }
   });
+}
+
+function formatSender(account = null) {
+  if (!account) return process.env.MAIL_FROM || process.env.SMTP_USER;
+  return account.name ? `"${account.name}" <${account.address}>` : account.address;
+}
+
+function senderAccountOrDefault(fromEmail) {
+  if (!fromEmail) return null;
+  return findEmailAccount(fromEmail);
 }
 
 export async function sendContactEmail(message) {
@@ -173,8 +192,9 @@ export async function sendTrainingEnquiryEmail(booking) {
   return { sent: true };
 }
 
-export async function sendCandidateOutreachEmail({ candidate, subject, message, replyTo }) {
-  if (!hasSmtpConfig()) {
+export async function sendCandidateOutreachEmail({ candidate, subject, message, replyTo, fromEmail }) {
+  const account = senderAccountOrDefault(fromEmail);
+  if (!account && !hasSmtpConfig()) {
     return { sent: false, reason: "SMTP is not configured" };
   }
 
@@ -182,13 +202,13 @@ export async function sendCandidateOutreachEmail({ candidate, subject, message, 
     return { sent: false, reason: "Candidate email is missing" };
   }
 
-  const transporter = makeTransporter();
+  const transporter = makeTransporter(account);
   const safeMessage = String(message || "").replace(/\n/g, "<br />");
 
   await transporter.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    from: formatSender(account),
     to: candidate.email,
-    replyTo: replyTo || recipient,
+    replyTo: replyTo || account?.address || recipient,
     subject,
     text: message,
     html: `
@@ -197,7 +217,7 @@ export async function sendCandidateOutreachEmail({ candidate, subject, message, 
         <hr style="border:none;border-top:1px solid #dce8eb;margin:20px 0" />
         <p style="font-size:13px;color:#667985">
           Innovex Resource Group Limited<br />
-          info@innovexresourcegroup.co.uk
+          ${account?.address || "info@innovexresourcegroup.co.uk"}
         </p>
       </div>
     `
@@ -206,8 +226,9 @@ export async function sendCandidateOutreachEmail({ candidate, subject, message, 
   return { sent: true };
 }
 
-export async function sendBusinessLeadOutreachEmail({ lead, subject, message, replyTo }) {
-  if (!hasSmtpConfig()) {
+export async function sendBusinessLeadOutreachEmail({ lead, subject, message, replyTo, fromEmail }) {
+  const account = senderAccountOrDefault(fromEmail);
+  if (!account && !hasSmtpConfig()) {
     return { sent: false, reason: "SMTP is not configured" };
   }
 
@@ -216,14 +237,14 @@ export async function sendBusinessLeadOutreachEmail({ lead, subject, message, re
     return { sent: false, reason: "Business lead email is missing" };
   }
 
-  const transporter = makeTransporter();
+  const transporter = makeTransporter(account);
   const safeMessage = String(message || "").replace(/\n/g, "<br />");
 
   await transporter.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    from: formatSender(account),
     to: emails[0],
     bcc: emails.slice(1),
-    replyTo: replyTo || recipient,
+    replyTo: replyTo || account?.address || recipient,
     subject,
     text: message,
     html: `
@@ -232,7 +253,39 @@ export async function sendBusinessLeadOutreachEmail({ lead, subject, message, re
         <hr style="border:none;border-top:1px solid #dce8eb;margin:20px 0" />
         <p style="font-size:13px;color:#667985">
           Innovex Resource Group Limited<br />
-          info@innovexresourcegroup.co.uk
+          ${account?.address || "info@innovexresourcegroup.co.uk"}
+        </p>
+      </div>
+    `
+  });
+
+  return { sent: true };
+}
+
+export async function sendComposedEmail({ fromEmail, to = [], cc = [], bcc = [], subject, message, replyTo }) {
+  const account = senderAccountOrDefault(fromEmail);
+  if (!account) {
+    return { sent: false, reason: "Selected sender mailbox is not configured" };
+  }
+
+  const transporter = makeTransporter(account);
+  const safeMessage = String(message || "").replace(/\n/g, "<br />");
+
+  await transporter.sendMail({
+    from: formatSender(account),
+    to,
+    cc,
+    bcc,
+    replyTo: replyTo || account.address,
+    subject,
+    text: message,
+    html: `
+      <div style="font-family:Arial,sans-serif;line-height:1.55;color:#10242c">
+        <p>${safeMessage}</p>
+        <hr style="border:none;border-top:1px solid #dce8eb;margin:20px 0" />
+        <p style="font-size:13px;color:#667985">
+          Innovex Resource Group Limited<br />
+          ${account.address}
         </p>
       </div>
     `
