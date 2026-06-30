@@ -59,17 +59,38 @@ Has full portal access, including Web Leads CRM settings, categories, team permi
 
 ## 3. Sidebar pages and why they exist
 
+### How to use the interface
+
+Every Web Leads CRM page has a **How to use** button in its header. Hover over it for a quick explanation or click it to keep the guide open. The guide explains:
+
+- what the page is for;
+- the correct order of work; and
+- the main mistake staff should avoid.
+
+Small question-mark buttons beside important blocks provide shorter field-level guidance. Hover or keyboard-focus the button to read it.
+
+The interface deliberately uses progressive disclosure:
+
+- priority information is visible first;
+- optional fields and advanced filters are collapsed;
+- supporting dashboard metrics open only when needed; and
+- an opened prospect is divided into task-specific workspace tabs.
+
+This keeps daily work simple without removing manager controls or historic information.
+
 ### CRM Dashboard
 
 Purpose: a quick operational view of prospect volume, email requests, follow-ups, qualified leads, meetings, and outcomes.
 
-Managers can filter by period, agent, category, status, and service. The agent summary helps managers identify coaching needs without opening every record.
+The Priority View shows the records and actions that need attention first. Supporting pipeline metrics are collapsed below it. Managers can open Dashboard Filters to filter by period, agent, category, status, and service. The agent summary helps managers identify coaching needs without opening every record.
 
 ### Add Prospect
 
 Purpose: capture the first useful response quickly and consistently.
 
 Required information protects lead quality. The system automatically records the logged-in user, creation time, last editor, and update time.
+
+Step 1 contains essential contact details. Optional Business Context contains decision-maker, supplier, address, budget, and timing fields and should be opened only when that information is available. Step 2 records services, response, notes, and the next follow-up.
 
 Before saving, the CRM checks telephone, email, website, and business name/postcode for possible duplicates.
 
@@ -80,6 +101,15 @@ Purpose: search and manage actionable prospect records.
 External agents see only their own records. Managers see all records and can filter by agent. Date filters refer to the prospect creation date.
 
 Use Edit details when contact or business information needs correction. External-agent editing is disabled while a submitted qualification is locked for manager review.
+
+Start with keyword and status. Open More Filters only when category, service, agent, or date filtering is required. Use Clear to remove every active filter.
+
+After opening a prospect, use one workspace tab at a time:
+
+- Activity & Follow-up: contact outcomes, next actions, and timeline;
+- Email & Meetings: approved messages, drafts, history, and meeting requests;
+- Qualification: sales-ready lead handover; and
+- Manager Review: assignment, acceptance, information requests, private notes, and pipeline stage.
 
 ### Email Requests
 
