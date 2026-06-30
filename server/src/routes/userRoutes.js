@@ -78,7 +78,6 @@ router.post("/", async (req, res, next) => {
     }
     const payload = userPayload(req.body);
     payload.password = req.body.password;
-    if (!payload.permissions?.length) payload.permissions = rolePresets[payload.role] || [];
     const user = await User.create(payload);
     res.status(201).json(safeUser(user));
   } catch (error) {

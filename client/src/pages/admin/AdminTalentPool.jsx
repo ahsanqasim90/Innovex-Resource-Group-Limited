@@ -147,15 +147,24 @@ export default function AdminTalentPool() {
   const [selectedOutboundCallerId, setSelectedOutboundCallerId] = useState("");
   const [senderAccounts, setSenderAccounts] = useState([]);
   const [selectedSenderEmail, setSelectedSenderEmail] = useState("");
+  const [postcodeRoles, setPostcodeRoles] = useState([]);
+  const [selectedPostcodeRoles, setSelectedPostcodeRoles] = useState([]);
+  const [loadingPostcodeRoles, setLoadingPostcodeRoles] = useState(false);
 
   const selectedCount = selectedIds.length;
   const selectedJob = useMemo(() => jobs.find((job) => job._id === selectedJobId), [jobs, selectedJobId]);
 
   function queryString(page = pagination.page, nextFilters = filters) {
+    const effectiveFilters = {
+      ...nextFilters,
+      ...(selectedPostcodeRoles.length
+        ? { role: "", roles: JSON.stringify(selectedPostcodeRoles) }
+        : {})
+    };
     const query = new URLSearchParams({
       page,
       limit: pagination.limit,
-      ...Object.fromEntries(Object.entries(nextFilters).filter(([, value]) => value))
+      ...Object.fromEntries(Object.entries(effectiveFilters).filter(([, value]) => value))
     });
     return query.toString();
   }
@@ -196,6 +205,37 @@ export default function AdminTalentPool() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const postcode = filters.postcode.trim();
+    setSelectedPostcodeRoles([]);
+    if (postcode.replace(/\s+/g, "").length < 2) {
+      setPostcodeRoles([]);
+      setLoadingPostcodeRoles(false);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(async () => {
+      setLoadingPostcodeRoles(true);
+      try {
+        const query = new URLSearchParams({
+          postcode,
+          ...(filters.status ? { status: filters.status } : {}),
+          ...(filters.visaStatus ? { visaStatus: filters.visaStatus } : {}),
+          ...(filters.availability ? { availability: filters.availability } : {})
+        });
+        const data = await api(`/candidates/role-options?${query.toString()}`);
+        setPostcodeRoles(data.roles || []);
+      } catch (error) {
+        setPostcodeRoles([]);
+        setStatus({ type: "error", message: error.message });
+      } finally {
+        setLoadingPostcodeRoles(false);
+      }
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [filters.postcode, filters.status, filters.visaStatus, filters.availability]);
 
   async function saveCandidate(event) {
     event.preventDefault();
@@ -380,12 +420,25 @@ export default function AdminTalentPool() {
 
   function applyFilters(event) {
     event.preventDefault();
-    load(1, filters);
+    const nextFilters = {
+      ...filters,
+      role: selectedPostcodeRoles.length ? "" : filters.role,
+      ...(selectedPostcodeRoles.length ? { roles: JSON.stringify(selectedPostcodeRoles) } : {})
+    };
+    load(1, nextFilters);
   }
 
   function resetFilters() {
     setFilters(emptyFilters);
+    setPostcodeRoles([]);
+    setSelectedPostcodeRoles([]);
     load(1, emptyFilters);
+  }
+
+  function togglePostcodeRole(role) {
+    setSelectedPostcodeRoles((current) => current.includes(role)
+      ? current.filter((item) => item !== role)
+      : [...current, role]);
   }
 
   const summaryCards = [
@@ -634,7 +687,49 @@ export default function AdminTalentPool() {
             <span>Availability</span>
             <input placeholder="e.g. Immediate, 2 weeks, weekends" value={filters.availability} onChange={(e) => setFilters({ ...filters, availability: e.target.value })} />
           </label>
-          <button className="button">Apply Filters</button>
+          {(filters.postcode.replace(/\s+/g, "").length >= 2 || loadingPostcodeRoles) && (
+            <div className="postcode-role-picker">
+              <div className="postcode-role-picker-heading">
+                <div>
+                  <strong>Roles available in {filters.postcode.trim().toUpperCase()}</strong>
+                  <span>
+                    {loadingPostcodeRoles
+                      ? "Checking candidate roles..."
+                      : `${postcodeRoles.length} unique role${postcodeRoles.length === 1 ? "" : "s"} found. Select the roles you want to display.`}
+                  </span>
+                </div>
+                {!!postcodeRoles.length && (
+                  <div className="postcode-role-picker-actions">
+                    <button type="button" onClick={() => setSelectedPostcodeRoles(postcodeRoles.map((item) => item.label))}>Select all</button>
+                    <button type="button" onClick={() => setSelectedPostcodeRoles([])}>Clear</button>
+                  </div>
+                )}
+              </div>
+              {!loadingPostcodeRoles && postcodeRoles.length > 0 && (
+                <div className="postcode-role-options">
+                  {postcodeRoles.map((item) => (
+                    <label className={selectedPostcodeRoles.includes(item.label) ? "selected" : ""} key={item.key}>
+                      <input
+                        type="checkbox"
+                        checked={selectedPostcodeRoles.includes(item.label)}
+                        onChange={() => togglePostcodeRole(item.label)}
+                      />
+                      <span>{item.label}</span>
+                      <small>{Number(item.count).toLocaleString()}</small>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {!loadingPostcodeRoles && !postcodeRoles.length && (
+                <p className="postcode-role-empty">No candidate roles were found for this postcode prefix.</p>
+              )}
+            </div>
+          )}
+          <button className="button">
+            {selectedPostcodeRoles.length
+              ? `Show ${selectedPostcodeRoles.length} selected role${selectedPostcodeRoles.length === 1 ? "" : "s"}`
+              : "Apply Filters"}
+          </button>
           <button className="button secondary" type="button" onClick={resetFilters}>Reset</button>
         </form>
       </section>

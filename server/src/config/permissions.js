@@ -89,7 +89,9 @@ export const rolePresets = {
 export function effectivePermissions(user) {
   if (!user) return [];
   if (["admin", "super_admin"].includes(user.role)) return allPermissions;
-  return Array.from(new Set([...(rolePresets[user.role] || []), ...(user.permissions || [])]));
+  // Role presets are only defaults when creating/editing an account. Once saved,
+  // the explicit checkbox selection is the source of truth for employee access.
+  return Array.from(new Set(Array.isArray(user.permissions) ? user.permissions : []));
 }
 
 export function hasPermission(user, permission) {

@@ -220,6 +220,18 @@ function applyTemplate(template, candidate, job = {}) {
   return String(template || "").replace(/\{\{\s*(name|jobTitle|location|salary|company|role)\s*\}\}/gi, (_, key) => values[key] || "");
 }
 
+function selectedRoles(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed)
+      ? parsed.map((role) => String(role || "").trim()).filter(Boolean).slice(0, 100)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 router.get("/", async (req, res, next) => {
   try {
     const page = Math.max(Number(req.query.page || 1), 1);
@@ -228,7 +240,12 @@ router.get("/", async (req, res, next) => {
     const filter = {};
 
     if (req.query.search) filter.$text = { $search: req.query.search };
-    if (req.query.role) filter.desiredRole = new RegExp(escapeRegex(req.query.role), "i");
+    const roles = selectedRoles(req.query.roles);
+    if (roles.length) {
+      filter.desiredRole = { $in: roles.map((role) => new RegExp(`^\\s*${escapeRegex(role)}\\s*$`, "i")) };
+    } else if (req.query.role) {
+      filter.desiredRole = new RegExp(escapeRegex(req.query.role), "i");
+    }
     if (req.query.postcode) filter.postcodePrefix = new RegExp(`^${escapeRegex(postcodePrefix(req.query.postcode))}`, "i");
     if (req.query.status) filter.status = req.query.status;
     if (req.query.visaStatus) filter.visaStatus = new RegExp(escapeRegex(req.query.visaStatus), "i");
@@ -240,6 +257,43 @@ router.get("/", async (req, res, next) => {
     ]);
 
     res.json({ items, total, page, pages: Math.ceil(total / limit), limit });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/role-options", async (req, res, next) => {
+  try {
+    const prefix = postcodePrefix(req.query.postcode);
+    if (prefix.length < 2) return res.json({ postcode: prefix, roles: [], total: 0 });
+
+    const match = {
+      postcodePrefix: new RegExp(`^${escapeRegex(prefix)}`, "i"),
+      desiredRole: { $type: "string", $ne: "" }
+    };
+    if (req.query.status) match.status = req.query.status;
+    if (req.query.visaStatus) match.visaStatus = new RegExp(escapeRegex(req.query.visaStatus), "i");
+    if (req.query.availability) match.availability = new RegExp(escapeRegex(req.query.availability), "i");
+
+    const roles = await Candidate.aggregate([
+      { $match: match },
+      {
+        $project: {
+          role: { $trim: { input: "$desiredRole" } },
+          normalizedRole: { $toLower: { $trim: { input: "$desiredRole" } } }
+        }
+      },
+      { $match: { normalizedRole: { $ne: "" } } },
+      { $group: { _id: "$normalizedRole", label: { $first: "$role" }, count: { $sum: 1 } } },
+      { $sort: { count: -1, label: 1 } },
+      { $limit: 100 }
+    ]);
+
+    res.json({
+      postcode: prefix,
+      roles: roles.map(({ _id, label, count }) => ({ key: _id, label, count })),
+      total: roles.reduce((sum, role) => sum + role.count, 0)
+    });
   } catch (error) {
     next(error);
   }
