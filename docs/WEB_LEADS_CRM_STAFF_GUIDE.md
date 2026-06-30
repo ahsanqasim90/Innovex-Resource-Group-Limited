@@ -61,7 +61,7 @@ Has full portal access, including Web Leads CRM settings, categories, team permi
 
 ### How to use the interface
 
-Every Web Leads CRM page has a **How to use** button in its header. Hover over it for a quick explanation or click it to keep the guide open. The guide explains:
+Every Web Leads CRM page has a **How to use** button in its header. Click it to expand a short guide inside the page, then click **Close guide** when finished. The guide explains:
 
 - what the page is for;
 - the correct order of work; and

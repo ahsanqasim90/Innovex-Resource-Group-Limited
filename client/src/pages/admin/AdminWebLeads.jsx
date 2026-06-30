@@ -122,32 +122,16 @@ function HelpHint({ text }) {
   return <span className="webcrm-help-hint" tabIndex="0" aria-label={text}><CircleHelp size={16} /><span role="tooltip">{text}</span></span>;
 }
 
-function HelpPopover({ mode }) {
-  const [open, setOpen] = useState(false);
-  const guide = modeGuides[mode] || modeGuides.dashboard;
-  return (
-    <div className={`webcrm-help${open ? " is-open" : ""}`}>
-      <button type="button" className="webcrm-help-button" onClick={() => setOpen((current) => !current)} aria-expanded={open}>
-        <CircleHelp size={18} /> How to use
-      </button>
-      <aside className="webcrm-help-popover" aria-hidden={!open}>
-        <span className="eyebrow">Quick staff guide</span>
-        <h3>How this section works</h3>
-        <p>{guide.purpose}</p>
-        <ol>{guide.steps.map((step) => <li key={step}>{step}</li>)}</ol>
-        <div className="webcrm-help-warning"><strong>Good practice</strong><span>{guide.avoid}</span></div>
-      </aside>
-    </div>
-  );
-}
-
 function PageHero({ mode, notifications = 0 }) {
+  const [guideOpen, setGuideOpen] = useState(false);
   const [title, description, Icon] = modeConfig[mode] || modeConfig.dashboard;
+  const guide = modeGuides[mode] || modeGuides.dashboard;
   return (
     <section className="webcrm-hero">
       <div className="webcrm-hero-icon"><Icon size={28} /></div>
       <div><span className="eyebrow">Web Leads CRM</span><h1>{title}</h1><p>{description}</p></div>
-      <div className="webcrm-hero-tools"><HelpPopover mode={mode} /><div className="webcrm-live"><Bell size={18} /><strong>{notifications}</strong><span>unread alerts</span></div></div>
+      <div className="webcrm-hero-tools"><button type="button" className="webcrm-help-button" title="Open the three-step staff guide" onClick={() => setGuideOpen((current) => !current)} aria-expanded={guideOpen}><CircleHelp size={18} /> {guideOpen ? "Close guide" : "How to use"}</button><div className="webcrm-live"><Bell size={18} /><strong>{notifications}</strong><span>unread alerts</span></div></div>
+      {guideOpen && <aside className="webcrm-guide-panel"><div className="webcrm-guide-copy"><span className="eyebrow">Quick staff guide</span><h3>How this section works</h3><p>{guide.purpose}</p></div><ol>{guide.steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol><div className="webcrm-help-warning"><strong>Good practice</strong><span>{guide.avoid}</span></div></aside>}
     </section>
   );
 }
