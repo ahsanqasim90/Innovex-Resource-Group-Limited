@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ArrowUpRight, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, GraduationCap, LayoutDashboard, LogOut, MailPlus, MessageSquare, PhoneCall, ShieldCheck, Store, Upload, UserCog, UsersRound } from "lucide-react";
+import { ArrowUpRight, BarChart3, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, FilePlus2, GraduationCap, LayoutDashboard, ListFilter, LogOut, MailCheck, MailPlus, MessageSquare, PhoneCall, Settings, ShieldCheck, Store, Target, Upload, UserCog, UsersRound } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { hasPermission } from "../auth/permissions.js";
@@ -23,12 +23,27 @@ const links = [
   ["/admin/team", "Team Members", UserCog, "team.manage"]
 ];
 
+const webLeadLinks = [
+  ["/admin/web-leads", "CRM Dashboard", LayoutDashboard, "webLeads.view"],
+  ["/admin/web-leads/add", "Add Prospect", FilePlus2, "webLeads.view"],
+  ["/admin/web-leads/prospects", "My Prospects", ListFilter, "webLeads.view"],
+  ["/admin/web-leads/emails", "Email Requests", MailCheck, "webLeads.view"],
+  ["/admin/web-leads/follow-ups", "Follow-Ups", CalendarClock, "webLeads.view"],
+  ["/admin/web-leads/qualified", "Qualified Leads", Target, "webLeads.view"],
+  ["/admin/web-leads/meetings", "Meeting Requests", CalendarCheck, "webLeads.view"],
+  ["/admin/web-leads/templates", "Email Templates", MessageSquare, "webLeads.view"],
+  ["/admin/web-leads/reports", "Reports", BarChart3, "webLeads.view"],
+  ["/admin/web-leads/settings", "CRM Settings", Settings, "webLeads.settings"]
+];
+
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const visibleLinks = links.filter(([, , , permission]) => hasPermission(user, permission));
-  const current = visibleLinks.find(([href]) => location.pathname.startsWith(href)) || links.find(([href]) => location.pathname.startsWith(href));
+  const visibleWebLeadLinks = webLeadLinks.filter(([, , , permission]) => hasPermission(user, permission));
+  const allVisibleLinks = [...visibleLinks, ...visibleWebLeadLinks];
+  const current = [...allVisibleLinks].sort((a, b) => b[0].length - a[0].length).find(([href]) => location.pathname === href || location.pathname.startsWith(`${href}/`)) || links.find(([href]) => location.pathname.startsWith(href));
   const CurrentIcon = current?.[2] || LayoutDashboard;
   const title = current?.[1] || "Dashboard";
   const copyLocked = user && !user.canCopyData;
@@ -65,6 +80,16 @@ export default function AdminLayout() {
               </NavLink>
             ))}
           </nav>
+          {visibleWebLeadLinks.length > 0 && <>
+            <div className="admin-nav-label webcrm-nav-label">Web Leads CRM</div>
+            <nav className="admin-nav webcrm-admin-nav">
+              {visibleWebLeadLinks.map(([href, label, Icon]) => (
+                <NavLink key={href} to={href} end={href === "/admin/web-leads"}>
+                  <Icon size={18} /> {label}
+                </NavLink>
+              ))}
+            </nav>
+          </>}
           <div className="admin-sidebar-footer">
             <div className="admin-sidebar-card">
               <ShieldCheck size={20} />

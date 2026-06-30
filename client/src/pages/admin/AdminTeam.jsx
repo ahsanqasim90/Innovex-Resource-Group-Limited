@@ -23,6 +23,8 @@ const roles = [
   ["sales", "Sales Executive"],
   ["training", "Training Coordinator"],
   ["marketing", "Marketing / Content"],
+  ["sales_manager", "Web Leads Sales Manager"],
+  ["external_agent", "External Web Leads Agent"],
   ["super_admin", "Super Admin"]
 ];
 

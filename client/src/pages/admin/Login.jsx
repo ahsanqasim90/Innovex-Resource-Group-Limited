@@ -16,8 +16,8 @@ export default function Login() {
     const data = Object.fromEntries(new FormData(event.currentTarget));
     setSubmitting(true);
     try {
-      await login(data.email, data.password);
-      navigate("/admin/dashboard");
+      const result = await login(data.email, data.password);
+      navigate(result.user?.role === "external_agent" || result.user?.role === "sales_manager" ? "/admin/web-leads" : "/admin/dashboard");
     } catch (error) {
       setStatus({ type: "error", message: error.message });
     } finally {

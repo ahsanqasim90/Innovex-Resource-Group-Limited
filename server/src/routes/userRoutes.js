@@ -5,6 +5,7 @@ import { publicEmailAccounts } from "../config/emailAccounts.js";
 import { allPermissions, permissionGroups, rolePresets, safeUser } from "../config/permissions.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
+import { logActivity } from "../services/activityLogService.js";
 
 const router = express.Router();
 
@@ -79,6 +80,7 @@ router.post("/", async (req, res, next) => {
     const payload = userPayload(req.body);
     payload.password = req.body.password;
     const user = await User.create(payload);
+    await logActivity(req, { module: "Team", action: "User created", entityType: "User", entityId: user._id, summary: `Created ${user.role} account for ${user.name}` });
     res.status(201).json(safeUser(user));
   } catch (error) {
     if (error.code === 11000) error.message = "A team member with this email already exists";
@@ -94,6 +96,8 @@ router.put("/:id", async (req, res, next) => {
       return res.status(400).json({ message: "You cannot suspend your own account" });
     }
 
+    const previousRole = user.role;
+    const previousActive = user.isActive;
     user.set(userPayload(req.body, user));
     if (req.body.password) {
       if (String(req.body.password).length < 8) {
@@ -102,6 +106,8 @@ router.put("/:id", async (req, res, next) => {
       user.password = req.body.password;
     }
     await user.save();
+    if (previousRole !== user.role) await logActivity(req, { module: "Team", action: "Role changed", entityType: "User", entityId: user._id, summary: `${user.name} changed from ${previousRole} to ${user.role}` });
+    if (previousActive !== user.isActive) await logActivity(req, { module: "Team", action: user.isActive ? "User enabled" : "User disabled", entityType: "User", entityId: user._id, summary: `${user.name} was ${user.isActive ? "enabled" : "disabled"}` });
     res.json(safeUser(user));
   } catch (error) {
     if (error.code === 11000) error.message = "A team member with this email already exists";

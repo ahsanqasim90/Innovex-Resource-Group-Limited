@@ -38,6 +38,14 @@ export const permissionGroups = [
   {
     label: "Administration",
     permissions: [["team.manage", "Team Members"]]
+  },
+  {
+    label: "Web Leads CRM",
+    permissions: [
+      ["webLeads.view", "Web Leads CRM"],
+      ["webLeads.manage", "Manage Web Leads"],
+      ["webLeads.settings", "Web Leads Settings"]
+    ]
   }
 ];
 
@@ -46,6 +54,8 @@ export const rolePresets = {
   sales: ["dashboard.view", "businessLeads.view", "emails.view", "calls.view", "meetings.view", "courses.view", "trainingBookings.view"],
   training: ["dashboard.view", "courses.view", "trainingBookings.view", "meetings.view", "businessLeads.view"],
   marketing: ["dashboard.view", "businessLeads.view", "emails.view", "blogs.view", "testimonials.view", "partners.view", "contacts.view"],
+  sales_manager: ["webLeads.view", "webLeads.manage"],
+  external_agent: ["webLeads.view"],
   viewer: ["dashboard.view"]
 };
 

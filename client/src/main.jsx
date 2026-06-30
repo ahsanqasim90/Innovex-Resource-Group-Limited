@@ -32,6 +32,7 @@ import AdminTrainingBookings from "./pages/admin/AdminTrainingBookings.jsx";
 import AdminTestimonials from "./pages/admin/AdminTestimonials.jsx";
 import AdminPartners from "./pages/admin/AdminPartners.jsx";
 import AdminTeam from "./pages/admin/AdminTeam.jsx";
+import AdminWebLeads from "./pages/admin/AdminWebLeads.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { hasPermission } from "./auth/permissions.js";
 import "./styles.css";
@@ -55,6 +56,12 @@ function RequirePermission({ permission, children }) {
     );
   }
   return children;
+}
+
+function AdminIndexRedirect() {
+  const { user, loadingUser } = useAuth();
+  if (loadingUser) return <div className="admin-loading-screen">Loading secure workspace...</div>;
+  return <Navigate to={hasPermission(user, "dashboard.view") ? "/admin/dashboard" : hasPermission(user, "webLeads.view") ? "/admin/web-leads" : "/admin/login"} replace />;
 }
 
 createRoot(document.getElementById("root")).render(
@@ -84,7 +91,7 @@ createRoot(document.getElementById("root")).render(
               </RequireAuth>
             }
           >
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route index element={<AdminIndexRedirect />} />
             <Route path="dashboard" element={<RequirePermission permission="dashboard.view"><Dashboard /></RequirePermission>} />
             <Route path="jobs" element={<RequirePermission permission="jobs.view"><AdminJobs /></RequirePermission>} />
             <Route path="applications" element={<RequirePermission permission="applications.view"><AdminApplications /></RequirePermission>} />
@@ -101,6 +108,16 @@ createRoot(document.getElementById("root")).render(
             <Route path="testimonials" element={<RequirePermission permission="testimonials.view"><AdminTestimonials /></RequirePermission>} />
             <Route path="partners" element={<RequirePermission permission="partners.view"><AdminPartners /></RequirePermission>} />
             <Route path="team" element={<RequirePermission permission="team.manage"><AdminTeam /></RequirePermission>} />
+            <Route path="web-leads" element={<RequirePermission permission="webLeads.view"><AdminWebLeads mode="dashboard" /></RequirePermission>} />
+            <Route path="web-leads/add" element={<RequirePermission permission="webLeads.view"><AdminWebLeads mode="add" /></RequirePermission>} />
+            <Route path="web-leads/prospects" element={<RequirePermission permission="webLeads.view"><AdminWebLeads mode="prospects" /></RequirePermission>} />
+            <Route path="web-leads/emails" element={<RequirePermission permission="webLeads.view"><AdminWebLeads mode="emails" /></RequirePermission>} />
+            <Route path="web-leads/follow-ups" element={<RequirePermission permission="webLeads.view"><AdminWebLeads mode="followups" /></RequirePermission>} />
+            <Route path="web-leads/qualified" element={<RequirePermission permission="webLeads.view"><AdminWebLeads mode="qualified" /></RequirePermission>} />
+            <Route path="web-leads/meetings" element={<RequirePermission permission="webLeads.view"><AdminWebLeads mode="meetings" /></RequirePermission>} />
+            <Route path="web-leads/templates" element={<RequirePermission permission="webLeads.view"><AdminWebLeads mode="templates" /></RequirePermission>} />
+            <Route path="web-leads/reports" element={<RequirePermission permission="webLeads.view"><AdminWebLeads mode="reports" /></RequirePermission>} />
+            <Route path="web-leads/settings" element={<RequirePermission permission="webLeads.settings"><AdminWebLeads mode="settings" /></RequirePermission>} />
           </Route>
         </Routes>
       </AuthProvider>
