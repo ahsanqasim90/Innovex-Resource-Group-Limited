@@ -1,5 +1,6 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
 import WebLeadCategory from "../models/WebLeadCategory.js";
 import WebLeadNotification from "../models/WebLeadNotification.js";
 import WebLeadProspect from "../models/WebLeadProspect.js";
@@ -121,7 +122,9 @@ function buildListFilter(req) {
   if (req.query.status) filter.status = req.query.status;
   if (req.query.category) filter.businessCategory = req.query.category;
   if (req.query.service) filter.interestedServices = req.query.service;
-  if (req.query.agent && isManager(req.user)) filter.createdBy = req.query.agent;
+  if (req.query.agent && isManager(req.user) && mongoose.Types.ObjectId.isValid(req.query.agent)) {
+    filter.createdBy = new mongoose.Types.ObjectId(req.query.agent);
+  }
   if (req.query.emailRequested === "true") filter.status = "Email Requested";
   if (req.query.qualified === "true") filter.status = { $in: ["Qualified", "Under Review", "Accepted by Innovex", "Rejected by Innovex"] };
   if (req.query.meetingRequested === "true") filter["meetingRequests.0"] = { $exists: true };
@@ -140,7 +143,7 @@ function buildListFilter(req) {
 router.get("/meta", async (req, res, next) => {
   try {
     await ensureDefaults(req.user);
-    const categories = await WebLeadCategory.find({ isActive: true }).sort({ name: 1 }).lean();
+    const categories = await WebLeadCategory.find(isSettingsManager(req.user) ? {} : { isActive: true }).sort({ name: 1 }).lean();
     const templates = await WebLeadTemplate.find(isManager(req.user) ? {} : { isActive: true }).sort({ name: 1 }).lean();
     const agents = isManager(req.user) ? await User.find({ role: "external_agent", isActive: true }).select("name email").sort({ name: 1 }).lean() : [];
     const internalStaff = isManager(req.user) ? await User.find({ role: { $ne: "external_agent" }, isActive: true }).select("name email role").sort({ name: 1 }).lean() : [];
@@ -166,9 +169,56 @@ router.get("/dashboard", async (req, res, next) => {
       });
       meetingsBooked += (item.meetingRequests || []).filter((meeting) => ["Approved", "Confirmed"].includes(meeting.status)).length;
     });
-    const recent = await WebLeadProspect.find(scope).select("businessName contactPerson status businessCategory interestedServices createdByName updatedAt").sort({ updatedAt: -1 }).limit(8).lean();
+    const [recent, byAgent] = await Promise.all([
+      WebLeadProspect.find(scope).select("businessName contactPerson status businessCategory interestedServices createdByName updatedAt").sort({ updatedAt: -1 }).limit(8).lean(),
+      isManager(req.user) ? WebLeadProspect.aggregate([
+        { $match: scope },
+        { $group: { _id: { user: "$createdBy", name: "$createdByName" }, prospects: { $sum: 1 }, interested: { $sum: { $cond: [{ $eq: ["$status", "Interested"] }, 1, 0] } }, qualified: { $sum: { $cond: [{ $in: ["$status", ["Qualified", "Under Review", "Accepted by Innovex"]] }, 1, 0] } }, accepted: { $sum: { $cond: [{ $eq: ["$status", "Accepted by Innovex"] }, 1, 0] } } } },
+        { $sort: { prospects: -1 } },
+        { $limit: 8 }
+      ]) : Promise.resolve([])
+    ]);
     const base = aggregation[0] || {};
-    res.json({ stats: { ...base, dueToday, overdue, meetingsBooked }, recent });
+    res.json({ stats: { ...base, dueToday, overdue, meetingsBooked }, recent, byAgent });
+  } catch (error) { next(error); }
+});
+
+router.get("/follow-ups", async (req, res, next) => {
+  try {
+    const page = Math.max(Number(req.query.page || 1), 1);
+    const limit = Math.min(Math.max(Number(req.query.limit || 30), 1), 100);
+    const now = new Date();
+    const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(now); dayEnd.setHours(23, 59, 59, 999);
+    const view = String(req.query.view || "due").toLowerCase();
+    const followMatch = view === "completed"
+      ? { "followUps.completed": true }
+      : view === "overdue"
+        ? { "followUps.completed": false, "followUps.dueAt": { $lt: dayStart } }
+        : view === "upcoming"
+          ? { "followUps.completed": false, "followUps.dueAt": { $gt: dayEnd } }
+          : { "followUps.completed": false, "followUps.dueAt": { $gte: dayStart, $lte: dayEnd } };
+    const scope = buildListFilter(req);
+    const result = await WebLeadProspect.aggregate([
+      { $match: scope },
+      { $unwind: "$followUps" },
+      { $match: followMatch },
+      { $project: {
+        _id: "$followUps._id",
+        dueAt: "$followUps.dueAt",
+        contactMethod: "$followUps.contactMethod",
+        priority: "$followUps.priority",
+        notes: "$followUps.notes",
+        completed: "$followUps.completed",
+        completedAt: "$followUps.completedAt",
+        prospect: { _id: "$_id", businessName: "$businessName", contactPerson: "$contactPerson", telephone: "$telephone", email: "$email", status: "$status", createdByName: "$createdByName" }
+      } },
+      { $sort: { dueAt: view === "completed" ? -1 : 1 } },
+      { $facet: { items: [{ $skip: (page - 1) * limit }, { $limit: limit }], count: [{ $count: "total" }] } }
+    ]);
+    const items = result[0]?.items || [];
+    const total = result[0]?.count?.[0]?.total || 0;
+    res.json({ items, total, page, pages: Math.ceil(total / limit) || 1, limit });
   } catch (error) { next(error); }
 });
 
@@ -253,11 +303,16 @@ router.post("/prospects/:id/merge", requirePermission("webLeads.manage"), async 
     ["interactions", "followUps", "emails", "meetingRequests", "internalNotes", "timeline"].forEach((field) => {
       target[field].push(...(duplicate[field] || []));
     });
+    ["interactions", "emails", "meetingRequests", "internalNotes", "timeline"].forEach((field) => {
+      target[field].sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    });
+    target.followUps.sort((a, b) => new Date(a.dueAt || 0) - new Date(b.dueAt || 0));
     if (!target.qualification?.locked && duplicate.qualification?.locked) target.qualification = duplicate.qualification;
     target.timeline.push(timeline(req.user, "Duplicate merged", `${duplicate.businessName} was merged into this prospect.`));
     target.lastUpdatedBy = req.user._id;
     target.lastUpdatedByName = req.user.name;
     await target.save();
+    await EmailLog.updateMany({ targetType: "WebLeadProspect", targetId: duplicate._id }, { $set: { targetId: target._id } });
     await WebLeadProspect.deleteOne({ _id: duplicate._id });
     await WebLeadNotification.deleteMany({ prospect: duplicate._id });
     await logActivity(req, { module: "Web Leads CRM", action: "Merged", entityType: "WebLeadProspect", entityId: target._id, summary: `Merged duplicate ${duplicate.businessName} into ${target.businessName}` });
@@ -269,11 +324,16 @@ router.put("/prospects/:id", async (req, res, next) => {
   try {
     const prospect = await prospectForUser(req, req.params.id);
     const previousStatus = prospect.status;
+    const previousAssignee = String(prospect.assignedTo || "");
     const data = cleanProspect(req.body, req.user, prospect);
     prospect.set({ ...data, lastUpdatedBy: req.user._id, lastUpdatedByName: req.user.name });
     prospect.timeline.push(timeline(req.user, previousStatus !== prospect.status ? "Status changed" : "Prospect edited", previousStatus !== prospect.status ? `${previousStatus} changed to ${prospect.status}.` : "Prospect information was updated."));
+    if (data.assignedTo && previousAssignee !== String(data.assignedTo)) {
+      const assignee = await User.findById(data.assignedTo).select("name").lean();
+      prospect.timeline.push(timeline(req.user, "Lead assigned internally", `Assigned to ${assignee?.name || "an internal representative"}.`));
+    }
     await prospect.save();
-    await logActivity(req, { module: "Web Leads CRM", action: "Updated", entityType: "WebLeadProspect", entityId: prospect._id, summary: `Updated prospect ${prospect.businessName}` });
+    await logActivity(req, { module: "Web Leads CRM", action: previousStatus !== prospect.status ? "Status changed" : "Updated", entityType: "WebLeadProspect", entityId: prospect._id, summary: previousStatus !== prospect.status ? `${prospect.businessName}: ${previousStatus} to ${prospect.status}` : `Updated prospect ${prospect.businessName}` });
     res.json(safeProspect(prospect, req.user));
   } catch (error) { next(error); }
 });
@@ -370,6 +430,10 @@ router.post("/prospects/:id/review", requirePermission("webLeads.manage"), async
     const prospect = await WebLeadProspect.findById(req.params.id);
     if (!prospect) return res.status(404).json({ message: "Prospect not found" });
     prospect.status = actionMap[req.body.action];
+    if (prospect.qualification) {
+      if (["more_info", "reopen"].includes(req.body.action)) prospect.qualification.locked = false;
+      if (["accept", "reject"].includes(req.body.action)) prospect.qualification.locked = true;
+    }
     if (req.body.assignedTo && String(prospect.assignedTo || "") !== String(req.body.assignedTo)) {
       prospect.assignedTo = req.body.assignedTo;
       const assignee = await User.findById(req.body.assignedTo).select("name").lean();
