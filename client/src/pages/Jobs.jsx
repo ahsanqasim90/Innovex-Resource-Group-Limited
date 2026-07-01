@@ -108,7 +108,7 @@ export default function Jobs() {
   return (
     <section className="section">
       <SEO title="Healthcare Jobs" path="/jobs" description="Search and apply for UK healthcare jobs including nurse, care assistant, registered manager, temporary staffing, and permanent recruitment roles." />
-      <SectionHeading eyebrow="Jobs" title="Current opportunities" />
+      <SectionHeading as="h1" eyebrow="Jobs" title="Current opportunities" />
       <div className="card filters jobs-filter-card">
         <div className="jobs-filter-heading">
           <span className="jobs-filter-icon"><Search size={24} /></span>

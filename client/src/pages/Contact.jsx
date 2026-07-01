@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client.js";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
@@ -7,7 +7,13 @@ import StatusMessage from "../components/StatusMessage.jsx";
 import SubmitButton from "../components/SubmitButton.jsx";
 import { company, contact } from "../data/content.js";
 import { BriefcaseBusiness, CheckCircle2, Clock3, HeartHandshake, Mail, MapPinned, MessageCircle, MonitorSmartphone, Share2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const serviceDefaults = {
+  recruitment: { inquiryType: "Recruitment Support", subject: "Healthcare recruitment enquiry" },
+  website: { inquiryType: "Website Development", subject: "Website development enquiry" },
+  seo: { inquiryType: "SEO Services", subject: "SEO services enquiry" }
+};
 
 const actionCards = [
   {
@@ -53,8 +59,16 @@ const contactCards = [
 ];
 
 export default function Contact() {
+  const [searchParams] = useSearchParams();
   const [status, setStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const defaults = serviceDefaults[searchParams.get("service")] || { inquiryType: "", subject: "" };
+
+  useEffect(() => {
+    if (window.location.hash !== "#contact-form") return;
+    const timer = window.setTimeout(() => document.getElementById("contact-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
   async function submit(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -78,7 +92,7 @@ export default function Contact() {
   return (
     <section className="section">
       <SEO title="Contact" path="/contact" description="Contact Innovex Resource Group Limited in Cardiff for healthcare recruitment, care home staffing, website design, SEO, partnerships, and job seeker support." />
-      <SectionHeading eyebrow="Contact Us" title={`Talk to ${company.name}`} />
+      <SectionHeading as="h1" eyebrow="Contact Us" title={`Talk to ${company.name}`} />
       <div className="card-grid contact-info-grid">
         {contactCards.map(({ title, text, href, icon: Icon, label, social }) => (
           <article className="card contact-info-card" key={title}>
@@ -105,7 +119,7 @@ export default function Contact() {
             <input name="phone" placeholder="Phone" />
             <label>
               <span>What do you need help with?</span>
-              <select name="inquiryType" required defaultValue="">
+              <select name="inquiryType" required defaultValue={defaults.inquiryType} key={defaults.inquiryType}>
                 <option value="" disabled>Select a service</option>
                 <option>Recruitment Support</option>
                 <option>Job Application / CV</option>
@@ -115,7 +129,7 @@ export default function Contact() {
                 <option>General Enquiry</option>
               </select>
             </label>
-            <input name="subject" placeholder="Subject" required />
+            <input name="subject" placeholder="Subject" required defaultValue={defaults.subject} key={defaults.subject} />
           </div>
           <textarea name="message" placeholder="How can we help?" required />
           <SubmitButton loading={submitting} loadingText="Sending message...">Send Message</SubmitButton>

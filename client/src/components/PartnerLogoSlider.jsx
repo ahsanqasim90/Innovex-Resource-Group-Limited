@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { publicAssetUrl } from "../api/client.js";
 
-function LogoTile({ partner }) {
+function LogoTile({ partner, duplicate = false }) {
   return (
-    <div className="partner-slider-tile">
+    <div className="partner-slider-tile" aria-hidden={duplicate || undefined}>
       {partner.logo?.url ? (
-        <img src={publicAssetUrl(partner.logo.url)} alt={`${partner.name} logo`} loading="lazy" />
+        <img src={publicAssetUrl(partner.logo.url)} alt={duplicate ? "" : `${partner.name} logo`} width="220" height="96" loading="lazy" />
       ) : (
         <span>{partner.name?.slice(0, 2).toUpperCase()}</span>
       )}
@@ -28,7 +28,7 @@ export default function PartnerLogoSlider({ partners = [] }) {
       </div>
       <Link className="partner-slider" to="/partners" aria-label="View all Innovex partners">
         <div className="partner-slider-track">
-          {trackPartners.map((partner, index) => <LogoTile key={`${partner._id}-${index}`} partner={partner} />)}
+          {trackPartners.map((partner, index) => <LogoTile key={`${partner._id}-${index}`} partner={partner} duplicate={index >= visiblePartners.length} />)}
         </div>
       </Link>
     </section>

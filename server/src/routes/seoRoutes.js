@@ -1,6 +1,5 @@
 import express from "express";
 import Blog from "../models/Blog.js";
-import Job from "../models/Job.js";
 
 const router = express.Router();
 const SITE_URL = process.env.SITE_URL || "https://www.innovexresourcegroup.co.uk";
@@ -31,6 +30,9 @@ router.get("/sitemap.xml", async (req, res, next) => {
       { path: "/", changefreq: "weekly", priority: "1.0" },
       { path: "/about", changefreq: "monthly", priority: "0.8" },
       { path: "/services", changefreq: "monthly", priority: "0.9" },
+      { path: "/healthcare-recruitment", changefreq: "monthly", priority: "0.95" },
+      { path: "/website-development", changefreq: "monthly", priority: "0.9" },
+      { path: "/seo-services", changefreq: "monthly", priority: "0.9" },
       { path: "/courses", changefreq: "weekly", priority: "0.85" },
       { path: "/jobs", changefreq: "daily", priority: "0.9" },
       { path: "/blogs", changefreq: "weekly", priority: "0.8" },
@@ -40,15 +42,14 @@ router.get("/sitemap.xml", async (req, res, next) => {
       { path: "/upload-cv", changefreq: "monthly", priority: "0.7" }
     ];
 
-    const [blogs, jobs] = await Promise.all([
-      Blog.find({ isPublished: true }).select("slug updatedAt publishedAt").sort({ publishedAt: -1 }).limit(500),
-      Job.find({ isActive: true }).select("_id updatedAt").sort({ createdAt: -1 }).limit(500)
-    ]);
+    const blogs = await Blog.find({ isPublished: true })
+      .select("slug updatedAt publishedAt")
+      .sort({ publishedAt: -1 })
+      .limit(500);
 
     const urls = [
       ...staticPages.map((page) => urlEntry({ loc: `${SITE_URL}${page.path}`, changefreq: page.changefreq, priority: page.priority })),
-      ...blogs.map((blog) => urlEntry({ loc: `${SITE_URL}/blogs/${blog.slug}`, lastmod: blog.updatedAt || blog.publishedAt, changefreq: "weekly", priority: "0.75" })),
-      ...jobs.map((job) => urlEntry({ loc: `${SITE_URL}/jobs?job=${job._id}`, lastmod: job.updatedAt, changefreq: "weekly", priority: "0.65" }))
+      ...blogs.map((blog) => urlEntry({ loc: `${SITE_URL}/blogs/${blog.slug}`, lastmod: blog.updatedAt || blog.publishedAt, changefreq: "weekly", priority: "0.75" }))
     ];
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>`;

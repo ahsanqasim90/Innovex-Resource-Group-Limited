@@ -45,13 +45,18 @@ export default function SEO({ title, description, path, noIndex = false, jsonLd 
     upsertMeta('meta[property="og:title"]', { property: "og:title", content: pageTitle });
     upsertMeta('meta[property="og:description"]', { property: "og:description", content: description });
     upsertMeta('meta[property="og:url"]', { property: "og:url", content: canonical });
+    upsertMeta('meta[property="og:type"]', { property: "og:type", content: "website" });
     upsertMeta('meta[property="og:image"]', { property: "og:image", content: `${company.siteUrl}/icon-512.png` });
+    upsertMeta('meta[property="og:site_name"]', { property: "og:site_name", content: company.name });
+    upsertMeta('meta[name="twitter:card"]', { name: "twitter:card", content: "summary_large_image" });
     upsertMeta('meta[name="twitter:title"]', { name: "twitter:title", content: pageTitle });
     upsertMeta('meta[name="twitter:description"]', { name: "twitter:description", content: description });
+    upsertMeta('meta[name="twitter:image"]', { name: "twitter:image", content: `${company.siteUrl}/icon-512.png` });
 
     upsertJsonLd("innovex-organization-schema", {
       "@context": "https://schema.org",
       "@type": ["Organization", "LocalBusiness", "EmploymentAgency"],
+      "@id": `${company.siteUrl}/#organization`,
       name: company.name,
       url: company.siteUrl,
       logo: `${company.siteUrl}/icon-512.png`,
@@ -65,13 +70,28 @@ export default function SEO({ title, description, path, noIndex = false, jsonLd 
         addressCountry: "GB"
       },
       sameAs: [contact.socials.instagram, contact.socials.facebook, contact.socials.linkedin, contact.socials.twitter],
-      areaServed: "United Kingdom",
-      description
+      areaServed: { "@type": "Country", name: "United Kingdom" },
+      openingHoursSpecification: [{
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        opens: "09:00",
+        closes: "17:30"
+      }],
+      contactPoint: [{
+        "@type": "ContactPoint",
+        telephone: contact.phone,
+        email: contact.email,
+        contactType: "customer service",
+        areaServed: "GB",
+        availableLanguage: "English"
+      }],
+      description: "UK healthcare recruitment, website development, SEO and digital growth services from Innovex Resource Group Limited."
     });
 
     upsertJsonLd("innovex-website-schema", {
       "@context": "https://schema.org",
       "@type": "WebSite",
+      "@id": `${company.siteUrl}/#website`,
       name: company.name,
       url: company.siteUrl,
       potentialAction: {

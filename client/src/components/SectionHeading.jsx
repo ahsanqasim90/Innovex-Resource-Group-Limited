@@ -1,8 +1,8 @@
-export default function SectionHeading({ eyebrow, title, children }) {
+export default function SectionHeading({ eyebrow, title, children, as: Heading = "h2" }) {
   return (
     <div className="section-heading">
       {eyebrow && <span>{eyebrow}</span>}
-      <h1>{title}</h1>
+      <Heading>{title}</Heading>
       {children && <p>{children}</p>}
     </div>
   );

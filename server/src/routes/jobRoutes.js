@@ -43,7 +43,11 @@ router.get("/", protectAdminQuery, async (req, res, next) => {
     if (req.query.location) filter.location = locationSearchRegex(req.query.location);
     if (req.query.type) filter.type = new RegExp(escapeRegex(req.query.type), "i");
 
-    const jobs = await Job.find(filter).sort({ createdAt: -1 });
+    const requestedLimit = Number.parseInt(req.query.limit, 10);
+    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 50) : 0;
+    const query = Job.find(filter).sort({ createdAt: -1 });
+    if (limit) query.limit(limit);
+    const jobs = await query;
     res.json(jobs);
   } catch (error) {
     next(error);

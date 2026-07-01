@@ -58,7 +58,7 @@ export default function Blogs() {
         }}
       />
       <div className="blog-hero">
-        <SectionHeading eyebrow="Insights" title="Healthcare, recruitment and digital growth insights">
+        <SectionHeading as="h1" eyebrow="Insights" title="Healthcare, recruitment and digital growth insights">
           Practical weekly advice for care providers, candidates, partners, and businesses improving their online visibility.
         </SectionHeading>
         <div className="blog-hero-card">

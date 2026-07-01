@@ -54,7 +54,7 @@ export default function Services() {
             }))
           }}
         />
-        <SectionHeading eyebrow="Services" title="Healthcare staffing services for care providers" />
+        <SectionHeading as="h1" eyebrow="Services" title="Healthcare staffing services for care providers" />
         <article className="card service-intro-card">
           <h2>Innovex supports organisations through recruitment, website development, and SEO.</h2>
           <p>Our recruitment services focus on healthcare and social care, while our website and SEO services support growing UK businesses across wider sectors.</p>
@@ -65,7 +65,7 @@ export default function Services() {
               <div className="badge">Recruitment Service</div>
               <h3>{service.title}</h3>
               <p>{service.description}</p>
-              <Link className="button secondary small" to="/contact">Learn More</Link>
+              <Link className="button secondary small" to="/healthcare-recruitment">Learn More</Link>
             </article>
           ))}
         </div>
@@ -78,8 +78,8 @@ export default function Services() {
               Alongside recruitment support, Innovex helps businesses build a stronger digital presence with clean websites, search-friendly content, and practical online growth services.
             </SectionHeading>
             <div className="actions">
-              <Link className="button" to="/contact">Request a Digital Project</Link>
-              <Link className="button secondary" to="/contact">Ask About SEO</Link>
+              <Link className="button" to="/website-development">Explore Website Development</Link>
+              <Link className="button secondary" to="/seo-services">Explore SEO Services</Link>
             </div>
             <p className="cta-microcopy">No obligation. Tell us what you need and our team will respond.</p>
           </div>

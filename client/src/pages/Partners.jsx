@@ -17,7 +17,7 @@ export default function Partners() {
     <section className="section">
       <SEO title="Partners" path="/partners" description="View Innovex Resource Group Limited partners and learn how care providers and businesses can partner with us across recruitment and digital services." />
       <div className="partners-hero">
-        <SectionHeading eyebrow="Our Partners" title="Professional partnerships built on trust">
+        <SectionHeading as="h1" eyebrow="Our Partners" title="Professional partnerships built on trust">
           We work with care providers and growing organisations that value reliable communication, ethical recruitment, and long-term support.
         </SectionHeading>
         <div className="partners-stat-card">

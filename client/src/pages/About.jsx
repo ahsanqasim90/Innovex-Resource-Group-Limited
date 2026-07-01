@@ -22,7 +22,7 @@ export default function About() {
   return (
     <section className="section">
       <SEO title="About" path="/about" description="Learn about Innovex Resource Group Limited, a Cardiff-based company supporting healthcare recruitment, care-sector staffing, compliance, websites, and SEO." />
-      <SectionHeading eyebrow="About Innovex" title="Healthcare recruitment built around trust, compliance, and continuity">
+      <SectionHeading as="h1" eyebrow="About Innovex" title="Healthcare recruitment built around trust, compliance, and continuity">
         Innovex Resource Group Limited helps UK care providers find dependable healthcare professionals while helping candidates move into roles where they can do meaningful work.
       </SectionHeading>
       <article className="card about-snapshot-card">

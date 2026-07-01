@@ -2,41 +2,42 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout.jsx";
-import AdminLayout from "./layouts/AdminLayout.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
-import About from "./pages/About.jsx";
-import BlogDetail from "./pages/BlogDetail.jsx";
-import Blogs from "./pages/Blogs.jsx";
-import Contact from "./pages/Contact.jsx";
-import Courses from "./pages/Courses.jsx";
 import Home from "./pages/Home.jsx";
-import Jobs from "./pages/Jobs.jsx";
-import Partners from "./pages/Partners.jsx";
-import Services from "./pages/Services.jsx";
-import Testimonials from "./pages/Testimonials.jsx";
-import UploadCv from "./pages/UploadCv.jsx";
-import Login from "./pages/admin/Login.jsx";
-import Dashboard from "./pages/admin/Dashboard.jsx";
-import AdminBlogs from "./pages/admin/AdminBlogs.jsx";
-import AdminCourses from "./pages/admin/AdminCourses.jsx";
-import AdminEmailCentre from "./pages/admin/AdminEmailCentre.jsx";
-import AdminJobs from "./pages/admin/AdminJobs.jsx";
-import AdminApplications from "./pages/admin/AdminApplications.jsx";
-import AdminCvs from "./pages/admin/AdminCvs.jsx";
-import AdminTalentPool from "./pages/admin/AdminTalentPool.jsx";
-import AdminBusinessLeads from "./pages/admin/AdminBusinessLeads.jsx";
-import AdminCalls from "./pages/admin/AdminCalls.jsx";
-import AdminInterviews from "./pages/admin/AdminInterviews.jsx";
-import AdminMeetings from "./pages/admin/AdminMeetings.jsx";
-import AdminTrainingBookings from "./pages/admin/AdminTrainingBookings.jsx";
-import AdminFinance from "./pages/admin/AdminFinance.jsx";
-import AdminTestimonials from "./pages/admin/AdminTestimonials.jsx";
-import AdminPartners from "./pages/admin/AdminPartners.jsx";
-import AdminTeam from "./pages/admin/AdminTeam.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { canViewFinance, hasPermission } from "./auth/permissions.js";
 import "./styles.css";
 
+const AdminLayout = React.lazy(() => import("./layouts/AdminLayout.jsx"));
+const About = React.lazy(() => import("./pages/About.jsx"));
+const BlogDetail = React.lazy(() => import("./pages/BlogDetail.jsx"));
+const Blogs = React.lazy(() => import("./pages/Blogs.jsx"));
+const Contact = React.lazy(() => import("./pages/Contact.jsx"));
+const Courses = React.lazy(() => import("./pages/Courses.jsx"));
+const Jobs = React.lazy(() => import("./pages/Jobs.jsx"));
+const Partners = React.lazy(() => import("./pages/Partners.jsx"));
+const Services = React.lazy(() => import("./pages/Services.jsx"));
+const ServiceLanding = React.lazy(() => import("./pages/ServiceLanding.jsx"));
+const Testimonials = React.lazy(() => import("./pages/Testimonials.jsx"));
+const UploadCv = React.lazy(() => import("./pages/UploadCv.jsx"));
+const Login = React.lazy(() => import("./pages/admin/Login.jsx"));
+const Dashboard = React.lazy(() => import("./pages/admin/Dashboard.jsx"));
+const AdminBlogs = React.lazy(() => import("./pages/admin/AdminBlogs.jsx"));
+const AdminCourses = React.lazy(() => import("./pages/admin/AdminCourses.jsx"));
+const AdminEmailCentre = React.lazy(() => import("./pages/admin/AdminEmailCentre.jsx"));
+const AdminJobs = React.lazy(() => import("./pages/admin/AdminJobs.jsx"));
+const AdminApplications = React.lazy(() => import("./pages/admin/AdminApplications.jsx"));
+const AdminCvs = React.lazy(() => import("./pages/admin/AdminCvs.jsx"));
+const AdminTalentPool = React.lazy(() => import("./pages/admin/AdminTalentPool.jsx"));
+const AdminBusinessLeads = React.lazy(() => import("./pages/admin/AdminBusinessLeads.jsx"));
+const AdminCalls = React.lazy(() => import("./pages/admin/AdminCalls.jsx"));
+const AdminInterviews = React.lazy(() => import("./pages/admin/AdminInterviews.jsx"));
+const AdminMeetings = React.lazy(() => import("./pages/admin/AdminMeetings.jsx"));
+const AdminTrainingBookings = React.lazy(() => import("./pages/admin/AdminTrainingBookings.jsx"));
+const AdminFinance = React.lazy(() => import("./pages/admin/AdminFinance.jsx"));
+const AdminTestimonials = React.lazy(() => import("./pages/admin/AdminTestimonials.jsx"));
+const AdminPartners = React.lazy(() => import("./pages/admin/AdminPartners.jsx"));
+const AdminTeam = React.lazy(() => import("./pages/admin/AdminTeam.jsx"));
 const AdminWebLeads = React.lazy(() => import("./pages/admin/AdminWebLeads.jsx"));
 
 function RequireAuth({ children }) {
@@ -80,11 +81,15 @@ createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <React.Suspense fallback={<div className="route-loading-screen">Loading Innovex...</div>}>
+          <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
+            <Route path="/healthcare-recruitment" element={<ServiceLanding service="recruitment" />} />
+            <Route path="/website-development" element={<ServiceLanding service="websites" />} />
+            <Route path="/seo-services" element={<ServiceLanding service="seo" />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/blogs" element={<Blogs />} />
@@ -132,7 +137,8 @@ createRoot(document.getElementById("root")).render(
             <Route path="web-leads/reports" element={<RequirePermission permission="webLeads.view"><WebLeadPage mode="reports" /></RequirePermission>} />
             <Route path="web-leads/settings" element={<RequirePermission permission="webLeads.settings"><WebLeadPage mode="settings" /></RequirePermission>} />
           </Route>
-        </Routes>
+          </Routes>
+        </React.Suspense>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

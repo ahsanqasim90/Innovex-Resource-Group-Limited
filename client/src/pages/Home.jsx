@@ -17,7 +17,7 @@ const helpCards = [
     text: "Healthcare, social care, nursing, care home and children's residential recruitment support across the UK.",
     points: ["Candidate sourcing", "Screening support", "Interview coordination"],
     cta: "Request Recruitment Support",
-    to: "/contact"
+    to: "/healthcare-recruitment"
   },
   {
     icon: MonitorSmartphone,
@@ -25,7 +25,7 @@ const helpCards = [
     text: "Modern, responsive websites built to help businesses look professional and generate enquiries.",
     points: ["Mobile-friendly pages", "Clear service content", "Enquiry forms"],
     cta: "Start Website Project",
-    to: "/services#website-development"
+    to: "/website-development"
   },
   {
     icon: Search,
@@ -33,7 +33,7 @@ const helpCards = [
     text: "SEO, content and digital visibility support to help businesses attract more leads online.",
     points: ["SEO foundations", "Content structure", "Local visibility"],
     cta: "Improve My SEO",
-    to: "/services#seo-digital-growth"
+    to: "/seo-services"
   },
   {
     icon: GraduationCap,
@@ -79,7 +79,7 @@ export default function Home() {
   const [partners, setPartners] = useState([]);
 
   useEffect(() => {
-    api("/jobs")
+    api("/jobs?limit=9")
       .then((data) => setJobs(data))
       .catch(() => setJobs([]))
       .finally(() => setJobsLoading(false));
@@ -98,9 +98,9 @@ export default function Home() {
           <p>Innovex Resource Group Limited supports healthcare recruitment and helps businesses across all sectors with modern websites, SEO, and online visibility.</p>
           <div className="actions">
             <Link className="button" to="/jobs">Browse Jobs <ArrowRight size={18} /></Link>
-            <Link className="button light" to="/contact">Request Staffing Support</Link>
-            <Link className="button hero-digital" to="/contact">Build Website</Link>
-            <Link className="button hero-digital secondary-hero" to="/contact">Boost SEO</Link>
+            <Link className="button light" to="/healthcare-recruitment">Request Staffing Support</Link>
+            <Link className="button hero-digital" to="/website-development">Build Website</Link>
+            <Link className="button hero-digital secondary-hero" to="/seo-services">Boost SEO</Link>
           </div>
           <p className="cta-microcopy hero-helper">For care providers, candidates, and businesses looking for recruitment, websites and digital growth.</p>
         </div>
@@ -178,7 +178,7 @@ export default function Home() {
       <section className="section">
         <SectionHeading eyebrow="Services" title="Specialist support for care providers">From temporary shifts to permanent leadership roles, Innovex keeps recruitment practical, fast, and compliant.</SectionHeading>
         <div className="card-grid">
-          {services.slice(0, 6).map((service) => <article className="card" key={service.title}><h3>{service.title}</h3><p>{service.description}</p><Link to="/services" className="button secondary small">Learn More</Link></article>)}
+          {services.slice(0, 6).map((service) => <article className="card" key={service.title}><h3>{service.title}</h3><p>{service.description}</p><Link to="/healthcare-recruitment" className="button secondary small">Learn More</Link></article>)}
         </div>
         <article className="card recruitment-quality-card">
           <div>
@@ -201,8 +201,8 @@ export default function Home() {
           We also design modern websites and provide SEO support for businesses across healthcare and every other sector.
         </SectionHeading>
         <div className="card-grid">
-          <article className="card digital-card"><span className="digital-icon"><MonitorSmartphone size={24} /></span><h3>Website Design</h3><p>Responsive, professional websites built around your services, brand, and customer journey.</p><Link to="/services" className="button secondary small">Explore Digital Services</Link></article>
-          <article className="card digital-card"><span className="digital-icon"><Search size={24} /></span><h3>SEO Services</h3><p>Search-friendly pages, local SEO, content structure, and visibility improvements.</p><Link to="/contact" className="button small">Discuss SEO</Link></article>
+          <article className="card digital-card"><span className="digital-icon"><MonitorSmartphone size={24} /></span><h3>Website Design</h3><p>Responsive, professional websites built around your services, brand, and customer journey.</p><Link to="/website-development" className="button secondary small">Explore Website Development</Link></article>
+          <article className="card digital-card"><span className="digital-icon"><Search size={24} /></span><h3>SEO Services</h3><p>Search-friendly pages, local SEO, content structure, and visibility improvements.</p><Link to="/seo-services" className="button small">Explore SEO Services</Link></article>
         </div>
         <div className="digital-proof-block">
           <SectionHeading eyebrow="Digital Delivery" title="What You Get With Our Digital Services" />
