@@ -41,6 +41,10 @@
     {
       "path": "/api/interviews/reminders/run",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/finance/reminders/run",
+      "schedule": "15 8 * * *"
     }
   ]
 }

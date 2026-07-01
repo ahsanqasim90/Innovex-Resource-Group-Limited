@@ -1,8 +1,8 @@
-import { useEffect } from "react";
-import { ArrowUpRight, BarChart3, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, FilePlus2, GraduationCap, LayoutDashboard, ListFilter, LogOut, MailCheck, MailPlus, MessageSquare, PhoneCall, Settings, ShieldCheck, Store, Target, Upload, UserCog, UsersRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowUpRight, BarChart3, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, FilePlus2, GraduationCap, LayoutDashboard, ListFilter, LogOut, MailCheck, MailPlus, Menu, MessageSquare, PhoneCall, ReceiptPoundSterling, Settings, ShieldCheck, Store, Target, Upload, UserCog, UsersRound, X } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { hasPermission } from "../auth/permissions.js";
+import { canViewFinance, hasPermission } from "../auth/permissions.js";
 
 const links = [
   ["/admin/dashboard", "Dashboard", LayoutDashboard, "dashboard.view"],
@@ -17,6 +17,7 @@ const links = [
   ["/admin/meetings", "Meetings", CalendarClock, "meetings.view"],
   ["/admin/courses", "Courses", BookOpenCheck, "courses.view"],
   ["/admin/training-bookings", "Training Bookings", GraduationCap, "trainingBookings.view"],
+  ["/admin/finance", "Finance Centre", ReceiptPoundSterling, null, true],
   ["/admin/blogs", "Blogs", BookOpenText, "blogs.view"],
   ["/admin/testimonials", "Testimonials", MessageSquare, "testimonials.view"],
   ["/admin/partners", "Partners", Building2, "partners.view"],
@@ -40,13 +41,14 @@ export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const visibleLinks = links.filter(([, , , permission]) => hasPermission(user, permission));
+  const visibleLinks = links.filter(([, , , permission, ownerOnly]) => (!ownerOnly || canViewFinance(user)) && hasPermission(user, permission));
   const visibleWebLeadLinks = webLeadLinks.filter(([, , , permission]) => hasPermission(user, permission));
   const allVisibleLinks = [...visibleLinks, ...visibleWebLeadLinks];
   const current = [...allVisibleLinks].sort((a, b) => b[0].length - a[0].length).find(([href]) => location.pathname === href || location.pathname.startsWith(`${href}/`)) || links.find(([href]) => location.pathname.startsWith(href));
   const CurrentIcon = current?.[2] || LayoutDashboard;
   const title = current?.[1] || "Dashboard";
   const copyLocked = user && !user.canCopyData;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!copyLocked) return undefined;
@@ -63,7 +65,7 @@ export default function AdminLayout() {
 
   return (
     <div className={`admin-shell${copyLocked ? " copy-locked" : ""}`}>
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar${menuOpen ? " open" : ""}`}>
         <div className="admin-sidebar-inner">
           <div className="brand admin-brand">
             <span className="brand-mark">IR</span>
@@ -71,11 +73,14 @@ export default function AdminLayout() {
               <strong>Innovex Admin</strong>
               <small>Operations centre</small>
             </span>
+            <button className="admin-menu-toggle" type="button" onClick={() => setMenuOpen((current) => !current)} aria-label={menuOpen ? "Close admin menu" : "Open admin menu"}>
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
           <div className="admin-nav-label">Workspace</div>
           <nav className="admin-nav">
             {visibleLinks.map(([href, label, Icon]) => (
-              <NavLink key={href} to={href}>
+              <NavLink key={href} to={href} onClick={() => setMenuOpen(false)}>
                 <Icon size={18} /> {label}
               </NavLink>
             ))}
@@ -84,7 +89,7 @@ export default function AdminLayout() {
             <div className="admin-nav-label webcrm-nav-label">Web Leads CRM</div>
             <nav className="admin-nav webcrm-admin-nav">
               {visibleWebLeadLinks.map(([href, label, Icon]) => (
-                <NavLink key={href} to={href} end={href === "/admin/web-leads"}>
+                <NavLink key={href} to={href} end={href === "/admin/web-leads"} onClick={() => setMenuOpen(false)}>
                   <Icon size={18} /> {label}
                 </NavLink>
               ))}

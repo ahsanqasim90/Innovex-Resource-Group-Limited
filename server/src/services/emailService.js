@@ -37,6 +37,18 @@ function senderAccountOrDefault(fromEmail) {
   return findEmailAccount(fromEmail);
 }
 
+function escapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[character]));
+}
+
+function money(value) {
+  return `£${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function invoiceDate(value) {
+  return new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+}
+
 export async function sendContactEmail(message) {
   if (!hasSmtpConfig()) {
     return { sent: false, reason: "SMTP is not configured" };
@@ -292,4 +304,41 @@ export async function sendComposedEmail({ fromEmail, to = [], cc = [], bcc = [],
   });
 
   return { sent: true };
+}
+
+export async function sendInvoiceEmail({ invoice, pdfBuffer, fromEmail, customMessage = "" }) {
+  const account = senderAccountOrDefault(fromEmail || invoice.senderEmail);
+  if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
+  const transporter = makeTransporter(account);
+  const subject = `Invoice ${invoice.invoiceNumber} from Innovex Resource Group Limited`;
+  const message = customMessage || `Please find attached invoice ${invoice.invoiceNumber} for ${money(invoice.total)}. Payment is due by ${invoiceDate(invoice.dueDate)}.`;
+  await transporter.sendMail({
+    from: formatSender(account),
+    to: invoice.billingEmail,
+    replyTo: account.address,
+    subject,
+    text: `${message}\n\nOutstanding balance: ${money(invoice.balanceDue)}\n\nKind regards,\nInnovex Resource Group Limited`,
+    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#173840"><p>Dear ${escapeHtml(invoice.contactName || invoice.clientName)},</p><p>${escapeHtml(message).replace(/\n/g, "<br />")}</p><div style="margin:22px 0;padding:16px;border-left:4px solid #f4b942;background:#f5fafa"><strong>Invoice ${escapeHtml(invoice.invoiceNumber)}</strong><br />Total: ${money(invoice.total)}<br />Outstanding: ${money(invoice.balanceDue)}<br />Due date: ${invoiceDate(invoice.dueDate)}</div><p>Kind regards,<br /><strong>Innovex Resource Group Limited</strong><br />0330 0435 830</p></div>`,
+    attachments: [{ filename: `Innovex-Invoice-${invoice.invoiceNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
+  });
+  return { sent: true, fromEmail: account.address, subject, message };
+}
+
+export async function sendInvoiceReminderEmail({ invoice, pdfBuffer, fromEmail }) {
+  const account = senderAccountOrDefault(fromEmail || invoice.senderEmail);
+  if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
+  const transporter = makeTransporter(account);
+  const subject = `Payment reminder: Invoice ${invoice.invoiceNumber}`;
+  const overdue = new Date(invoice.dueDate) < new Date();
+  const timing = overdue ? `was due on ${invoiceDate(invoice.dueDate)}` : `is due on ${invoiceDate(invoice.dueDate)}`;
+  await transporter.sendMail({
+    from: formatSender(account),
+    to: invoice.billingEmail,
+    replyTo: account.address,
+    subject,
+    text: `This is a friendly payment reminder for invoice ${invoice.invoiceNumber}. The outstanding balance is ${money(invoice.balanceDue)} and ${timing}. Please disregard this message if payment has already been made.`,
+    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#173840"><p>Dear ${escapeHtml(invoice.contactName || invoice.clientName)},</p><p>This is a friendly payment reminder for invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong>.</p><div style="margin:22px 0;padding:16px;border-left:4px solid #f4b942;background:#f5fafa"><strong>Outstanding balance: ${money(invoice.balanceDue)}</strong><br />Payment ${timing}.</div><p>Please disregard this message if payment has already been made, or reply to this email if you have a query.</p><p>Kind regards,<br /><strong>Innovex Resource Group Limited</strong><br />0330 0435 830</p></div>`,
+    attachments: [{ filename: `Innovex-Invoice-${invoice.invoiceNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
+  });
+  return { sent: true, fromEmail: account.address, subject };
 }

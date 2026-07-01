@@ -13,6 +13,7 @@ const allowedCsvMimeTypes = new Set([
   "application/vnd.ms-excel",
   "text/plain"
 ]);
+const allowedReceiptMimeTypes = new Set([...allowedImageMimeTypes, "application/pdf"]);
 
 function safeFilename(originalName) {
   return `${Date.now()}-${originalName.replace(/[^a-z0-9.\-_]/gi, "-").toLowerCase()}`;
@@ -79,6 +80,18 @@ export const uploadBusinessLeadCsv = multer({
       return;
     }
     cb(new Error("Business lead import must be a CSV file. In Excel, use Save As or Export as CSV UTF-8, then upload that CSV."));
+  }
+});
+
+export const uploadExpenseReceipt = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 4 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (allowedReceiptMimeTypes.has(file.mimetype)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("Receipt must be a PDF, JPG, PNG, WEBP, or SVG file"));
   }
 });
 

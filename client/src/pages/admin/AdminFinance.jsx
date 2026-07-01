@@ -1,0 +1,142 @@
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, BadgePoundSterling, CalendarClock, CheckCircle2, Download, FileSpreadsheet, FileText, Landmark, Mail, Plus, ReceiptText, RefreshCw, Send, TrendingUp, Upload } from "lucide-react";
+import { api, downloadFile } from "../../api/client.js";
+import StatusMessage from "../../components/StatusMessage.jsx";
+import SubmitButton from "../../components/SubmitButton.jsx";
+
+const today = () => new Date().toISOString().slice(0, 10);
+const futureDate = (days) => {
+  const value = new Date();
+  value.setDate(value.getDate() + days);
+  return value.toISOString().slice(0, 10);
+};
+const currentFinancialYear = () => {
+  const value = new Date();
+  const start = value.getMonth() >= 8 ? value.getFullYear() : value.getFullYear() - 1;
+  return `${start}/${String(start + 1).slice(-2)}`;
+};
+const money = (value) => `£${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const dateLabel = (value) => value ? new Date(value).toLocaleDateString("en-GB") : "-";
+
+const emptyLine = { description: "", details: "", client: "", candidate: "", hourlyRate: "", hoursPerWeek: "", weeksPerYear: 52, serviceFeePercent: "", quantity: 1, unitPrice: "" };
+const emptyInvoice = {
+  invoiceType: "Recruitment", issueDate: today(), dueDate: futureDate(30), clientName: "", contactName: "", billingEmail: "", billingAddress: "",
+  salesPerson: "", orderNumber: "", lineItems: [{ ...emptyLine }], vatRate: 0, amountPaid: 0, notes: "", paymentTerms: "Payment is due by the due date shown on this invoice.",
+  senderEmail: "info@innovexresourcegroup.co.uk", reminderEnabled: true, reminderFrequencyDays: 7
+};
+const emptyExpense = { expenseDate: today(), supplier: "", category: "Other", description: "", reference: "", netAmount: "", vatRate: 0, paymentStatus: "Paid", paymentMethod: "Business Card", notes: "", receipt: null };
+const expenseCategories = ["Advertising & Marketing", "Bank Charges", "Insurance", "Office & Equipment", "Payroll & Contractors", "Professional Fees", "Recruitment", "Software & Subscriptions", "Telecoms", "Training", "Travel & Mileage", "Website & Hosting", "Other"];
+
+function lineAmount(item) {
+  const calculatedAnnual = Number(item.hourlyRate || 0) * Number(item.hoursPerWeek || 0) * Number(item.weeksPerYear || 52);
+  const annual = calculatedAnnual > 0 ? calculatedAnnual : Number(item.annualGrossSalary || 0);
+  return Number(item.serviceFeePercent || 0) > 0 && annual > 0 ? annual * Number(item.serviceFeePercent) / 100 : Number(item.quantity || 1) * Number(item.unitPrice || 0);
+}
+
+function invoiceTotals(form) {
+  const subtotal = form.lineItems.reduce((sum, item) => sum + lineAmount(item), 0);
+  const vat = subtotal * Number(form.vatRate || 0) / 100;
+  const total = subtotal + vat;
+  return { subtotal, vat, total, balance: Math.max(0, total - Number(form.amountPaid || 0)) };
+}
+
+function statusClass(status = "") {
+  return `finance-status ${status.toLowerCase().replace(/\s+/g, "-")}`;
+}
+
+function FinanceStat({ icon: Icon, label, value, tone = "" }) {
+  return <article className={`finance-stat ${tone}`}><span><Icon size={20} /></span><div><small>{label}</small><strong>{value}</strong></div></article>;
+}
+
+function Overview({ dashboard, onTab }) {
+  const data = dashboard || {};
+  return <>
+    <div className="finance-stats-grid">
+      <FinanceStat icon={FileText} label="Invoices raised" value={money(data.invoice?.invoiced)} />
+      <FinanceStat icon={CheckCircle2} label="Payments received" value={money(data.invoice?.paid)} tone="positive" />
+      <FinanceStat icon={CalendarClock} label="Outstanding" value={money(data.invoice?.outstanding)} tone="warning" />
+      <FinanceStat icon={ReceiptText} label="Business expenses" value={money(data.expense?.total)} />
+      <FinanceStat icon={TrendingUp} label="Cash position" value={money(data.netPosition)} tone={Number(data.netPosition) >= 0 ? "positive" : "danger"} />
+      <FinanceStat icon={AlertTriangle} label="Overdue invoices" value={data.overdueCount || 0} tone={data.overdueCount ? "danger" : "positive"} />
+    </div>
+    <div className="finance-overview-grid">
+      <section className="finance-panel">
+        <div className="finance-panel-head"><div><span className="eyebrow">Collections</span><h2>Payments needing attention</h2></div><button className="button secondary small" onClick={() => onTab("invoices")}>Open invoices</button></div>
+        <div className="finance-attention-list">
+          {(data.dueSoon || []).map((item) => <article key={item._id}><div><strong>{item.clientName}</strong><span>Invoice {item.invoiceNumber} · due {dateLabel(item.dueDate)}</span></div><div><strong>{money(item.balanceDue)}</strong><span className={statusClass(item.status)}>{item.status}</span></div></article>)}
+          {!data.dueSoon?.length && <div className="finance-empty"><CheckCircle2 /><strong>No urgent collections</strong><span>Outstanding invoices due within 14 days will appear here.</span></div>}
+        </div>
+      </section>
+      <section className="finance-panel finance-year-card">
+        <span className="eyebrow">Financial year</span><h2>{data.financialYear}</h2><p>Innovex reporting runs from 1 September to 31 August. Every invoice and expense is tagged automatically.</p>
+        <dl><div><dt>Expense net</dt><dd>{money(data.expense?.net)}</dd></div><div><dt>Input VAT recorded</dt><dd>{money(data.expense?.vat)}</dd></div><div><dt>Draft invoices</dt><dd>{data.draftCount || 0}</dd></div></dl>
+        <button className="button" onClick={() => onTab("expenses")}><FileSpreadsheet size={17} /> Review expense ledger</button>
+      </section>
+    </div>
+  </>;
+}
+
+function InvoiceForm({ form, setForm, editing, saving, onSave, onCancel }) {
+  const totals = useMemo(() => invoiceTotals(form), [form]);
+  const updateLine = (index, field, value) => setForm({ ...form, lineItems: form.lineItems.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item) });
+  const addLine = () => setForm({ ...form, lineItems: [...form.lineItems, { ...emptyLine }] });
+  const removeLine = (index) => form.lineItems.length > 1 && setForm({ ...form, lineItems: form.lineItems.filter((_, itemIndex) => itemIndex !== index) });
+  return <form className="finance-panel finance-form" onSubmit={onSave}>
+    <div className="finance-panel-head"><div><span className="eyebrow">Invoice builder</span><h2>{editing ? "Edit invoice" : "Create a new invoice"}</h2><p>Save as draft first. Generate or send the PDF only when it is ready.</p></div>{editing && <button type="button" className="button secondary small" onClick={onCancel}>Cancel edit</button>}</div>
+    <div className="finance-form-section"><h3>Client and invoice details</h3><div className="finance-form-grid">
+      <label><span>Service type</span><select value={form.invoiceType} onChange={(e) => setForm({ ...form, invoiceType: e.target.value })}>{["Recruitment", "Training", "Website", "SEO", "Compliance", "Other"].map((item) => <option key={item}>{item}</option>)}</select></label>
+      <label><span>Client / company</span><input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} required /></label>
+      <label><span>Accounts contact</span><input value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></label>
+      <label><span>Billing email</span><input type="email" value={form.billingEmail} onChange={(e) => setForm({ ...form, billingEmail: e.target.value })} required /></label>
+      <label><span>Invoice date</span><input type="date" value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} required /></label>
+      <label><span>Due date</span><input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} required /></label>
+      <label><span>Sales person</span><input value={form.salesPerson} onChange={(e) => setForm({ ...form, salesPerson: e.target.value })} /></label>
+      <label><span>Order / PO number</span><input value={form.orderNumber} onChange={(e) => setForm({ ...form, orderNumber: e.target.value })} /></label>
+    </div><label><span>Billing address</span><textarea rows="3" value={form.billingAddress} onChange={(e) => setForm({ ...form, billingAddress: e.target.value })} required /></label></div>
+    <div className="finance-form-section"><div className="finance-section-line"><h3>Invoice items</h3><button type="button" className="button secondary small" onClick={addLine}><Plus size={16} /> Add item</button></div>
+      <div className="invoice-lines">{form.lineItems.map((item, index) => <article className="invoice-line" key={index}>
+        <div className="invoice-line-head"><strong>Item {index + 1}</strong><span>{money(lineAmount(item))}</span>{form.lineItems.length > 1 && <button type="button" onClick={() => removeLine(index)}>Remove</button>}</div>
+        <div className="finance-form-grid"><label><span>Description</span><input value={item.description} onChange={(e) => updateLine(index, "description", e.target.value)} placeholder="e.g. Registered Nurse placement fee" required /></label><label><span>Client / service</span><input value={item.client} onChange={(e) => updateLine(index, "client", e.target.value)} /></label><label><span>Candidate (optional)</span><input value={item.candidate} onChange={(e) => updateLine(index, "candidate", e.target.value)} /></label><label><span>Notes</span><input value={item.details} onChange={(e) => updateLine(index, "details", e.target.value)} /></label></div>
+        {form.invoiceType === "Recruitment" ? <div className="finance-rate-grid"><label><span>Hourly rate</span><input type="number" min="0" step="0.01" value={item.hourlyRate} onChange={(e) => updateLine(index, "hourlyRate", e.target.value)} /></label><label><span>Hours/week</span><input type="number" min="0" step="0.01" value={item.hoursPerWeek} onChange={(e) => updateLine(index, "hoursPerWeek", e.target.value)} /></label><label><span>Weeks/year</span><input type="number" min="1" value={item.weeksPerYear} onChange={(e) => updateLine(index, "weeksPerYear", e.target.value)} /></label><label><span>Annual salary</span><input type="number" min="0" step="0.01" value={item.annualGrossSalary || ""} onChange={(e) => updateLine(index, "annualGrossSalary", e.target.value)} /></label><label><span>Service fee %</span><input type="number" min="0" max="100" step="0.01" value={item.serviceFeePercent} onChange={(e) => updateLine(index, "serviceFeePercent", e.target.value)} /></label><label><span>Flat fee</span><input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateLine(index, "unitPrice", e.target.value)} /></label></div> : <div className="finance-rate-grid compact"><label><span>Quantity</span><input type="number" min="0" step="0.01" value={item.quantity} onChange={(e) => updateLine(index, "quantity", e.target.value)} /></label><label><span>Unit price</span><input type="number" min="0" step="0.01" value={item.unitPrice} onChange={(e) => updateLine(index, "unitPrice", e.target.value)} /></label></div>}
+      </article>)}</div>
+    </div>
+    <div className="finance-form-section"><h3>Payment and reminders</h3><div className="finance-form-grid"><label><span>VAT rate</span><select value={form.vatRate} onChange={(e) => setForm({ ...form, vatRate: Number(e.target.value) })}><option value="0">0% / No VAT</option><option value="5">5%</option><option value="20">20%</option></select></label><label><span>Amount already paid</span><input type="number" min="0" step="0.01" value={form.amountPaid} onChange={(e) => setForm({ ...form, amountPaid: e.target.value })} /></label><label><span>Reminder frequency</span><select value={form.reminderFrequencyDays} onChange={(e) => setForm({ ...form, reminderFrequencyDays: Number(e.target.value) })}><option value="3">Every 3 days</option><option value="7">Every 7 days</option><option value="14">Every 14 days</option><option value="30">Every 30 days</option></select></label><label className="finance-check"><input type="checkbox" checked={form.reminderEnabled} onChange={(e) => setForm({ ...form, reminderEnabled: e.target.checked })} /><span>Automatic payment reminders enabled</span></label></div><label><span>Invoice notes</span><textarea rows="3" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label></div>
+    <div className="invoice-total-bar"><div><span>Subtotal</span><strong>{money(totals.subtotal)}</strong></div><div><span>VAT</span><strong>{money(totals.vat)}</strong></div><div><span>Total</span><strong>{money(totals.total)}</strong></div><div className="balance"><span>Balance due</span><strong>{money(totals.balance)}</strong></div></div>
+    <div className="finance-form-actions"><SubmitButton loading={saving} loadingText="Saving draft..."><FileText size={17} /> {editing ? "Update invoice" : "Save draft invoice"}</SubmitButton></div>
+  </form>;
+}
+
+function InvoiceWorkspace({ invoices, senders, reload, status, setStatus }) {
+  const [form, setForm] = useState(emptyInvoice); const [editing, setEditing] = useState(null); const [selected, setSelected] = useState(null); const [saving, setSaving] = useState(false); const [sending, setSending] = useState(false); const [message, setMessage] = useState("");
+  useEffect(() => { if (senders[0] && !form.senderEmail) setForm((current) => ({ ...current, senderEmail: senders[0].address })); }, [senders]);
+  const save = async (event) => { event.preventDefault(); setSaving(true); try { const saved = await api(editing ? `/finance/invoices/${editing}` : "/finance/invoices", { method: editing ? "PUT" : "POST", body: form }); setStatus({ message: editing ? "Invoice updated." : `Draft invoice ${saved.invoiceNumber} created.` }); setSelected(saved); setEditing(null); setForm({ ...emptyInvoice, lineItems: [{ ...emptyLine }], senderEmail: senders[0]?.address || emptyInvoice.senderEmail }); reload(); } catch (error) { setStatus({ type: "error", message: error.message }); } finally { setSaving(false); } };
+  const edit = (invoice) => { setEditing(invoice._id); setForm({ ...emptyInvoice, ...invoice, issueDate: invoice.issueDate?.slice(0, 10), dueDate: invoice.dueDate?.slice(0, 10), lineItems: invoice.lineItems?.length ? invoice.lineItems : [{ ...emptyLine }] }); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const send = async (reminder = false) => { if (!selected) return; setSending(true); try { const result = await api(`/finance/invoices/${selected._id}/${reminder ? "remind" : "send"}`, { method: "POST", body: { fromEmail: selected.senderEmail || senders[0]?.address, message } }); setSelected(result.invoice); setStatus({ message: result.message }); setMessage(""); reload(); } catch (error) { setStatus({ type: "error", message: error.message }); } finally { setSending(false); } };
+  const remove = async (invoice) => { if (!confirm(`Delete draft invoice ${invoice.invoiceNumber}?`)) return; try { await api(`/finance/invoices/${invoice._id}`, { method: "DELETE" }); setStatus({ message: "Draft invoice deleted." }); if (selected?._id === invoice._id) setSelected(null); reload(); } catch (error) { setStatus({ type: "error", message: error.message }); } };
+  return <div className="finance-workspace"><InvoiceForm form={form} setForm={setForm} editing={editing} saving={saving} onSave={save} onCancel={() => { setEditing(null); setForm({ ...emptyInvoice, lineItems: [{ ...emptyLine }] }); }} />
+    <aside className="finance-panel invoice-action-panel">{selected ? <><span className="eyebrow">Invoice selected</span><h2>{selected.invoiceNumber}</h2><p>{selected.clientName}</p><div className="invoice-action-total"><span>Outstanding balance</span><strong>{money(selected.balanceDue)}</strong><small>Due {dateLabel(selected.dueDate)}</small></div><label><span>Send from</span><select value={selected.senderEmail || senders[0]?.address || ""} onChange={(e) => setSelected({ ...selected, senderEmail: e.target.value })}>{senders.map((sender) => <option value={sender.address} key={sender.address}>{sender.label} · {sender.address}</option>)}</select></label><label><span>Optional email message</span><textarea rows="4" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="A professional default message is already prepared." /></label><div className="invoice-action-buttons"><button className="button" onClick={() => send(false)} disabled={sending}><Send size={16} /> Send invoice</button><button className="button secondary" onClick={() => downloadFile(`/finance/invoices/${selected._id}/pdf`, `Innovex-Invoice-${selected.invoiceNumber}.pdf`)}><Download size={16} /> Download PDF</button>{selected.status !== "Draft" && selected.balanceDue > 0 && <button className="button secondary" onClick={() => send(true)} disabled={sending}><Mail size={16} /> Send reminder</button>}</div></> : <div className="finance-empty"><FileText /><strong>Select an invoice</strong><span>Choose a record below to download, send, remind or record payment.</span></div>}</aside>
+    <section className="finance-panel finance-register"><div className="finance-panel-head"><div><span className="eyebrow">Invoice register</span><h2>Invoices and payment status</h2></div><span className="finance-count">{invoices.length} records</span></div><div className="table-wrap"><table><thead><tr><th>Invoice</th><th>Client</th><th>Issued / due</th><th>Status</th><th>Total</th><th>Balance</th><th>Actions</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice._id} className={selected?._id === invoice._id ? "selected-row" : ""}><td><strong>{invoice.invoiceNumber}</strong><br /><span className="muted">{invoice.invoiceType}</span></td><td><strong>{invoice.clientName}</strong><br /><span className="muted">{invoice.billingEmail}</span></td><td>{dateLabel(invoice.issueDate)}<br /><span className="muted">Due {dateLabel(invoice.dueDate)}</span></td><td><span className={statusClass(invoice.status)}>{invoice.status}</span></td><td>{money(invoice.total)}</td><td><strong>{money(invoice.balanceDue)}</strong></td><td><div className="compact-actions"><button className="button secondary small" onClick={() => setSelected(invoice)}>Open</button><button className="button secondary small" onClick={() => edit(invoice)}>Edit</button>{invoice.status === "Draft" && <button className="button danger small" onClick={() => remove(invoice)}>Delete</button>}</div></td></tr>)}</tbody></table></div>{!invoices.length && <div className="finance-empty"><FileText /><strong>No invoices yet</strong><span>Create your first draft invoice above.</span></div>}</section>
+  </div>;
+}
+
+function ExpenseWorkspace({ expenses, financialYear, reload, setStatus }) {
+  const [form, setForm] = useState(emptyExpense); const [editing, setEditing] = useState(null); const [saving, setSaving] = useState(false);
+  const vat = Number(form.netAmount || 0) * Number(form.vatRate || 0) / 100; const gross = Number(form.netAmount || 0) + vat;
+  const save = async (event) => { event.preventDefault(); setSaving(true); try { const data = new FormData(); Object.entries(form).forEach(([key, value]) => { if (key === "receipt") { if (value) data.append("receipt", value); } else data.append(key, value ?? ""); }); await api(editing ? `/finance/expenses/${editing}` : "/finance/expenses", { method: editing ? "PUT" : "POST", body: data }); setStatus({ message: editing ? "Expense updated." : "Expense recorded." }); setEditing(null); setForm(emptyExpense); reload(); } catch (error) { setStatus({ type: "error", message: error.message }); } finally { setSaving(false); } };
+  const edit = (expense) => { setEditing(expense._id); setForm({ ...emptyExpense, ...expense, expenseDate: expense.expenseDate?.slice(0, 10), receipt: null }); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const remove = async (expense) => { if (!confirm(`Delete ${expense.expenseNumber}?`)) return; try { await api(`/finance/expenses/${expense._id}`, { method: "DELETE" }); setStatus({ message: "Expense deleted." }); reload(); } catch (error) { setStatus({ type: "error", message: error.message }); } };
+  return <div className="finance-workspace expense-workspace"><form className="finance-panel finance-form" onSubmit={save}><div className="finance-panel-head"><div><span className="eyebrow">Expense capture</span><h2>{editing ? "Edit expense" : "Record a business expense"}</h2><p>Keep the VAT split and receipt with the transaction for accountant review.</p></div>{editing && <button type="button" className="button secondary small" onClick={() => { setEditing(null); setForm(emptyExpense); }}>Cancel edit</button>}</div><div className="finance-form-grid"><label><span>Expense date</span><input type="date" value={form.expenseDate} onChange={(e) => setForm({ ...form, expenseDate: e.target.value })} required /></label><label><span>Supplier</span><input value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} required /></label><label><span>Category</span><select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{expenseCategories.map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Invoice / receipt reference</span><input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></label><label><span>Net amount</span><input type="number" min="0" step="0.01" value={form.netAmount} onChange={(e) => setForm({ ...form, netAmount: e.target.value })} required /></label><label><span>VAT rate</span><select value={form.vatRate} onChange={(e) => setForm({ ...form, vatRate: Number(e.target.value) })}><option value="0">0% / No VAT</option><option value="5">5%</option><option value="20">20%</option></select></label><label><span>Payment status</span><select value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}>{["Unpaid", "Paid", "Reimbursable", "Reimbursed"].map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Payment method</span><select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}>{["Bank Transfer", "Business Card", "Cash", "Direct Debit", "Personal Card", "Other"].map((item) => <option key={item}>{item}</option>)}</select></label></div><label><span>Description</span><textarea rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required /></label><label className="finance-file"><Upload size={20} /><span><strong>{form.receipt?.name || "Attach receipt"}</strong><small>PDF, JPG, PNG, WEBP or SVG up to 4MB</small></span><input type="file" accept=".pdf,image/*" onChange={(e) => setForm({ ...form, receipt: e.target.files?.[0] || null })} /></label><div className="expense-total-bar"><div><span>Net</span><strong>{money(form.netAmount)}</strong></div><div><span>VAT</span><strong>{money(vat)}</strong></div><div><span>Gross expense</span><strong>{money(gross)}</strong></div></div><div className="finance-form-actions"><SubmitButton loading={saving} loadingText="Saving expense..."><ReceiptText size={17} /> {editing ? "Update expense" : "Record expense"}</SubmitButton></div></form>
+    <aside className="finance-panel expense-guidance"><Landmark size={28} /><span className="eyebrow">Accounts ready</span><h2>September year-end discipline</h2><p>Use one expense per supplier document. Record the net amount and VAT shown on the receipt; do not estimate VAT when it is absent.</p><ul><li>Attach the source receipt whenever possible.</li><li>Use Personal Card only for reimbursable employee costs.</li><li>Export the complete ledger for your accountant.</li></ul><button className="button" onClick={() => downloadFile(`/finance/expenses/export.csv?financialYear=${encodeURIComponent(financialYear)}`, `Innovex-Expenses-${financialYear}.csv`)}><FileSpreadsheet size={17} /> Export accountant CSV</button></aside>
+    <section className="finance-panel finance-register"><div className="finance-panel-head"><div><span className="eyebrow">Expense ledger</span><h2>Recorded costs</h2></div><span className="finance-count">{expenses.length} records</span></div><div className="table-wrap"><table><thead><tr><th>Reference</th><th>Supplier</th><th>Category</th><th>Date</th><th>Net</th><th>VAT</th><th>Gross</th><th>Actions</th></tr></thead><tbody>{expenses.map((expense) => <tr key={expense._id}><td><strong>{expense.expenseNumber}</strong><br /><span className="muted">{expense.reference || "No supplier ref"}</span></td><td><strong>{expense.supplier}</strong><br /><span className="muted">{expense.description}</span></td><td>{expense.category}</td><td>{dateLabel(expense.expenseDate)}</td><td>{money(expense.netAmount)}</td><td>{money(expense.vatAmount)}</td><td><strong>{money(expense.totalAmount)}</strong></td><td><div className="compact-actions">{expense.hasReceipt && <button className="button secondary small" onClick={() => downloadFile(`/finance/expenses/${expense._id}/receipt`, expense.receipt?.originalName || "receipt")}>Receipt</button>}<button className="button secondary small" onClick={() => edit(expense)}>Edit</button><button className="button danger small" onClick={() => remove(expense)}>Delete</button></div></td></tr>)}</tbody></table></div>{!expenses.length && <div className="finance-empty"><ReceiptText /><strong>No expenses in this year</strong><span>Record your first business expense above.</span></div>}</section>
+  </div>;
+}
+
+export default function AdminFinance() {
+  const [tab, setTab] = useState("overview"); const [dashboard, setDashboard] = useState(null); const [invoices, setInvoices] = useState([]); const [expenses, setExpenses] = useState([]); const [senders, setSenders] = useState([]); const [financialYear, setFinancialYear] = useState(currentFinancialYear()); const [status, setStatus] = useState(null); const [loading, setLoading] = useState(true);
+  const load = async () => { setLoading(true); try { const query = `financialYear=${encodeURIComponent(financialYear)}`; const [dashboardData, invoiceData, expenseData, senderData] = await Promise.all([api(`/finance/dashboard?${query}`), api(`/finance/invoices?${query}`), api(`/finance/expenses?${query}`), api("/finance/senders")]); setDashboard(dashboardData); setInvoices(invoiceData); setExpenses(expenseData); setSenders(senderData); } catch (error) { setStatus({ type: "error", message: error.message }); } finally { setLoading(false); } };
+  useEffect(() => { load(); }, [financialYear]);
+  return <div className="admin-finance-page"><section className="finance-hero"><div className="finance-hero-icon"><BadgePoundSterling size={30} /></div><div><span className="eyebrow">Owner finance workspace</span><h1>Finance Centre</h1><p>Create professional invoices, collect outstanding payments and maintain an accountant-ready expense ledger.</p></div><div className="finance-year-picker"><span>Reporting year</span><select value={financialYear} onChange={(e) => setFinancialYear(e.target.value)}>{(dashboard?.financialYears || [financialYear]).map((year) => <option key={year}>{year}</option>)}</select></div></section><StatusMessage status={status} />
+    <div className="finance-tabs" role="tablist">{[["overview", "Overview", Landmark], ["invoices", "Invoices", FileText], ["expenses", "Expenses", ReceiptText]].map(([key, label, Icon]) => <button key={key} className={tab === key ? "active" : ""} onClick={() => setTab(key)}><Icon size={18} /> {label}</button>)}<button className="finance-refresh" onClick={load}><RefreshCw size={17} /> Refresh</button></div>
+    {loading ? <div className="finance-loading">Loading secure financial records...</div> : <>{tab === "overview" && <Overview dashboard={dashboard} onTab={setTab} />}{tab === "invoices" && <InvoiceWorkspace invoices={invoices} senders={senders} reload={load} status={status} setStatus={setStatus} />}{tab === "expenses" && <ExpenseWorkspace expenses={expenses} financialYear={financialYear} reload={load} setStatus={setStatus} />}</>}
+  </div>;
+}

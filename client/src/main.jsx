@@ -29,11 +29,12 @@ import AdminCalls from "./pages/admin/AdminCalls.jsx";
 import AdminInterviews from "./pages/admin/AdminInterviews.jsx";
 import AdminMeetings from "./pages/admin/AdminMeetings.jsx";
 import AdminTrainingBookings from "./pages/admin/AdminTrainingBookings.jsx";
+import AdminFinance from "./pages/admin/AdminFinance.jsx";
 import AdminTestimonials from "./pages/admin/AdminTestimonials.jsx";
 import AdminPartners from "./pages/admin/AdminPartners.jsx";
 import AdminTeam from "./pages/admin/AdminTeam.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
-import { hasPermission } from "./auth/permissions.js";
+import { canViewFinance, hasPermission } from "./auth/permissions.js";
 import "./styles.css";
 
 const AdminWebLeads = React.lazy(() => import("./pages/admin/AdminWebLeads.jsx"));
@@ -57,6 +58,12 @@ function RequirePermission({ permission, children }) {
     );
   }
   return children;
+}
+
+function RequireFinance({ children }) {
+  const { user, loadingUser } = useAuth();
+  if (loadingUser) return <div className="admin-loading-screen">Checking finance access...</div>;
+  return canViewFinance(user) ? children : <Navigate to="/admin/dashboard" replace />;
 }
 
 function AdminIndexRedirect() {
@@ -109,6 +116,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="meetings" element={<RequirePermission permission="meetings.view"><AdminMeetings /></RequirePermission>} />
             <Route path="courses" element={<RequirePermission permission="courses.view"><AdminCourses /></RequirePermission>} />
             <Route path="training-bookings" element={<RequirePermission permission="trainingBookings.view"><AdminTrainingBookings /></RequirePermission>} />
+            <Route path="finance" element={<RequireFinance><AdminFinance /></RequireFinance>} />
             <Route path="blogs" element={<RequirePermission permission="blogs.view"><AdminBlogs /></RequirePermission>} />
             <Route path="testimonials" element={<RequirePermission permission="testimonials.view"><AdminTestimonials /></RequirePermission>} />
             <Route path="partners" element={<RequirePermission permission="partners.view"><AdminPartners /></RequirePermission>} />
