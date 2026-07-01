@@ -49,6 +49,15 @@ function invoiceDate(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
 }
 
+function invoiceGreeting(invoice) {
+  const contact = String(invoice.contactName || "").trim();
+  return /[a-z]/i.test(contact) ? `Dear ${escapeHtml(contact)},` : "Hello,";
+}
+
+function systemEmailFooter() {
+  return `<div style="margin-top:26px;padding-top:14px;border-top:1px solid #d8e5e7;color:#6b7f85;font-size:11px;line-height:1.5">This is a system-generated email from the Innovex Finance Centre. Please do not send payment information by email. For invoice queries, reply to this message or call 0330 0435 830.</div>`;
+}
+
 export async function sendContactEmail(message) {
   if (!hasSmtpConfig()) {
     return { sent: false, reason: "SMTP is not configured" };
@@ -310,15 +319,15 @@ export async function sendInvoiceEmail({ invoice, pdfBuffer, fromEmail, customMe
   const account = senderAccountOrDefault(fromEmail || invoice.senderEmail);
   if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
   const transporter = makeTransporter(account);
-  const subject = `Invoice ${invoice.invoiceNumber} from Innovex Resource Group Limited`;
-  const message = customMessage || `Please find attached invoice ${invoice.invoiceNumber} for ${money(invoice.total)}. Payment is due by ${invoiceDate(invoice.dueDate)}.`;
+  const subject = `Invoice ${invoice.invoiceNumber} | Innovex Resource Group Limited`;
+  const message = customMessage || `Please find attached invoice ${invoice.invoiceNumber} for services provided by Innovex Resource Group Limited. The invoice total is ${money(invoice.total)}, due by ${invoiceDate(invoice.dueDate)}.`;
   await transporter.sendMail({
     from: formatSender(account),
     to: invoice.billingEmail,
     replyTo: account.address,
     subject,
-    text: `${message}\n\nOutstanding balance: ${money(invoice.balanceDue)}\n\nKind regards,\nInnovex Resource Group Limited`,
-    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#173840"><p>Dear ${escapeHtml(invoice.contactName || invoice.clientName)},</p><p>${escapeHtml(message).replace(/\n/g, "<br />")}</p><div style="margin:22px 0;padding:16px;border-left:4px solid #f4b942;background:#f5fafa"><strong>Invoice ${escapeHtml(invoice.invoiceNumber)}</strong><br />Total: ${money(invoice.total)}<br />Outstanding: ${money(invoice.balanceDue)}<br />Due date: ${invoiceDate(invoice.dueDate)}</div><p>Kind regards,<br /><strong>Innovex Resource Group Limited</strong><br />0330 0435 830</p></div>`,
+    text: `${message}\n\nInvoice: ${invoice.invoiceNumber}\nClient: ${invoice.clientName}\nTotal: ${money(invoice.total)}\nBalance due: ${money(invoice.balanceDue)}\nDue date: ${invoiceDate(invoice.dueDate)}\n\nKind regards,\nInnovex Resource Group Limited\n\nThis is a system-generated email from the Innovex Finance Centre.`,
+    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:620px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Invoice ${escapeHtml(invoice.invoiceNumber)}</div></div><div style="padding:26px 28px"><p style="margin-top:0">${invoiceGreeting(invoice)}</p><p style="line-height:1.65">${escapeHtml(message).replace(/\n/g, "<br />")}</p><table role="presentation" style="width:100%;margin:22px 0;border-collapse:separate;border-spacing:0;background:#eef7f7;border-radius:10px"><tr><td style="padding:16px 18px;color:#60777e;font-size:12px">INVOICE TOTAL<br><strong style="display:block;color:#173840;font-size:18px;margin-top:5px">${money(invoice.total)}</strong></td><td style="padding:16px 18px;color:#60777e;font-size:12px">BALANCE DUE<br><strong style="display:block;color:#173840;font-size:18px;margin-top:5px">${money(invoice.balanceDue)}</strong></td><td style="padding:16px 18px;color:#60777e;font-size:12px">DUE DATE<br><strong style="display:block;color:#173840;font-size:14px;margin-top:7px">${invoiceDate(invoice.dueDate)}</strong></td></tr></table><p style="line-height:1.6">The PDF invoice is attached to this email. Please use <strong>${escapeHtml(invoice.invoiceNumber)}</strong> as your payment reference.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; info@innovexresourcegroup.co.uk</span></p>${systemEmailFooter()}</div></div></div>`,
     attachments: [{ filename: `Innovex-Invoice-${invoice.invoiceNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
   });
   return { sent: true, fromEmail: account.address, subject, message };
@@ -336,8 +345,8 @@ export async function sendInvoiceReminderEmail({ invoice, pdfBuffer, fromEmail }
     to: invoice.billingEmail,
     replyTo: account.address,
     subject,
-    text: `This is a friendly payment reminder for invoice ${invoice.invoiceNumber}. The outstanding balance is ${money(invoice.balanceDue)} and ${timing}. Please disregard this message if payment has already been made.`,
-    html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#173840"><p>Dear ${escapeHtml(invoice.contactName || invoice.clientName)},</p><p>This is a friendly payment reminder for invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong>.</p><div style="margin:22px 0;padding:16px;border-left:4px solid #f4b942;background:#f5fafa"><strong>Outstanding balance: ${money(invoice.balanceDue)}</strong><br />Payment ${timing}.</div><p>Please disregard this message if payment has already been made, or reply to this email if you have a query.</p><p>Kind regards,<br /><strong>Innovex Resource Group Limited</strong><br />0330 0435 830</p></div>`,
+    text: `This is a friendly payment reminder for invoice ${invoice.invoiceNumber}. The outstanding balance is ${money(invoice.balanceDue)} and ${timing}. Please disregard this message if payment has already been made.\n\nThis is a system-generated email from the Innovex Finance Centre.`,
+    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:620px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Payment reminder</div></div><div style="padding:26px 28px"><p style="margin-top:0">${invoiceGreeting(invoice)}</p><p>This is a friendly reminder regarding invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong>.</p><div style="margin:22px 0;padding:18px;border-left:4px solid #f4b942;background:#eef7f7;border-radius:4px"><div style="font-size:12px;color:#60777e">OUTSTANDING BALANCE</div><strong style="display:block;font-size:22px;margin:5px 0">${money(invoice.balanceDue)}</strong><span>Payment ${timing}.</span></div><p>Please disregard this message if payment has already been made. If you have a query, reply to this email and our team will assist you.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; info@innovexresourcegroup.co.uk</span></p>${systemEmailFooter()}</div></div></div>`,
     attachments: [{ filename: `Innovex-Invoice-${invoice.invoiceNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
   });
   return { sent: true, fromEmail: account.address, subject };
