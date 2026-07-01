@@ -91,6 +91,22 @@ function postcodePrefix(value = "") {
   return cleanPostcode(value).replace(/\s+/g, "").slice(0, 4);
 }
 
+function postcodePrefixes(value = "") {
+  return [...new Set(
+    String(value)
+      .split(/[,;\n]+/)
+      .map((item) => postcodePrefix(item))
+      .filter((item) => item.length >= 2)
+  )].slice(0, 20);
+}
+
+function postcodePrefixFilter(value = "") {
+  const prefixes = postcodePrefixes(value);
+  if (!prefixes.length) return null;
+  const expressions = prefixes.map((prefix) => new RegExp(`^${escapeRegex(prefix)}`, "i"));
+  return expressions.length === 1 ? expressions[0] : { $in: expressions };
+}
+
 function normalizeHeader(value = "") {
   return String(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -246,7 +262,10 @@ router.get("/", async (req, res, next) => {
     } else if (req.query.role) {
       filter.desiredRole = new RegExp(escapeRegex(req.query.role), "i");
     }
-    if (req.query.postcode) filter.postcodePrefix = new RegExp(`^${escapeRegex(postcodePrefix(req.query.postcode))}`, "i");
+    if (req.query.postcode) {
+      const postcodeFilter = postcodePrefixFilter(req.query.postcode);
+      if (postcodeFilter) filter.postcodePrefix = postcodeFilter;
+    }
     if (req.query.status) filter.status = req.query.status;
     if (req.query.visaStatus) filter.visaStatus = new RegExp(escapeRegex(req.query.visaStatus), "i");
     if (req.query.availability) filter.availability = new RegExp(escapeRegex(req.query.availability), "i");
@@ -264,11 +283,13 @@ router.get("/", async (req, res, next) => {
 
 router.get("/role-options", async (req, res, next) => {
   try {
-    const prefix = postcodePrefix(req.query.postcode);
-    if (prefix.length < 2) return res.json({ postcode: prefix, roles: [], total: 0 });
+    const prefixes = postcodePrefixes(req.query.postcode);
+    if (!prefixes.length) return res.json({ postcodes: [], roles: [], total: 0 });
 
     const match = {
-      postcodePrefix: new RegExp(`^${escapeRegex(prefix)}`, "i"),
+      postcodePrefix: prefixes.length === 1
+        ? new RegExp(`^${escapeRegex(prefixes[0])}`, "i")
+        : { $in: prefixes.map((prefix) => new RegExp(`^${escapeRegex(prefix)}`, "i")) },
       desiredRole: { $type: "string", $ne: "" }
     };
     if (req.query.status) match.status = req.query.status;
@@ -290,7 +311,8 @@ router.get("/role-options", async (req, res, next) => {
     ]);
 
     res.json({
-      postcode: prefix,
+      postcode: prefixes.join(", "),
+      postcodes: prefixes,
       roles: roles.map(({ _id, label, count }) => ({ key: _id, label, count })),
       total: roles.reduce((sum, role) => sum + role.count, 0)
     });

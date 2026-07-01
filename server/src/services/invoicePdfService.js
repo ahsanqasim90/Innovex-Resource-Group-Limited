@@ -41,8 +41,9 @@ function drawHeader(doc, invoice, continuation = false) {
   doc.rect(0, 10, PAGE_WIDTH, 112).fill(deepTeal);
   const hasLogo = drawLogo(doc, LEFT, 32, 76, 48);
   const brandX = hasLogo ? 128 : LEFT;
-  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(14).text("INNOVEX RESOURCE GROUP LIMITED", brandX, 39, { width: 260, lineBreak: false });
-  doc.fillColor("#b9d8dc").font("Helvetica").fontSize(8.5).text("Recruitment, training and digital business services", brandX, 62, { width: 280, lineBreak: false });
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(12.4).text("INNOVEX RESOURCE GROUP LIMITED", brandX, 39, { width: 255, lineBreak: false });
+  doc.fillColor("#b9d8dc").font("Helvetica").fontSize(8.2).text("Recruitment | Training | Website Development | SEO", brandX, 61, { width: 270, lineBreak: false });
+  doc.fillColor("#d8eaec").fontSize(7.2).text("info@innovexresourcegroup.co.uk  |  0330 0435 830", brandX, 78, { width: 270, lineBreak: false });
   doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(continuation ? 17 : 29).text(continuation ? "INVOICE CONTINUED" : "INVOICE", 390, 31, { width: 163, align: "right", lineBreak: false });
   doc.fillColor(gold).fontSize(12).text(safe(invoice.invoiceNumber), 390, 68, { width: 163, align: "right", lineBreak: false });
   doc.roundedRect(455, 88, 98, 22, 11).fill("#ffffff");
@@ -88,6 +89,10 @@ function itemDetails(item) {
   const details = [];
   if (item.client) details.push(`Client: ${item.client}`);
   if (item.candidate) details.push(`Candidate: ${item.candidate}`);
+  if (Number(item.hourlyRate || 0) > 0) details.push(`Hourly rate: ${money(item.hourlyRate)}`);
+  if (Number(item.hoursPerWeek || 0) > 0 || Number(item.weeksPerYear || 0) > 0) {
+    details.push(`${Number(item.hoursPerWeek || 0)} hours/week x ${Number(item.weeksPerYear || 52)} weeks/year`);
+  }
   if (Number(item.annualGrossSalary || 0) > 0) details.push(`Annual salary: ${money(item.annualGrossSalary)}`);
   if (Number(item.serviceFeePercent || 0) > 0) details.push(`Service fee: ${item.serviceFeePercent}%`);
   if (!details.length) details.push(`${item.quantity || 1} x ${money(item.unitPrice)}`);

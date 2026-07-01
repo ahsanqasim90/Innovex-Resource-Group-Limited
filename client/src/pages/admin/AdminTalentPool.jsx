@@ -41,6 +41,10 @@ const emptyCandidate = {
 
 const emptyFilters = { search: "", role: "", postcode: "", status: "", visaStatus: "", availability: "" };
 
+function validPostcodePrefixes(value = "") {
+  return [...new Set(String(value).split(/[,;\n]+/).map((item) => item.toUpperCase().replace(/\s+/g, "").slice(0, 4)).filter((item) => item.length >= 2))];
+}
+
 const emailTemplate = {
   subject: "New {{jobTitle}} opportunity in {{location}}",
   message: [
@@ -209,7 +213,7 @@ export default function AdminTalentPool() {
   useEffect(() => {
     const postcode = filters.postcode.trim();
     setSelectedPostcodeRoles([]);
-    if (postcode.replace(/\s+/g, "").length < 2) {
+    if (!validPostcodePrefixes(postcode).length) {
       setPostcodeRoles([]);
       setLoadingPostcodeRoles(false);
       return undefined;
@@ -687,11 +691,11 @@ export default function AdminTalentPool() {
             <span>Availability</span>
             <input placeholder="e.g. Immediate, 2 weeks, weekends" value={filters.availability} onChange={(e) => setFilters({ ...filters, availability: e.target.value })} />
           </label>
-          {(filters.postcode.replace(/\s+/g, "").length >= 2 || loadingPostcodeRoles) && (
+          {(validPostcodePrefixes(filters.postcode).length > 0 || loadingPostcodeRoles) && (
             <div className="postcode-role-picker">
               <div className="postcode-role-picker-heading">
                 <div>
-                  <strong>Roles available in {filters.postcode.trim().toUpperCase()}</strong>
+                  <strong>Roles available in {validPostcodePrefixes(filters.postcode).join(", ")}</strong>
                   <span>
                     {loadingPostcodeRoles
                       ? "Checking candidate roles..."
@@ -721,7 +725,7 @@ export default function AdminTalentPool() {
                 </div>
               )}
               {!loadingPostcodeRoles && !postcodeRoles.length && (
-                <p className="postcode-role-empty">No candidate roles were found for this postcode prefix.</p>
+                <p className="postcode-role-empty">No candidate roles were found for these postcode prefixes.</p>
               )}
             </div>
           )}
