@@ -53,6 +53,14 @@ const invoiceSchema = new mongoose.Schema({
     bic: { type: String, default: () => process.env.FINANCE_BANK_BIC || "" }
   },
   senderEmail: { type: String, trim: true, lowercase: true, default: "info@innovexresourcegroup.co.uk" },
+  cc: [{ type: String, trim: true, lowercase: true }],
+  scheduledSendAt: { type: Date, index: true },
+  scheduledStatus: { type: String, enum: ["None", "Scheduled", "Processing", "Sent", "Failed", "Cancelled"], default: "None", index: true },
+  scheduledMessage: { type: String, trim: true },
+  scheduledBy: actorSchema,
+  scheduleError: { type: String, trim: true },
+  sentFolderSaved: { type: Boolean, default: false },
+  sentFolderError: { type: String, trim: true },
   reminderEnabled: { type: Boolean, default: true },
   reminderFrequencyDays: { type: Number, min: 1, max: 90, default: 7 },
   nextReminderAt: { type: Date },
@@ -94,6 +102,7 @@ invoiceSchema.pre("validate", function calculateTotals(next) {
 
 invoiceSchema.index({ clientName: "text", billingEmail: "text", invoiceNumber: "text", orderNumber: "text" });
 invoiceSchema.index({ dueDate: 1, status: 1, reminderEnabled: 1 });
+invoiceSchema.index({ scheduledStatus: 1, scheduledSendAt: 1 });
 invoiceSchema.index({ issueDate: -1, financialYear: 1 });
 
 export default mongoose.model("Invoice", invoiceSchema);

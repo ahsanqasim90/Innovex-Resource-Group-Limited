@@ -22,7 +22,10 @@ function accountFromEnv(prefix, fallback = {}) {
     port,
     secure,
     user,
-    pass
+    pass,
+    imapHost: process.env[`${prefix}_IMAP_HOST`] || fallback.imapHost || process.env.IMAP_HOST || "imap.hostinger.com",
+    imapPort: Number(process.env[`${prefix}_IMAP_PORT`] || fallback.imapPort || process.env.IMAP_PORT || 993),
+    imapSecure: bool(process.env[`${prefix}_IMAP_SECURE`], bool(fallback.imapSecure, process.env.IMAP_SECURE !== "false"))
   };
 }
 
@@ -42,7 +45,10 @@ function accountFromObject(account = {}) {
     port: Number(account.port || account.smtpPort || process.env.SMTP_PORT || 587),
     secure: bool(account.secure ?? account.smtpSecure, process.env.SMTP_SECURE === "true"),
     user,
-    pass
+    pass,
+    imapHost: account.imapHost || process.env.IMAP_HOST || "imap.hostinger.com",
+    imapPort: Number(account.imapPort || process.env.IMAP_PORT || 993),
+    imapSecure: bool(account.imapSecure, process.env.IMAP_SECURE !== "false")
   };
 }
 

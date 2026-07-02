@@ -21,7 +21,7 @@ const emailLogSchema = new mongoose.Schema(
     message: { type: String, required: true },
     targetType: { type: String, enum: ["Candidate", "BusinessLead", "WebLeadProspect", "Invoice", "Manual"], default: "Manual", index: true },
     targetId: { type: mongoose.Schema.Types.ObjectId },
-    status: { type: String, enum: ["Sent", "Failed"], default: "Sent", index: true },
+    status: { type: String, enum: ["Scheduled", "Sent", "Failed"], default: "Sent", index: true },
     error: { type: String, trim: true },
     sentBy: emailActorSchema
   },

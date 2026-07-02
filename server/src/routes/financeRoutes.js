@@ -10,6 +10,7 @@ import { logActivity } from "../services/activityLogService.js";
 import { generateInvoicePdf } from "../services/invoicePdfService.js";
 import { sendInvoiceEmail, sendInvoiceReminderEmail } from "../services/emailService.js";
 import { processInvoiceReminders } from "../services/invoiceReminderService.js";
+import { processScheduledInvoices } from "../services/invoiceScheduleService.js";
 import { actorFrom, addDays, csvEscape, financialYearFor, nextExpenseNumber, nextInvoiceNumber } from "../services/financeService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
@@ -31,6 +32,14 @@ function dateRange(from, to) {
   if (from) range.$gte = new Date(`${from}T00:00:00.000Z`);
   if (to) range.$lte = new Date(`${to}T23:59:59.999Z`);
   return Object.keys(range).length ? range : null;
+}
+
+function emailList(value) {
+  const items = (Array.isArray(value) ? value : String(value || "").split(","))
+    .map((item) => String(item || "").trim().toLowerCase())
+    .filter(Boolean);
+  items.forEach(validateEmail);
+  return Array.from(new Set(items));
 }
 
 function invoicePayload(body, user) {
@@ -81,7 +90,16 @@ router.get("/reminders/run", async (req, res, next) => {
   try {
     const secret = process.env.CRON_SECRET;
     if (!secret || req.headers.authorization !== `Bearer ${secret}`) return res.status(401).json({ message: "Invalid cron authorization" });
-    res.json(await processInvoiceReminders());
+    const [reminders, scheduled] = await Promise.all([processInvoiceReminders(), processScheduledInvoices()]);
+    res.json({ reminders, scheduled });
+  } catch (error) { next(error); }
+});
+
+router.get("/scheduled/run", async (req, res, next) => {
+  try {
+    const secret = process.env.CRON_SECRET;
+    if (!secret || req.headers.authorization !== `Bearer ${secret}`) return res.status(401).json({ message: "Invalid cron authorization" });
+    res.json(await processScheduledInvoices());
   } catch (error) { next(error); }
 });
 
@@ -152,21 +170,71 @@ router.post("/invoices/:id/send", async (req, res, next) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+    if (invoice.scheduledStatus === "Processing") return res.status(409).json({ message: "This invoice is currently being sent by the scheduler" });
     if (!invoice.bankDetails?.accountNumber || !invoice.bankDetails?.sortCode) return res.status(400).json({ message: "Configure Finance Centre bank details before sending this invoice" });
     const fromEmail = req.body.fromEmail || invoice.senderEmail;
     if (!canUseSender(req.user, fromEmail)) return res.status(403).json({ message: "This sender mailbox is not assigned to your account" });
     const pdfBuffer = await generateInvoicePdf(invoice);
-    const delivery = await sendInvoiceEmail({ invoice, pdfBuffer, fromEmail, customMessage: req.body.message });
+    const cc = emailList(req.body.cc);
+    const delivery = await sendInvoiceEmail({ invoice, pdfBuffer, fromEmail, customMessage: req.body.message, cc });
     if (!delivery.sent) return res.status(503).json({ message: delivery.reason });
     invoice.senderEmail = fromEmail;
+    invoice.cc = cc;
     invoice.sentAt = new Date();
+    invoice.scheduledStatus = "Sent";
+    invoice.scheduledSendAt = undefined;
+    invoice.scheduledMessage = "";
+    invoice.scheduleError = "";
+    invoice.sentFolderSaved = delivery.sentFolderSaved;
+    invoice.sentFolderError = delivery.sentFolderError;
     if (["Draft", "Overdue"].includes(invoice.status)) invoice.status = new Date(invoice.dueDate) < new Date() ? "Overdue" : "Sent";
     invoice.nextReminderAt = invoice.reminderEnabled ? addDays(invoice.dueDate, 1) : undefined;
     invoice.updatedBy = actorFrom(req.user);
     await invoice.save();
-    await EmailLog.create({ fromEmail: delivery.fromEmail, fromName: req.user.name, to: [invoice.billingEmail], subject: delivery.subject, message: delivery.message, targetType: "Invoice", targetId: invoice._id, status: "Sent", sentBy: { user: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role } });
+    await EmailLog.create({ fromEmail: delivery.fromEmail, fromName: req.user.name, to: [invoice.billingEmail], cc, subject: delivery.subject, message: delivery.message, targetType: "Invoice", targetId: invoice._id, status: "Sent", error: delivery.sentFolderError || "", sentBy: { user: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role } });
     await logActivity(req, { module: "Finance", action: "Sent", entityType: "Invoice", entityId: invoice._id, summary: `Sent invoice ${invoice.invoiceNumber} to ${invoice.billingEmail}`, metadata: { total: invoice.total, senderEmail: fromEmail } });
-    res.json({ message: "Invoice sent with PDF attachment", invoice });
+    const archiveNote = delivery.sentFolderSaved ? " A copy was saved in the sender mailbox Sent folder." : ` The invoice was sent, but the Sent-folder copy could not be saved: ${delivery.sentFolderError}`;
+    res.json({ message: `Invoice sent with PDF attachment.${archiveNote}`, invoice });
+  } catch (error) { next(error); }
+});
+
+router.post("/invoices/:id/schedule", async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+    if (invoice.scheduledStatus === "Processing") return res.status(409).json({ message: "This invoice is currently being sent" });
+    if (!invoice.bankDetails?.accountNumber || !invoice.bankDetails?.sortCode) return res.status(400).json({ message: "Configure Finance Centre bank details before scheduling this invoice" });
+    const fromEmail = req.body.fromEmail || invoice.senderEmail;
+    if (!canUseSender(req.user, fromEmail)) return res.status(403).json({ message: "This sender mailbox is not assigned to your account" });
+    const scheduledSendAt = new Date(req.body.scheduledSendAt);
+    if (Number.isNaN(scheduledSendAt.getTime()) || scheduledSendAt <= new Date()) return res.status(400).json({ message: "Choose a future date and time" });
+
+    invoice.senderEmail = fromEmail;
+    invoice.cc = emailList(req.body.cc);
+    invoice.scheduledSendAt = scheduledSendAt;
+    invoice.scheduledStatus = "Scheduled";
+    invoice.scheduledMessage = String(req.body.message || "").trim();
+    invoice.scheduleError = "";
+    invoice.scheduledBy = actorFrom(req.user);
+    invoice.updatedBy = actorFrom(req.user);
+    await invoice.save();
+    await logActivity(req, { module: "Finance", action: "Scheduled", entityType: "Invoice", entityId: invoice._id, summary: `Scheduled invoice ${invoice.invoiceNumber} for ${scheduledSendAt.toISOString()}`, metadata: { senderEmail: fromEmail, cc: invoice.cc } });
+    res.json({ message: `Invoice scheduled for ${scheduledSendAt.toLocaleString("en-GB", { timeZone: "Europe/London" })}`, invoice });
+  } catch (error) { next(error); }
+});
+
+router.delete("/invoices/:id/schedule", async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+    if (!['Scheduled', 'Failed'].includes(invoice.scheduledStatus)) return res.status(400).json({ message: "This invoice does not have a cancellable scheduled delivery" });
+    invoice.scheduledStatus = "Cancelled";
+    invoice.scheduledSendAt = undefined;
+    invoice.scheduleError = "";
+    invoice.updatedBy = actorFrom(req.user);
+    await invoice.save();
+    await logActivity(req, { module: "Finance", action: "Schedule cancelled", entityType: "Invoice", entityId: invoice._id, summary: `Cancelled scheduled delivery for invoice ${invoice.invoiceNumber}` });
+    res.json({ message: "Scheduled delivery cancelled", invoice });
   } catch (error) { next(error); }
 });
 
@@ -178,13 +246,16 @@ router.post("/invoices/:id/remind", async (req, res, next) => {
     if (!invoice.bankDetails?.accountNumber || !invoice.bankDetails?.sortCode) return res.status(400).json({ message: "Configure Finance Centre bank details before sending this reminder" });
     const fromEmail = req.body.fromEmail || invoice.senderEmail;
     if (!canUseSender(req.user, fromEmail)) return res.status(403).json({ message: "This sender mailbox is not assigned to your account" });
-    const delivery = await sendInvoiceReminderEmail({ invoice, pdfBuffer: await generateInvoicePdf(invoice), fromEmail });
+    const delivery = await sendInvoiceReminderEmail({ invoice, pdfBuffer: await generateInvoicePdf(invoice), fromEmail, cc: invoice.cc || [] });
     if (!delivery.sent) return res.status(503).json({ message: delivery.reason });
     invoice.lastReminderAt = new Date();
     invoice.reminderCount += 1;
     invoice.nextReminderAt = addDays(new Date(), invoice.reminderFrequencyDays || 7);
+    invoice.sentFolderSaved = delivery.sentFolderSaved;
+    invoice.sentFolderError = delivery.sentFolderError;
     if (new Date(invoice.dueDate) < new Date()) invoice.status = "Overdue";
     await invoice.save();
+    await EmailLog.create({ fromEmail: delivery.fromEmail, fromName: req.user.name, to: [invoice.billingEmail], cc: invoice.cc || [], subject: delivery.subject, message: `Manual payment reminder for invoice ${invoice.invoiceNumber}`, targetType: "Invoice", targetId: invoice._id, status: "Sent", error: delivery.sentFolderError || "", sentBy: { user: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role } });
     await logActivity(req, { module: "Finance", action: "Reminder sent", entityType: "Invoice", entityId: invoice._id, summary: `Sent payment reminder for invoice ${invoice.invoiceNumber}`, metadata: { balanceDue: invoice.balanceDue } });
     res.json({ message: "Payment reminder sent", invoice });
   } catch (error) { next(error); }

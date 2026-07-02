@@ -6719,7 +6719,7 @@ tbody tr:hover td {
 .finance-form label,.invoice-action-panel label { display: grid; gap: 7px; color: #315d67; font-size: .78rem; font-weight: 850; }
 .finance-form input,.finance-form select,.finance-form textarea,.invoice-action-panel input,.invoice-action-panel select,.invoice-action-panel textarea { width: 100%; min-height: 46px; padding: 11px 13px; border: 1px solid #cfe0e3; border-radius: 13px; color: #173840; background: #fff; font: inherit; outline: none; }
 .finance-form textarea,.invoice-action-panel textarea { min-height: auto; resize: vertical; }
-.finance-form input:focus,.finance-form select:focus,.finance-form textarea:focus,.invoice-action-panel select:focus,.invoice-action-panel textarea:focus { border-color: #168071; box-shadow: 0 0 0 3px rgba(22,128,113,.1); }
+.finance-form input:focus,.finance-form select:focus,.finance-form textarea:focus,.invoice-action-panel input:focus,.invoice-action-panel select:focus,.invoice-action-panel textarea:focus { border-color: #168071; box-shadow: 0 0 0 3px rgba(22,128,113,.1); }
 .finance-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 13px; }
 .invoice-lines { display: grid; gap: 12px; }
 .invoice-line { display: grid; gap: 13px; padding: 15px; border: 1px solid #d6e5e7; border-radius: 16px; background: #fff; }
@@ -6742,6 +6742,10 @@ tbody tr:hover td {
 .invoice-action-total { display: grid; gap: 5px; padding: 18px; border-radius: 17px; color: #fff; background: #064f5e; }
 .invoice-action-total span,.invoice-action-total small { color: #cbe7e9; }.invoice-action-total strong { font-size: 1.65rem; }
 .invoice-action-buttons { display: grid; gap: 9px; }.invoice-action-buttons .button { width: 100%; }
+.invoice-action-panel label small,.invoice-sent-note { color: #6a8086; font-size: .73rem; line-height: 1.45; }
+.invoice-schedule-banner { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border: 1px solid #9fd8cf; border-radius: 13px; color: #075f53; background: #e9f8f5; }
+.invoice-schedule-banner div { display: grid; gap: 3px; }.invoice-schedule-banner span { color: #50747a; font-size: .78rem; }.invoice-schedule-banner.failed { border-color: #f1b9b5; color: #9d342e; background: #fff0ef; }.invoice-schedule-banner.failed span { color: #8b5a57; }
+.finance-status.scheduled { color: #71500a; background: #fff0c4; }
 .finance-register { grid-column: 1 / -1; overflow: hidden; }.finance-register > .finance-panel-head { padding: 22px 24px; }
 .finance-register .table-wrap { border: 0; border-top: 1px solid #dce8ea; border-radius: 0; box-shadow: none; }
 .finance-register th { color: #fff; background: #064f5e; }

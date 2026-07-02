@@ -78,3 +78,11 @@ Backend: `http://localhost:5000/api/health`
 - Keep `/admin/` blocked from indexing via `robots.txt` and admin meta `noindex`.
 - Use HTTPS, enable gzip/Brotli at the host, and cache static assets using the included `_headers` file where supported.
 - Ranking is not instant: add real partner logos/content, job posts, testimonials, and local Cardiff/UK service copy over time for stronger search performance.
+
+## Invoice Scheduling & Sent Mail
+
+- Invoice delivery supports CC recipients, immediate sending, and future scheduling.
+- Successful invoice and reminder emails are recorded in CRM email history and appended to the selected mailbox Sent folder through IMAP.
+- Hostinger defaults are `IMAP_HOST=imap.hostinger.com`, `IMAP_PORT=993`, and `IMAP_SECURE=true`; per-mailbox overrides use `SMTP_INFO_IMAP_*` or `SMTP_MARK_IMAP_*`.
+- The existing daily finance reminder cron also processes overdue scheduled invoices as a fallback.
+- For delivery close to the selected time, call `GET /api/finance/scheduled/run` every five minutes from a scheduler and send `Authorization: Bearer <CRON_SECRET>`.

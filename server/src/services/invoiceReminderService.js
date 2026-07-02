@@ -20,22 +20,26 @@ export async function processInvoiceReminders({ limit = 30 } = {}) {
         throw new Error("Finance Centre bank details are not configured for this invoice");
       }
       const pdfBuffer = await generateInvoicePdf(invoice);
-      const delivery = await sendInvoiceReminderEmail({ invoice, pdfBuffer, fromEmail: invoice.senderEmail });
+      const delivery = await sendInvoiceReminderEmail({ invoice, pdfBuffer, fromEmail: invoice.senderEmail, cc: invoice.cc || [] });
       if (!delivery.sent) throw new Error(delivery.reason || "Reminder email failed");
       invoice.lastReminderAt = now;
       invoice.reminderCount += 1;
       invoice.nextReminderAt = addDays(now, invoice.reminderFrequencyDays || 7);
+      invoice.sentFolderSaved = delivery.sentFolderSaved;
+      invoice.sentFolderError = delivery.sentFolderError;
       if (new Date(invoice.dueDate) < now && invoice.status === "Sent") invoice.status = "Overdue";
       await invoice.save();
       await EmailLog.create({
         fromEmail: delivery.fromEmail,
         fromName: "Innovex Resource Group Limited",
         to: [invoice.billingEmail],
+        cc: invoice.cc || [],
         subject: delivery.subject,
         message: `Automatic payment reminder for invoice ${invoice.invoiceNumber}`,
         targetType: "Invoice",
         targetId: invoice._id,
         status: "Sent",
+        error: delivery.sentFolderError || "",
         sentBy: { name: "Finance reminder automation", role: "system" }
       });
       result.sent += 1;
