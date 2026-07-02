@@ -21,8 +21,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.2",
     "morgan": "^1.10.0",
-    "multer": "^2.0.0",
-    "nodemailer": "^8.0.10",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.3",
     "pdfkit": "^0.17.2",
     "validator": "^13.12.0"
   },
