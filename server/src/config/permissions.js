@@ -24,6 +24,8 @@ export const permissionGroups = [
     permissions: [
       ["businessLeads.view", "Business Leads"],
       ["emails.view", "Email Centre"],
+      ["terms.view", "Client Terms"],
+      ["terms.manage", "Manage Client Terms"],
       ["courses.view", "Courses"],
       ["trainingBookings.view", "Training Bookings"]
     ]
@@ -64,7 +66,9 @@ export const rolePresets = {
     "talentPool.view",
     "calls.view",
     "interviews.view",
-    "meetings.view"
+    "meetings.view",
+    "terms.view",
+    "terms.manage"
   ],
   sales: [
     "dashboard.view",
@@ -72,6 +76,8 @@ export const rolePresets = {
     "emails.view",
     "calls.view",
     "meetings.view",
+    "terms.view",
+    "terms.manage",
     "courses.view",
     "trainingBookings.view"
   ],
@@ -80,6 +86,8 @@ export const rolePresets = {
     "courses.view",
     "trainingBookings.view",
     "meetings.view",
+    "terms.view",
+    "terms.manage",
     "businessLeads.view"
   ],
   marketing: [

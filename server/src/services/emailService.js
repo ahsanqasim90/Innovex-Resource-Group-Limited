@@ -389,3 +389,30 @@ export async function sendInvoiceReminderEmail({ invoice, pdfBuffer, fromEmail, 
   const archive = await sendAndArchive(transporter, account, mailOptions);
   return { sent: true, fromEmail: account.address, subject, cc, ...archive };
 }
+
+export async function sendClientTermsEmail({ terms, pdfBuffer, fromEmail, customMessage = "", cc = [] }) {
+  const account = senderAccountOrDefault(fromEmail || terms.senderEmail);
+  if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
+
+  const transporter = makeTransporter(account);
+  const subject = `Terms of Business | ${terms.clientName} | Innovex Resource Group Limited`;
+  const message = customMessage || `Please find attached the Terms of Business prepared for ${terms.clientName}. These include the agreed commercial schedule, role rates, payment terms and rebate details for Innovex Resource Group Limited services.`;
+  const dueSummary = `${terms.paymentDueDays || 0} days from invoice date`;
+  const roleSummary = (terms.roleRates || [])
+    .map((rate) => `${rate.roleTitle}: ${rate.feeType} ${rate.rateValue || 0}${rate.feeType === "Percentage" ? "%" : ""}`)
+    .join("\n");
+
+  const mailOptions = {
+    from: formatSender(account),
+    to: terms.clientEmail,
+    cc,
+    replyTo: account.address,
+    subject,
+    text: `${message}\n\nClient: ${terms.clientName}\nDocument: ${terms.documentNumber}\nPayment terms: ${dueSummary}\nRebate period: ${terms.rebatePeriodDays || 0} days\n\n${roleSummary ? `Role rates:\n${roleSummary}\n\n` : ""}Kind regards,\nInnovex Resource Group Limited\n\nThis is a system-generated email from the Innovex Client Terms Centre.`,
+    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Terms of Business</div></div><div style="padding:26px 28px"><p style="margin-top:0">Hello,</p><p style="line-height:1.65">${escapeHtml(message).replace(/\n/g, "<br />")}</p><table role="presentation" style="width:100%;margin:22px 0;border-collapse:separate;border-spacing:0;background:#eef7f7;border-radius:10px"><tr><td style="padding:16px 18px;color:#60777e;font-size:12px">DOCUMENT<br><strong style="display:block;color:#173840;font-size:15px;margin-top:6px">${escapeHtml(terms.documentNumber)}</strong></td><td style="padding:16px 18px;color:#60777e;font-size:12px">PAYMENT TERMS<br><strong style="display:block;color:#173840;font-size:15px;margin-top:6px">${escapeHtml(dueSummary)}</strong></td><td style="padding:16px 18px;color:#60777e;font-size:12px">REBATE PERIOD<br><strong style="display:block;color:#173840;font-size:15px;margin-top:6px">${Number(terms.rebatePeriodDays || 0)} days</strong></td></tr></table><p style="line-height:1.6">The PDF document is attached. Please review the terms and reply to this email if you would like any amendment before signing.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; info@innovexresourcegroup.co.uk</span></p><div style="margin-top:26px;padding-top:14px;border-top:1px solid #d8e5e7;color:#6b7f85;font-size:11px;line-height:1.5">This is a system-generated email from the Innovex Client Terms Centre. If the attachment does not open, please reply and our team will resend it.</div></div></div></div>`,
+    attachments: [{ filename: `Innovex-Terms-${terms.documentNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
+  };
+
+  const archive = await sendAndArchive(transporter, account, mailOptions);
+  return { sent: true, fromEmail: account.address, subject, message, cc, ...archive };
+}

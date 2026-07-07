@@ -17,6 +17,7 @@ const links = [
   ["/admin/meetings", "Meetings", CalendarClock, "meetings.view"],
   ["/admin/courses", "Courses", BookOpenCheck, "courses.view"],
   ["/admin/training-bookings", "Training Bookings", GraduationCap, "trainingBookings.view"],
+  ["/admin/client-terms", "Client Terms", FileText, "terms.view"],
   ["/admin/finance", "Finance Centre", ReceiptPoundSterling, null, true],
   ["/admin/blogs", "Blogs", BookOpenText, "blogs.view"],
   ["/admin/testimonials", "Testimonials", MessageSquare, "testimonials.view"],

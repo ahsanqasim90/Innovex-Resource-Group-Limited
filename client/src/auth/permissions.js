@@ -22,6 +22,8 @@ export const permissionGroups = [
     permissions: [
       ["businessLeads.view", "Business Leads"],
       ["emails.view", "Email Centre"],
+      ["terms.view", "Client Terms"],
+      ["terms.manage", "Manage Client Terms"],
       ["courses.view", "Courses"],
       ["trainingBookings.view", "Training Bookings"]
     ]
@@ -50,9 +52,9 @@ export const permissionGroups = [
 ];
 
 export const rolePresets = {
-  recruitment: ["dashboard.view", "jobs.view", "applications.view", "cvs.view", "talentPool.view", "calls.view", "interviews.view", "meetings.view"],
-  sales: ["dashboard.view", "businessLeads.view", "emails.view", "calls.view", "meetings.view", "courses.view", "trainingBookings.view"],
-  training: ["dashboard.view", "courses.view", "trainingBookings.view", "meetings.view", "businessLeads.view"],
+  recruitment: ["dashboard.view", "jobs.view", "applications.view", "cvs.view", "talentPool.view", "calls.view", "interviews.view", "meetings.view", "terms.view", "terms.manage"],
+  sales: ["dashboard.view", "businessLeads.view", "emails.view", "calls.view", "meetings.view", "terms.view", "terms.manage", "courses.view", "trainingBookings.view"],
+  training: ["dashboard.view", "courses.view", "trainingBookings.view", "meetings.view", "terms.view", "terms.manage", "businessLeads.view"],
   marketing: ["dashboard.view", "businessLeads.view", "emails.view", "blogs.view", "testimonials.view", "partners.view", "contacts.view"],
   sales_manager: ["webLeads.view", "webLeads.manage"],
   external_agent: ["webLeads.view"],
@@ -62,7 +64,9 @@ export const rolePresets = {
 export function hasPermission(user, permission) {
   if (!permission) return true;
   if (["admin", "super_admin"].includes(user?.role)) return true;
-  return Boolean(user?.permissions?.includes(permission));
+  if (user?.permissions?.includes(permission)) return true;
+  const [moduleName, action] = permission.split(".");
+  return action === "view" && Boolean(user?.permissions?.includes(`${moduleName}.manage`));
 }
 
 export function canViewFinance(user) {
