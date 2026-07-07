@@ -8,6 +8,7 @@ import { canViewFinance } from "../config/permissions.js";
 import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { logActivity } from "../services/activityLogService.js";
 import { generateInvoicePdf } from "../services/invoicePdfService.js";
+import { generateExpenseLedgerPdf } from "../services/expenseLedgerPdfService.js";
 import { sendInvoiceEmail, sendInvoiceReminderEmail } from "../services/emailService.js";
 import { processInvoiceReminders } from "../services/invoiceReminderService.js";
 import { processScheduledInvoices } from "../services/invoiceScheduleService.js";
@@ -375,6 +376,18 @@ router.delete("/invoices/:id", async (req, res, next) => {
     await invoice.deleteOne();
     await logActivity(req, { module: "Finance", action: "Deleted", entityType: "Invoice", entityId: invoice._id, summary: `Deleted draft invoice ${invoice.invoiceNumber}` });
     res.json({ message: "Draft invoice deleted" });
+  } catch (error) { next(error); }
+});
+
+router.get("/expenses/export.pdf", async (req, res, next) => {
+  try {
+    const filter = req.query.financialYear ? { financialYear: req.query.financialYear } : {};
+    const financialYear = req.query.financialYear || "All";
+    const expenses = attachLedgerNumbers(await Expense.find(filter).sort({ expenseDate: 1, createdAt: 1 }));
+    const pdf = await generateExpenseLedgerPdf({ expenses, financialYear });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=Innovex-Expense-Ledger-${financialYear}.pdf`);
+    res.send(pdf);
   } catch (error) { next(error); }
 });
 
