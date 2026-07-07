@@ -103,7 +103,7 @@ function postcodePrefixes(value = "") {
 function postcodeConditions(value = "") {
   const prefixes = postcodePrefixes(value);
   return prefixes.flatMap((prefix) => {
-    const expression = new RegExp(`^\s*${escapeRegex(prefix)}`, "i");
+    const expression = new RegExp(`^\\s*${escapeRegex(prefix)}`, "i");
     return [{ postcodePrefix: expression }, { postcode: expression }, { city: expression }];
   });
 }
@@ -267,6 +267,12 @@ async function geocodePostcode(value = "") {
   }
 }
 
+function apiDistanceToMiles(value) {
+  const distance = Number(value || 0);
+  if (!Number.isFinite(distance)) return 0;
+  return distance > 1000 ? distance / 1609.344 : distance / 1.609344;
+}
+
 function outwardCode(value = "") {
   const compact = String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (!compact) return "";
@@ -277,19 +283,105 @@ async function nearbyOutcodes(value = "", miles = 20) {
   const outcode = outwardCode(String(value).split(/[,;\n]+/)[0]);
   if (!outcode) return [];
   try {
-    const response = await fetch(`https://api.postcodes.io/outcodes/${encodeURIComponent(outcode)}/nearest`);
+    const radiusMeters = Math.round(Number(miles || 20) * 1609.344);
+    const response = await fetch(`https://api.postcodes.io/outcodes/${encodeURIComponent(outcode)}/nearest?limit=100&radius=${radiusMeters}`);
     if (!response.ok) return [outcode];
     const data = await response.json();
     const matches = Array.isArray(data?.result) ? data.result : [];
     const filtered = matches
-      .filter((item) => item?.outcode && (item.distance === undefined || Number(item.distance) <= miles))
-      .map((item) => ({ outcode: String(item.outcode).toUpperCase(), distance: Number(item.distance || 0) }));
+      .map((item) => ({ ...item, distanceMiles: apiDistanceToMiles(item?.distance) }))
+      .filter((item) => item?.outcode && (item.distance === undefined || item.distanceMiles <= miles))
+      .map((item) => ({ outcode: String(item.outcode).toUpperCase(), distance: Number(item.distanceMiles || 0) }));
     return [{ outcode, distance: 0 }, ...filtered]
       .filter((item, index, array) => array.findIndex((match) => match.outcode === item.outcode) === index)
-      .slice(0, 80);
+      .slice(0, 120);
   } catch {
     return [outcode].map((code) => ({ outcode: code, distance: 0 }));
   }
+}
+
+function outcodeConditions(outcodes = []) {
+  return outcodes.map((item) => ({ postcodePrefix: new RegExp(`^${escapeRegex(item.outcode)}`, "i") }));
+}
+
+function areaFallbackOutcode(value = "") {
+  const outcode = outwardCode(value);
+  const match = outcode.match(/^[A-Z]+/);
+  return match?.[0] || "";
+}
+
+const nearbyPostcodeAreas = {
+  SO: ["SO", "PO", "BH", "SP", "RG", "GU"],
+  PO: ["PO", "SO", "GU", "BN", "RH"],
+  BH: ["BH", "SO", "SP", "DT"],
+  GU: ["GU", "SO", "PO", "RG", "SL", "KT", "RH"],
+  RG: ["RG", "SO", "GU", "SL", "OX", "SP"],
+  FY: ["FY", "PR", "LA", "BB", "L", "WN", "BL"],
+  PR: ["PR", "FY", "BB", "L", "WN", "BL", "LA"],
+  L: ["L", "PR", "WN", "CH", "WA"],
+  M: ["M", "SK", "OL", "BL", "WN", "WA"],
+  B: ["B", "CV", "DY", "WS", "WV", "WR"],
+  LE: ["LE", "CV", "NN", "DE", "NG"],
+  NN: ["NN", "LE", "MK", "CV", "OX"],
+  PE: ["PE", "CB", "NN", "LN"],
+  CB: ["CB", "PE", "SG", "MK"],
+  MK: ["MK", "NN", "LU", "OX", "SG"],
+  LU: ["LU", "MK", "AL", "HP", "SG"],
+  AL: ["AL", "LU", "SG", "EN", "WD"],
+  WD: ["WD", "HA", "UB", "AL", "HP"],
+  HA: ["HA", "UB", "WD", "NW"],
+  UB: ["UB", "HA", "SL", "TW", "WD"],
+  SL: ["SL", "UB", "RG", "GU", "TW", "HP"],
+  TW: ["TW", "UB", "SL", "KT", "SW"],
+  KT: ["KT", "TW", "GU", "RH", "SM", "SW"],
+  RH: ["RH", "GU", "KT", "BN", "CR"],
+  BN: ["BN", "RH", "PO", "TN"],
+  TN: ["TN", "BN", "ME", "RH"],
+  ME: ["ME", "TN", "DA", "CT"],
+  CT: ["CT", "ME", "TN"],
+  DA: ["DA", "ME", "BR", "SE"],
+  BR: ["BR", "DA", "CR", "SE"],
+  CR: ["CR", "BR", "RH", "SM", "SE"],
+  SM: ["SM", "CR", "KT", "SW"],
+  SW: ["SW", "SM", "KT", "TW", "SE"],
+  SE: ["SE", "BR", "CR", "DA", "SW"],
+  E: ["E", "IG", "RM", "N"],
+  N: ["N", "EN", "E", "NW"],
+  NW: ["NW", "HA", "N", "W"],
+  W: ["W", "NW", "SW", "UB"],
+  IG: ["IG", "E", "RM", "CM"],
+  RM: ["RM", "IG", "E", "CM", "SS"],
+  CM: ["CM", "IG", "RM", "SS", "CO"],
+  SS: ["SS", "RM", "CM", "CO"],
+  CO: ["CO", "CM", "SS", "IP"],
+  IP: ["IP", "CO", "NR", "CB"],
+  NR: ["NR", "IP", "PE"],
+  OX: ["OX", "RG", "MK", "NN", "SN"],
+  SN: ["SN", "OX", "RG", "GL", "BS"],
+  BS: ["BS", "SN", "GL", "BA", "NP"],
+  GL: ["GL", "BS", "SN", "WR", "HR"],
+  WR: ["WR", "GL", "B", "HR"],
+  HR: ["HR", "WR", "GL", "LD", "NP"],
+  NP: ["NP", "CF", "BS", "HR"],
+  CF: ["CF", "NP", "SA", "BS"],
+  SA: ["SA", "CF", "LD"],
+  DT: ["DT", "BH", "TA", "EX"],
+  TA: ["TA", "DT", "EX", "BS"],
+  EX: ["EX", "TA", "TQ", "PL"],
+  TQ: ["TQ", "EX", "PL"],
+  PL: ["PL", "EX", "TQ", "TR"],
+  TR: ["TR", "PL"]
+};
+
+function areaFallbackOutcodes(value = "", miles = 20) {
+  const area = areaFallbackOutcode(value);
+  if (!area) return [];
+  if (Number(miles || 0) < 20) return [area];
+  return nearbyPostcodeAreas[area] || [area];
+}
+
+function areaConditions(areas = []) {
+  return areas.map((area) => ({ postcodePrefix: new RegExp(`^${escapeRegex(area)}`, "i") }));
 }
 
 function radiusBounds(latitude, longitude, miles) {
@@ -312,6 +404,7 @@ router.get("/", async (req, res, next) => {
     let radiusMeta = null;
     let radiusOutcodes = [];
     let radiusOutcodeDistances = new Map();
+    let radiusAreaFallback = [];
 
     if (req.query.search) filter.$text = { $search: req.query.search };
     const roles = selectedRoles(req.query.roles);
@@ -325,17 +418,20 @@ router.get("/", async (req, res, next) => {
       if (radiusOrigin) {
         radiusOutcodes = await nearbyOutcodes(req.query.postcode, radiusMiles);
         radiusOutcodeDistances = new Map(radiusOutcodes.map((item) => [item.outcode, item.distance]));
+        radiusAreaFallback = areaFallbackOutcodes(req.query.postcode, radiusMiles);
         const geoBounds = radiusBounds(radiusOrigin.latitude, radiusOrigin.longitude, radiusMiles);
         filter.$or = [
           ...(filter.$or || []),
           { latitude: geoBounds.latitude, longitude: geoBounds.longitude },
-          ...radiusOutcodes.map((item) => ({ postcodePrefix: new RegExp(`^${escapeRegex(item.outcode)}`, "i") }))
+          ...outcodeConditions(radiusOutcodes),
+          ...areaConditions(radiusAreaFallback)
         ];
         radiusMeta = {
           enabled: true,
           postcode: radiusOrigin.postcode,
           radiusMiles,
-          outcodeMatches: radiusOutcodes.length
+          outcodeMatches: radiusOutcodes.length,
+          areaFallback: radiusAreaFallback.join(", ")
         };
       }
     }
@@ -360,12 +456,15 @@ router.get("/", async (req, res, next) => {
         .map((candidate) => {
           const exactDistance = haversineMiles(radiusOrigin.latitude, radiusOrigin.longitude, candidate.latitude, candidate.longitude);
           const candidateOutcode = outwardCode(candidate.postcode || candidate.postcodePrefix);
+          const candidateArea = areaFallbackOutcode(candidateOutcode);
           const fallbackDistance = radiusOutcodeDistances.get(candidateOutcode);
+          const areaFallbackDistance = radiusAreaFallback.includes(candidateArea) ? radiusMiles : undefined;
           const distance = exactDistance ?? fallbackDistance;
+          const finalDistance = distance ?? areaFallbackDistance;
           return {
             ...candidate,
-            distanceMiles: distance === undefined || distance === null ? null : Number(distance.toFixed(1)),
-            distanceSource: exactDistance !== null ? "exact" : fallbackDistance !== undefined ? "postcode area" : null
+            distanceMiles: finalDistance === undefined || finalDistance === null ? null : Number(finalDistance.toFixed(1)),
+            distanceSource: exactDistance !== null ? "exact" : fallbackDistance !== undefined ? "postcode area" : areaFallbackDistance !== undefined ? "area fallback" : null
           };
         })
         .filter((candidate) => candidate.distanceMiles !== null && candidate.distanceMiles <= radiusMiles)
@@ -377,7 +476,7 @@ router.get("/", async (req, res, next) => {
         page,
         pages: Math.ceil(scored.length / limit) || 1,
         limit,
-        radiusMeta: { ...radiusMeta, matchedCandidates: scored.length }
+        radiusMeta: { ...radiusMeta, matchedCandidates: scored.length, matchedOutcodes: radiusOutcodes.map((item) => item.outcode).slice(0, 25) }
       });
     }
 
@@ -396,9 +495,38 @@ router.get("/role-options", async (req, res, next) => {
   try {
     const prefixes = postcodePrefixes(req.query.postcode);
     if (!prefixes.length) return res.json({ postcodes: [], roles: [], total: 0 });
+    const radiusMiles = Math.min(Math.max(Number(req.query.radiusMiles || 0), 0), 100);
+    let matchConditions = postcodeConditions(req.query.postcode);
+    let radiusMeta = null;
+
+    if (radiusMiles > 0) {
+      const origin = await geocodePostcode(req.query.postcode);
+      if (origin) {
+        const radiusOutcodes = await nearbyOutcodes(req.query.postcode, radiusMiles);
+        const areaFallback = areaFallbackOutcodes(req.query.postcode, radiusMiles);
+        matchConditions = [
+          ...outcodeConditions(radiusOutcodes),
+          ...areaConditions(areaFallback)
+        ];
+        radiusMeta = {
+          enabled: true,
+          postcode: origin.postcode,
+          radiusMiles,
+          outcodeMatches: radiusOutcodes.length,
+          areaFallback: areaFallback.join(", "),
+          matchedOutcodes: radiusOutcodes.map((item) => item.outcode).slice(0, 25)
+        };
+      } else {
+        radiusMeta = {
+          enabled: false,
+          radiusMiles,
+          warning: "Enter a full postcode for true mileage radius. Prefix matching has been applied instead."
+        };
+      }
+    }
 
     const match = {
-      $or: postcodeConditions(req.query.postcode),
+      $or: matchConditions,
       desiredRole: { $type: "string", $ne: "" }
     };
     if (req.query.status) match.status = req.query.status;
@@ -423,7 +551,8 @@ router.get("/role-options", async (req, res, next) => {
       postcode: prefixes.join(", "),
       postcodes: prefixes,
       roles: roles.map(({ _id, label, count }) => ({ key: _id, label, count })),
-      total: roles.reduce((sum, role) => sum + role.count, 0)
+      total: roles.reduce((sum, role) => sum + role.count, 0),
+      radiusMeta
     });
   } catch (error) {
     next(error);

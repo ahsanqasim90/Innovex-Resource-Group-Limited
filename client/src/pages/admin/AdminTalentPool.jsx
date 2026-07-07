@@ -153,6 +153,7 @@ export default function AdminTalentPool() {
   const [selectedSenderEmail, setSelectedSenderEmail] = useState("");
   const [postcodeRoles, setPostcodeRoles] = useState([]);
   const [selectedPostcodeRoles, setSelectedPostcodeRoles] = useState([]);
+  const [postcodeRoleMeta, setPostcodeRoleMeta] = useState(null);
   const [loadingPostcodeRoles, setLoadingPostcodeRoles] = useState(false);
 
   const selectedCount = selectedIds.length;
@@ -215,6 +216,7 @@ export default function AdminTalentPool() {
     setSelectedPostcodeRoles([]);
     if (!validPostcodePrefixes(postcode).length) {
       setPostcodeRoles([]);
+      setPostcodeRoleMeta(null);
       setLoadingPostcodeRoles(false);
       return undefined;
     }
@@ -224,14 +226,17 @@ export default function AdminTalentPool() {
       try {
         const query = new URLSearchParams({
           postcode,
+          ...(filters.radiusMiles ? { radiusMiles: filters.radiusMiles } : {}),
           ...(filters.status ? { status: filters.status } : {}),
           ...(filters.visaStatus ? { visaStatus: filters.visaStatus } : {}),
           ...(filters.availability ? { availability: filters.availability } : {})
         });
         const data = await api(`/candidates/role-options?${query.toString()}`);
         setPostcodeRoles(data.roles || []);
+        setPostcodeRoleMeta(data.radiusMeta || null);
       } catch (error) {
         setPostcodeRoles([]);
+        setPostcodeRoleMeta(null);
         setStatus({ type: "error", message: error.message });
       } finally {
         setLoadingPostcodeRoles(false);
@@ -239,7 +244,7 @@ export default function AdminTalentPool() {
     }, 400);
 
     return () => window.clearTimeout(timer);
-  }, [filters.postcode, filters.status, filters.visaStatus, filters.availability]);
+  }, [filters.postcode, filters.radiusMiles, filters.status, filters.visaStatus, filters.availability]);
 
   async function saveCandidate(event) {
     event.preventDefault();
@@ -704,11 +709,15 @@ export default function AdminTalentPool() {
             <div className="postcode-role-picker">
               <div className="postcode-role-picker-heading">
                 <div>
-                  <strong>Roles available in {validPostcodePrefixes(filters.postcode).join(", ")}</strong>
+                  <strong>
+                    {postcodeRoleMeta?.enabled
+                      ? `Roles within ${postcodeRoleMeta.radiusMiles} miles of ${postcodeRoleMeta.postcode}`
+                      : `Roles available in ${validPostcodePrefixes(filters.postcode).join(", ")}`}
+                  </strong>
                   <span>
                     {loadingPostcodeRoles
                       ? "Checking candidate roles..."
-                      : `${postcodeRoles.length} unique role${postcodeRoles.length === 1 ? "" : "s"} found. Select the roles you want to display.`}
+                      : `${postcodeRoles.length} unique role${postcodeRoles.length === 1 ? "" : "s"} found${postcodeRoleMeta?.enabled ? " in this radius" : ""}. Select the roles you want to display.`}
                   </span>
                 </div>
                 {!!postcodeRoles.length && (
@@ -734,7 +743,11 @@ export default function AdminTalentPool() {
                 </div>
               )}
               {!loadingPostcodeRoles && !postcodeRoles.length && (
-                <p className="postcode-role-empty">No candidate roles were found for these postcode prefixes.</p>
+                <p className="postcode-role-empty">
+                  {postcodeRoleMeta?.enabled
+                    ? "No candidate roles were found inside this radius."
+                    : "No candidate roles were found for these postcode prefixes."}
+                </p>
               )}
             </div>
           )}
@@ -743,7 +756,10 @@ export default function AdminTalentPool() {
               <MapPin size={18} />
               <div>
                 <strong>{pagination.radiusMeta.enabled ? `Showing candidates within ${pagination.radiusMeta.radiusMiles} miles of ${pagination.radiusMeta.postcode}` : "Postcode prefix mode active"}</strong>
-                <span>{pagination.radiusMeta.warning || `${Number(pagination.radiusMeta.matchedWithCoordinates || 0).toLocaleString()} candidates matched with postcode coordinates.`}</span>
+                <span>
+                  {pagination.radiusMeta.warning ||
+                    `${Number(pagination.radiusMeta.matchedCandidates || 0).toLocaleString()} candidates matched across ${Number(pagination.radiusMeta.outcodeMatches || 0).toLocaleString()} nearby postcode areas${pagination.radiusMeta.areaFallback ? `, with ${pagination.radiusMeta.areaFallback} area fallback applied` : ""}.`}
+                </span>
               </div>
             </div>
           )}
