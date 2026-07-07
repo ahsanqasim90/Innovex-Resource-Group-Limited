@@ -39,7 +39,7 @@ const emptyCandidate = {
   notes: ""
 };
 
-const emptyFilters = { search: "", role: "", postcode: "", status: "", visaStatus: "", availability: "" };
+const emptyFilters = { search: "", role: "", postcode: "", radiusMiles: "", status: "", visaStatus: "", availability: "" };
 
 function validPostcodePrefixes(value = "") {
   return [...new Set(String(value).split(/[,;\n]+/).map((item) => item.toUpperCase().replace(/\s+/g, "").slice(0, 4)).filter((item) => item.length >= 2))];
@@ -133,7 +133,7 @@ export default function AdminTalentPool() {
   const [form, setForm] = useState(emptyCandidate);
   const [editing, setEditing] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 25 });
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 25, radiusMeta: null });
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -178,7 +178,7 @@ export default function AdminTalentPool() {
     try {
       const data = await api(`/candidates?${queryString(page, nextFilters)}`);
       setCandidates(data.items || []);
-      setPagination({ page: data.page, pages: data.pages || 1, total: data.total || 0, limit: data.limit || 25 });
+      setPagination({ page: data.page, pages: data.pages || 1, total: data.total || 0, limit: data.limit || 25, radiusMeta: data.radiusMeta || null });
       setSelectedIds([]);
     } catch (error) {
       setStatus({ type: "error", message: error.message });
@@ -677,6 +677,15 @@ export default function AdminTalentPool() {
             <div className="input-with-icon"><MapPin size={18} /><input placeholder="e.g. SO40, PE2" value={filters.postcode} onChange={(e) => setFilters({ ...filters, postcode: e.target.value })} /></div>
           </label>
           <label className="filter-field">
+            <span>Distance radius</span>
+            <select value={filters.radiusMiles} onChange={(e) => setFilters({ ...filters, radiusMiles: e.target.value })}>
+              <option value="">Prefix / exact postcode match</option>
+              <option value="20">Within 20 miles</option>
+              <option value="30">Within 30 miles</option>
+              <option value="50">Within 50 miles</option>
+            </select>
+          </label>
+          <label className="filter-field">
             <span>Status</span>
             <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
               <option value="">All statuses</option>
@@ -727,6 +736,15 @@ export default function AdminTalentPool() {
               {!loadingPostcodeRoles && !postcodeRoles.length && (
                 <p className="postcode-role-empty">No candidate roles were found for these postcode prefixes.</p>
               )}
+            </div>
+          )}
+          {pagination.radiusMeta && (
+            <div className={`postcode-radius-banner${pagination.radiusMeta.warning ? " warning" : ""}`}>
+              <MapPin size={18} />
+              <div>
+                <strong>{pagination.radiusMeta.enabled ? `Showing candidates within ${pagination.radiusMeta.radiusMiles} miles of ${pagination.radiusMeta.postcode}` : "Postcode prefix mode active"}</strong>
+                <span>{pagination.radiusMeta.warning || `${Number(pagination.radiusMeta.matchedWithCoordinates || 0).toLocaleString()} candidates matched with postcode coordinates.`}</span>
+              </div>
             </div>
           )}
           <button className="button">
@@ -781,7 +799,7 @@ export default function AdminTalentPool() {
                     </div>
                   </div>
                 </td>
-                <td>{candidate.desiredRole || "-"}<br /><span className="muted">{candidate.postcode || candidate.city || "-"}</span></td>
+                <td>{candidate.desiredRole || "-"}<br /><span className="muted">{candidate.postcode || candidate.city || "-"}{candidate.distanceMiles !== undefined && candidate.distanceMiles !== null ? ` · ${candidate.distanceMiles} miles` : ""}</span></td>
                 <td>{candidate.visaStatus || "-"}<br /><span className="muted">{candidate.availability || candidate.shiftPreference || "-"}</span></td>
                 <td><span className="status-chip table-chip">{candidate.status}</span></td>
                 <td>{formatDate(candidate.lastContactedAt)}</td>

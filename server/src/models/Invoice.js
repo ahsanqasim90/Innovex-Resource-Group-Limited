@@ -61,6 +61,9 @@ const invoiceSchema = new mongoose.Schema({
   scheduleError: { type: String, trim: true },
   sentFolderSaved: { type: Boolean, default: false },
   sentFolderError: { type: String, trim: true },
+  cancelledAt: { type: Date },
+  cancelReason: { type: String, trim: true },
+  paymentReference: { type: String, trim: true },
   reminderEnabled: { type: Boolean, default: true },
   reminderFrequencyDays: { type: Number, min: 1, max: 90, default: 7 },
   nextReminderAt: { type: Date },
@@ -89,7 +92,13 @@ invoiceSchema.pre("validate", function calculateTotals(next) {
   this.vatAmount = Math.round((this.subtotal * Number(this.vatRate || 0) / 100) * 100) / 100;
   this.total = Math.round((this.subtotal + this.vatAmount) * 100) / 100;
   this.balanceDue = Math.max(0, Math.round((this.total - Number(this.amountPaid || 0)) * 100) / 100);
-  if (this.status !== "Cancelled") {
+  if (this.status === "Cancelled") {
+    this.balanceDue = 0;
+    this.reminderEnabled = false;
+    this.scheduledStatus = ["Scheduled", "Processing"].includes(this.scheduledStatus) ? "Cancelled" : this.scheduledStatus;
+    this.scheduledSendAt = undefined;
+    this.nextReminderAt = undefined;
+  } else {
     if (this.balanceDue <= 0 && this.total > 0) {
       this.status = "Paid";
       this.paidAt ||= new Date();

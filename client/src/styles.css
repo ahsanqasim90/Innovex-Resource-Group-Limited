@@ -3748,6 +3748,25 @@ tbody tr:hover td {
   font-weight: 800;
 }
 .postcode-role-empty { margin: 14px 0 0; color: var(--muted); }
+.postcode-radius-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(29, 158, 117, .28);
+  border-radius: 16px;
+  color: #0f6e56;
+  background: #e9f8f3;
+}
+.postcode-radius-banner.warning {
+  border-color: rgba(239, 159, 39, .35);
+  color: #7a520d;
+  background: #fff6df;
+}
+.postcode-radius-banner div { display: grid; gap: 3px; }
+.postcode-radius-banner strong { color: inherit; }
+.postcode-radius-banner span { color: #60757b; font-size: .9rem; line-height: 1.45; }
 
 @media (max-width: 900px) {
   .postcode-role-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -6745,6 +6764,13 @@ tbody tr:hover td {
 .invoice-action-panel label small,.invoice-sent-note { color: #6a8086; font-size: .73rem; line-height: 1.45; }
 .invoice-schedule-banner { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border: 1px solid #9fd8cf; border-radius: 13px; color: #075f53; background: #e9f8f5; }
 .invoice-schedule-banner div { display: grid; gap: 3px; }.invoice-schedule-banner span { color: #50747a; font-size: .78rem; }.invoice-schedule-banner.failed { border-color: #f1b9b5; color: #9d342e; background: #fff0ef; }.invoice-schedule-banner.failed span { color: #8b5a57; }
+.invoice-state-banner { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border-radius: 14px; border: 1px solid #b7e2d5; color: #11664e; background: #e7f7f1; }
+.invoice-state-banner.cancelled { border-color: #d3d9dc; color: #50626a; background: #f0f3f4; }
+.invoice-state-banner div { display: grid; gap: 3px; }
+.invoice-state-banner span { color: #60757b; font-size: .78rem; }
+.button.success { background: linear-gradient(135deg,#16856c,#0b5c4d); color: #fff; border-color: transparent; }
+.button.success:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(11,92,77,.18); }
+.invoice-audit-actions { display: grid; gap: 10px; padding: 14px; border: 1px solid #dbe8ea; border-radius: 16px; background: #fbfdfd; }
 .finance-status.scheduled { color: #71500a; background: #fff0c4; }
 .finance-register { grid-column: 1 / -1; overflow: hidden; }.finance-register > .finance-panel-head { padding: 22px 24px; }
 .finance-register .table-wrap { border: 0; border-top: 1px solid #dce8ea; border-radius: 0; box-shadow: none; }
@@ -6753,11 +6779,15 @@ tbody tr:hover td {
 .finance-register tbody tr:hover td { background: #eef8f8; }
 .finance-count { padding: 7px 11px; border-radius: 999px; color: #075a6a; background: #e6f5f3; font-size: .8rem; font-weight: 900; }
 .finance-status { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; color: #516d74; background: #edf2f3; font-size: .73rem; font-weight: 900; }
-.finance-status.sent,.finance-status.partially-paid { color: #17644f; background: #e1f5ee; }.finance-status.paid { color: #12613f; background: #d9f3e5; }.finance-status.overdue { color: #a03935; background: #fde5e4; }.finance-status.draft { color: #6c5b26; background: #fff1cb; }.finance-status.cancelled { color: #59656a; background: #e9edef; }
+.finance-status.sent,.finance-status.partially-paid { color: #17644f; background: #e1f5ee; }.finance-status.paid { color: #12613f; background: #d9f3e5; }.finance-status.unpaid,.finance-status.overdue { color: #a03935; background: #fde5e4; }.finance-status.draft { color: #6c5b26; background: #fff1cb; }.finance-status.cancelled { color: #59656a; background: #e9edef; }.finance-status.reimbursable { color: #71500a; background: #fff0c4; }.finance-status.reimbursed { color: #12613f; background: #d9f3e5; }
 .finance-empty { display: grid; justify-items: center; gap: 8px; padding: 34px 18px; color: #668087; text-align: center; }.finance-empty svg { color: #168071; }.finance-empty strong { color: #073f4c; }
 .expense-workspace .finance-form { align-self: start; }.expense-total-bar { grid-template-columns: repeat(3,minmax(0,1fr)); }.expense-total-bar > div:last-child { background: #fff3d2; }
 .finance-file { position: relative; grid-template-columns: auto 1fr; align-items: center; padding: 14px; border: 1px dashed #8fc4c8; border-radius: 16px; background: #f4fbfb; cursor: pointer; }.finance-file svg { color: #075a6a; }.finance-file span { display: grid; }.finance-file small { color: var(--muted); font-weight: 600; }.finance-file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .expense-guidance > svg { color: #075a6a; }.expense-guidance ul { display: grid; gap: 7px; margin: 0; padding-left: 20px; }
+.expense-ledger-strip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; padding: 0 24px 20px; }
+.expense-ledger-strip article { display: grid; gap: 5px; padding: 14px; border: 1px solid #dce8ea; border-radius: 16px; background: linear-gradient(135deg,#f7fcfc,#fff8e6); }
+.expense-ledger-strip span { color: #668087; font-size: .74rem; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+.expense-ledger-strip strong { color: #073f4c; font-size: 1.05rem; }
 .admin-menu-toggle { display: none; width: 42px; height: 42px; margin-left: auto; place-items: center; border: 1px solid rgba(255,255,255,.2); border-radius: 13px; color: #fff; background: rgba(255,255,255,.08); cursor: pointer; }
 
 @media (max-width: 900px) {

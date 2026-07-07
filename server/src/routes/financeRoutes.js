@@ -15,7 +15,7 @@ import { actorFrom, addDays, csvEscape, financialYearFor, nextExpenseNumber, nex
 import { pick, requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
-const invoiceFields = ["invoiceType", "issueDate", "dueDate", "status", "clientName", "contactName", "billingEmail", "billingAddress", "salesPerson", "orderNumber", "lineItems", "vatRate", "amountPaid", "notes", "paymentTerms", "bankDetails", "senderEmail", "reminderEnabled", "reminderFrequencyDays"];
+const invoiceFields = ["invoiceType", "issueDate", "dueDate", "status", "clientName", "contactName", "billingEmail", "billingAddress", "salesPerson", "orderNumber", "lineItems", "vatRate", "amountPaid", "notes", "paymentTerms", "bankDetails", "senderEmail", "reminderEnabled", "reminderFrequencyDays", "cancelReason", "paymentReference"];
 const expenseFields = ["expenseDate", "supplier", "category", "description", "reference", "netAmount", "vatRate", "paymentStatus", "paymentMethod", "notes"];
 
 function ownerOnly(req, res, next) {
@@ -80,6 +80,37 @@ function expenseSummary(expense) {
     item.receipt = { originalName: item.receipt.originalName, mimetype: item.receipt.mimetype, size: item.receipt.size };
   }
   return item;
+}
+
+function ledgerNumberFor(expense, index) {
+  const year = String(expense.financialYear || financialYearFor(expense.expenseDate)).replace("/", "-");
+  return `LED-${year}-${String(index + 1).padStart(4, "0")}`;
+}
+
+function attachLedgerNumbers(expenses) {
+  const sorted = [...expenses].sort((a, b) => {
+    const dateDiff = new Date(a.expenseDate || 0) - new Date(b.expenseDate || 0);
+    if (dateDiff) return dateDiff;
+    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+  });
+  const ledgerMap = new Map(sorted.map((expense, index) => [String(expense._id), ledgerNumberFor(expense, index)]));
+  return expenses.map((expense) => ({
+    ...expenseSummary(expense),
+    ledgerNumber: ledgerMap.get(String(expense._id)) || expense.expenseNumber
+  }));
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function moneyCell(value) {
+  return Number(value || 0).toFixed(2);
 }
 
 async function refreshOverdueInvoices() {
@@ -261,6 +292,67 @@ router.post("/invoices/:id/remind", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.post("/invoices/:id/mark-paid", async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+    if (invoice.status === "Cancelled") return res.status(400).json({ message: "Cancelled invoices cannot be marked as paid" });
+    if (invoice.total <= 0) return res.status(400).json({ message: "This invoice has no payable total" });
+
+    const paidAmount = req.body.amountPaid !== undefined ? Number(req.body.amountPaid || 0) : invoice.total;
+    invoice.amountPaid = Math.min(Math.max(paidAmount, 0), invoice.total);
+    invoice.paymentReference = String(req.body.paymentReference || invoice.paymentReference || "").trim();
+    invoice.paidAt = req.body.paidAt ? new Date(req.body.paidAt) : new Date();
+    invoice.nextReminderAt = undefined;
+    invoice.reminderEnabled = false;
+    if (["Scheduled", "Processing", "Failed"].includes(invoice.scheduledStatus)) {
+      invoice.scheduledStatus = "Cancelled";
+      invoice.scheduledSendAt = undefined;
+      invoice.scheduleError = "";
+    }
+    invoice.updatedBy = actorFrom(req.user);
+    await invoice.save();
+    await logActivity(req, {
+      module: "Finance",
+      action: "Marked paid",
+      entityType: "Invoice",
+      entityId: invoice._id,
+      summary: `Marked invoice ${invoice.invoiceNumber} as paid`,
+      metadata: { amountPaid: invoice.amountPaid, paymentReference: invoice.paymentReference }
+    });
+    res.json({ message: `Invoice ${invoice.invoiceNumber} marked as paid`, invoice });
+  } catch (error) { next(error); }
+});
+
+router.post("/invoices/:id/cancel", async (req, res, next) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+    if (invoice.status === "Paid") return res.status(400).json({ message: "Paid invoices cannot be cancelled. Record a credit note separately if needed." });
+    invoice.status = "Cancelled";
+    invoice.cancelReason = String(req.body.cancelReason || invoice.cancelReason || "Cancelled by admin").trim();
+    invoice.cancelledAt = new Date();
+    invoice.nextReminderAt = undefined;
+    invoice.reminderEnabled = false;
+    if (["Scheduled", "Processing", "Failed"].includes(invoice.scheduledStatus)) {
+      invoice.scheduledStatus = "Cancelled";
+      invoice.scheduledSendAt = undefined;
+      invoice.scheduleError = "";
+    }
+    invoice.updatedBy = actorFrom(req.user);
+    await invoice.save();
+    await logActivity(req, {
+      module: "Finance",
+      action: "Cancelled",
+      entityType: "Invoice",
+      entityId: invoice._id,
+      summary: `Cancelled invoice ${invoice.invoiceNumber}`,
+      metadata: { cancelReason: invoice.cancelReason }
+    });
+    res.json({ message: `Invoice ${invoice.invoiceNumber} cancelled`, invoice });
+  } catch (error) { next(error); }
+});
+
 router.put("/invoices/:id", async (req, res, next) => {
   try {
     if (req.body.billingEmail) validateEmail(req.body.billingEmail);
@@ -289,12 +381,75 @@ router.delete("/invoices/:id", async (req, res, next) => {
 router.get("/expenses/export.csv", async (req, res, next) => {
   try {
     const filter = req.query.financialYear ? { financialYear: req.query.financialYear } : {};
-    const expenses = await Expense.find(filter).sort({ expenseDate: 1 });
-    const rows = [["Expense Number", "Date", "Financial Year", "Supplier", "Category", "Description", "Reference", "Net", "VAT Rate", "VAT", "Gross", "Payment Status", "Payment Method"]];
-    expenses.forEach((item) => rows.push([item.expenseNumber, new Date(item.expenseDate).toLocaleDateString("en-GB"), item.financialYear, item.supplier, item.category, item.description, item.reference, item.netAmount.toFixed(2), item.vatRate, item.vatAmount.toFixed(2), item.totalAmount.toFixed(2), item.paymentStatus, item.paymentMethod]));
+    const expenses = attachLedgerNumbers(await Expense.find(filter).sort({ expenseDate: 1, createdAt: 1 }));
+    const rows = [["Ledger Number", "Audit ID", "Date", "Financial Year", "Supplier", "Category", "Description", "Reference", "Net", "VAT Rate", "VAT", "Gross", "Payment Status", "Payment Method"]];
+    expenses.forEach((item) => rows.push([item.ledgerNumber, item.expenseNumber, new Date(item.expenseDate).toLocaleDateString("en-GB"), item.financialYear, item.supplier, item.category, item.description, item.reference, moneyCell(item.netAmount), item.vatRate, moneyCell(item.vatAmount), moneyCell(item.totalAmount), item.paymentStatus, item.paymentMethod]));
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename=Innovex-Expenses-${req.query.financialYear || "All"}.csv`);
     res.send(`\uFEFF${rows.map((row) => row.map(csvEscape).join(",")).join("\n")}`);
+  } catch (error) { next(error); }
+});
+
+router.get("/expenses/export.xls", async (req, res, next) => {
+  try {
+    const filter = req.query.financialYear ? { financialYear: req.query.financialYear } : {};
+    const financialYear = req.query.financialYear || "All";
+    const expenses = attachLedgerNumbers(await Expense.find(filter).sort({ expenseDate: 1, createdAt: 1 }));
+    const totals = expenses.reduce((sum, item) => ({
+      net: sum.net + Number(item.netAmount || 0),
+      vat: sum.vat + Number(item.vatAmount || 0),
+      gross: sum.gross + Number(item.totalAmount || 0)
+    }), { net: 0, vat: 0, gross: 0 });
+
+    const rows = expenses.map((item) => `
+      <tr>
+        <td>${escapeHtml(item.ledgerNumber)}</td>
+        <td>${escapeHtml(item.expenseNumber)}</td>
+        <td>${escapeHtml(new Date(item.expenseDate).toLocaleDateString("en-GB"))}</td>
+        <td>${escapeHtml(item.supplier)}</td>
+        <td>${escapeHtml(item.category)}</td>
+        <td>${escapeHtml(item.description)}</td>
+        <td>${escapeHtml(item.reference || "")}</td>
+        <td class="money">${moneyCell(item.netAmount)}</td>
+        <td class="money">${moneyCell(item.vatAmount)}</td>
+        <td class="money">${moneyCell(item.totalAmount)}</td>
+        <td>${escapeHtml(item.paymentStatus)}</td>
+        <td>${escapeHtml(item.paymentMethod)}</td>
+      </tr>`).join("");
+
+    const html = `<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <style>
+            body { font-family: Arial, sans-serif; color: #073f4c; }
+            .title { font-size: 24px; font-weight: 700; }
+            .subtle { color: #60757b; }
+            .summary td { padding: 8px 14px; border: 1px solid #d9e7e9; background: #f3fbfb; font-weight: 700; }
+            table { border-collapse: collapse; width: 100%; }
+            th { padding: 9px; color: #fff; background: #064f5e; border: 1px solid #064f5e; text-align: left; }
+            td { padding: 8px; border: 1px solid #d9e7e9; vertical-align: top; }
+            tr:nth-child(even) td { background: #f8fbfb; }
+            .money { mso-number-format: "0.00"; text-align: right; }
+          </style>
+        </head>
+        <body>
+          <p class="title">Innovex Resource Group Limited - Expense Ledger</p>
+          <p class="subtle">Financial year: ${escapeHtml(financialYear)} | Generated: ${escapeHtml(new Date().toLocaleString("en-GB", { timeZone: "Europe/London" }))}</p>
+          <table class="summary">
+            <tr><td>Total records</td><td>${expenses.length}</td><td>Net</td><td class="money">${moneyCell(totals.net)}</td><td>VAT</td><td class="money">${moneyCell(totals.vat)}</td><td>Gross</td><td class="money">${moneyCell(totals.gross)}</td></tr>
+          </table>
+          <br />
+          <table>
+            <thead><tr><th>Ledger No</th><th>Audit ID</th><th>Date</th><th>Supplier</th><th>Category</th><th>Description</th><th>Supplier Ref</th><th>Net</th><th>VAT</th><th>Gross</th><th>Status</th><th>Method</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="12">No expenses found for this reporting period.</td></tr>'}</tbody>
+          </table>
+        </body>
+      </html>`;
+
+    res.setHeader("Content-Type", "application/vnd.ms-excel; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename=Innovex-Expense-Ledger-${financialYear}.xls`);
+    res.send(`\uFEFF${html}`);
   } catch (error) { next(error); }
 });
 
@@ -312,7 +467,7 @@ router.get("/expenses", async (req, res, next) => {
       filter.$or = [{ supplier: regex }, { description: regex }, { reference: regex }, { expenseNumber: regex }];
     }
     const expenses = await Expense.find(filter).select("-receipt.data").sort({ expenseDate: -1, createdAt: -1 });
-    res.json(expenses.map(expenseSummary));
+    res.json(attachLedgerNumbers(expenses));
   } catch (error) { next(error); }
 });
 

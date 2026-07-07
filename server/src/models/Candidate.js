@@ -61,6 +61,7 @@ candidateSchema.index({
 candidateSchema.index({ email: 1 }, { sparse: true });
 candidateSchema.index({ phone: 1 }, { sparse: true });
 candidateSchema.index({ postcodePrefix: 1, desiredRole: 1, status: 1 });
+candidateSchema.index({ latitude: 1, longitude: 1 });
 
 candidateSchema.pre("save", function setPostcodePrefix(next) {
   if (this.postcode) {
