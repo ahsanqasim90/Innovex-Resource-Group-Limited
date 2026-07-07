@@ -3372,6 +3372,110 @@ tbody tr:hover td {
   border-radius: 18px;
   background: #f7fcfc;
 }
+.csv-import-report {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid #d6e9de;
+  background: linear-gradient(135deg, #f4fffb, #ffffff);
+}
+.csv-import-report.error {
+  border-color: #f2b7b7;
+  background: linear-gradient(135deg, #fff6f6, #ffffff);
+}
+.csv-import-report-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.csv-import-report-head > span {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #e1f5ee;
+  color: #0f6e56;
+  flex: 0 0 auto;
+}
+.csv-import-report.error .csv-import-report-head > span {
+  background: #ffe6e6;
+  color: #b42318;
+}
+.csv-import-report-head strong,
+.csv-import-warnings strong {
+  display: block;
+  color: var(--teal);
+  font-weight: 950;
+}
+.csv-import-report.error .csv-import-report-head strong {
+  color: #9f1f1f;
+}
+.csv-import-report-head small,
+.csv-import-issues small,
+.csv-import-warnings small {
+  display: block;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.csv-import-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.csv-import-summary-grid span {
+  padding: 10px;
+  border-radius: 14px;
+  background: #eefafa;
+  color: var(--muted);
+  font-weight: 850;
+}
+.csv-import-summary-grid strong {
+  display: block;
+  color: var(--teal);
+  font-size: 1.2rem;
+}
+.csv-import-report-note {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(244, 185, 66, .16);
+  color: #6c560f !important;
+  font-weight: 850;
+}
+.csv-import-issues {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.csv-import-issues article {
+  padding: 10px 12px;
+  border: 1px solid #f0caca;
+  border-radius: 14px;
+  background: white;
+}
+.csv-import-issues article strong {
+  display: inline-flex;
+  margin-bottom: 4px;
+  color: #9f1f1f;
+  font-weight: 950;
+}
+.csv-import-issues article span {
+  display: block;
+  color: #193842;
+  font-weight: 850;
+  line-height: 1.4;
+}
+.csv-import-warnings {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff8e6;
+  border: 1px solid rgba(244, 185, 66, .45);
+}
 .talent-match-card {
   margin-bottom: 22px;
 }

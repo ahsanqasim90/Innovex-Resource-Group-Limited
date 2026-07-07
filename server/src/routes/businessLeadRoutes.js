@@ -48,6 +48,19 @@ const categoryAliases = {
   other: "Other"
 };
 
+const validBusinessLeadStatuses = new Set(["New", "Contacted", "Interested", "Follow-up", "Converted", "Not Interested", "Do Not Contact"]);
+const validBusinessLeadCategories = new Set([
+  "Care Home",
+  "Children Home",
+  "Supported Living",
+  "Healthcare Company",
+  "Website Lead",
+  "SEO Lead",
+  "Training Lead",
+  "Compliance Lead",
+  "Other"
+]);
+
 const headerMap = {
   company: "companyName",
   companyname: "companyName",
@@ -172,6 +185,22 @@ function invalidEmailValues(input = {}) {
   return rawEmailValues(input).filter((email) => !parseEmails({ emails: email }).length);
 }
 
+function visibleRowValue(row, fields = []) {
+  return fields
+    .map((field) => String(row[field] || "").trim())
+    .filter(Boolean)
+    .join(" | ");
+}
+
+function importIssue(row, field, message, value = "") {
+  return {
+    row: row.__rowNumber,
+    field,
+    value: value || visibleRowValue(row, ["companyName", "emails", "email1", "phone", "postcode"]),
+    message
+  };
+}
+
 function parseCsvLine(line) {
   const cells = [];
   let current = "";
@@ -263,6 +292,104 @@ function sanitizeLead(input, options = {}) {
   }
   if (data.serviceInterests !== undefined) data.serviceInterests = splitList(data.serviceInterests);
   return data;
+}
+
+function validateBusinessLeadImportRows(rows = []) {
+  const issues = [];
+  const warnings = [];
+  const seenRows = new Map();
+  const maxReportItems = 250;
+  let emptyRows = 0;
+  let importableRows = 0;
+  let issueCount = 0;
+  let warningCount = 0;
+
+  rows.forEach((row) => {
+    const hasData = Boolean(
+      row.companyName ||
+      row.contactName ||
+      row.phone ||
+      row.postcode ||
+      row.city ||
+      row.website ||
+      row.serviceInterests ||
+      row.emails ||
+      row.email1 ||
+      row.email2 ||
+      row.email3 ||
+      row.email4 ||
+      row.email5
+    );
+    if (!hasData) {
+      emptyRows += 1;
+      return;
+    }
+
+    importableRows += 1;
+    const rowIssues = [];
+    const companyName = String(row.companyName || "").trim();
+    const phone = String(row.phone || "").trim();
+    const validEmails = parseEmails(row);
+    const invalidEmails = invalidEmailValues(row);
+    const category = String(row.category || "").trim();
+    const normalizedCategory = normalizeCategory(category);
+    const status = String(row.status || "").trim();
+
+    if (!companyName) {
+      rowIssues.push(importIssue(row, "Company Name", "Company name is required for business leads."));
+    }
+
+    if (!validEmails.length && !phone) {
+      rowIssues.push(importIssue(row, "Email / Phone", "At least one valid email address or phone number is required."));
+    }
+
+    invalidEmails.forEach((email) => {
+      rowIssues.push(importIssue(row, "Email", "Invalid email address format.", email));
+    });
+
+    if (category && !normalizedCategory && !validBusinessLeadCategories.has(category)) {
+      // category may still be handled as Other by sanitizeLead, so this is a warning not a blocker.
+      warningCount += 1;
+      if (warnings.length < maxReportItems) {
+        warnings.push(importIssue(row, "Category", "Category was not recognised and will be imported as Other.", category));
+      }
+    }
+
+    if (status && !validBusinessLeadStatuses.has(status)) {
+      rowIssues.push(importIssue(row, "Status", `Status must be one of: ${Array.from(validBusinessLeadStatuses).join(", ")}.`, status));
+    }
+
+    const duplicateKey = `${normalizeCompany(companyName)}|${postcodePrefix(row.postcode || "")}`;
+    if (companyName && seenRows.has(duplicateKey)) {
+      warningCount += 1;
+      if (warnings.length < maxReportItems) {
+        warnings.push({
+          row: row.__rowNumber,
+          field: "Duplicate company",
+          value: companyName,
+          message: `This appears to duplicate row ${seenRows.get(duplicateKey)} and will be merged into one company record.`
+        });
+      }
+    } else if (companyName) {
+      seenRows.set(duplicateKey, row.__rowNumber);
+    }
+
+    rowIssues.forEach((issue) => {
+      issueCount += 1;
+      if (issues.length < maxReportItems) issues.push(issue);
+    });
+  });
+
+  return {
+    rowsRead: rows.length,
+    importableRows,
+    emptyRows,
+    issueCount,
+    warningCount,
+    issues,
+    warnings,
+    truncated: issueCount > issues.length || warningCount > warnings.length
+  };
 }
 
 function mergeEmailLists(existing = [], incoming = []) {
@@ -376,23 +503,28 @@ router.post("/import", uploadBusinessLeadCsv.single("file"), async (req, res, ne
     if (!req.file) return res.status(400).json({ message: "CSV file is required" });
     const defaultCategory = req.body.category || "Care Home";
     const rows = parseCsv(req.file.buffer);
+    const importReport = validateBusinessLeadImportRows(rows);
+    if (!rows.length) {
+      return res.status(400).json({
+        message: "No importable rows were found in this CSV file.",
+        importReport
+      });
+    }
+    if (importReport.issueCount) {
+      return res.status(422).json({
+        message: `${importReport.issueCount} issue${importReport.issueCount === 1 ? "" : "s"} found in this CSV. Please correct the highlighted rows and upload again.`,
+        importReport
+      });
+    }
+
     const leadsByKey = new Map();
     let skipped = 0;
     let duplicatesMerged = 0;
-    let invalidEmailsIgnored = 0;
-    const invalidEmailExamples = [];
 
     for (const row of rows) {
-      if (!row.companyName && !row.phone && !row.postcode && !row.emails && !row.email1) {
+      if (!row.companyName && !row.contactName && !row.phone && !row.postcode && !row.city && !row.website && !row.serviceInterests && !row.emails && !row.email1) {
         skipped += 1;
         continue;
-      }
-      const invalidEmails = invalidEmailValues(row);
-      if (invalidEmails.length) {
-        invalidEmailsIgnored += invalidEmails.length;
-        invalidEmails.slice(0, 3).forEach((email) => {
-          if (invalidEmailExamples.length < 8) invalidEmailExamples.push(`Row ${row.__rowNumber}: ${email}`);
-        });
       }
       const data = sanitizeLead({ category: defaultCategory, source: "CSV Import", ...row }, { rowNumber: row.__rowNumber });
       if (!data.companyName) data.companyName = data.emails?.[0]?.email || data.phone || "Unnamed company";
@@ -441,8 +573,7 @@ router.post("/import", uploadBusinessLeadCsv.single("file"), async (req, res, ne
       updated,
       duplicatesMerged,
       skipped,
-      invalidEmailsIgnored,
-      invalidEmailExamples,
+      importReport: { ...importReport, duplicatesMerged },
       message: "Business lead import completed"
     });
   } catch (error) {

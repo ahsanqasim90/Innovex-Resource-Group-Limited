@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Database,
   Factory,
+  FileUp,
   Filter,
   Globe2,
   GraduationCap,
@@ -181,6 +182,7 @@ export default function AdminBusinessLeads() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importReport, setImportReport] = useState(null);
   const [sending, setSending] = useState(false);
   const [importCategory, setImportCategory] = useState("Care Home");
   const [outreach, setOutreach] = useState(emailTemplate);
@@ -261,7 +263,8 @@ export default function AdminBusinessLeads() {
 
   async function importCsv(event) {
     event.preventDefault();
-    const file = event.currentTarget.elements.file.files?.[0];
+    const formElement = event.currentTarget;
+    const file = formElement.elements.file.files?.[0];
     if (!file) {
       setStatus({ type: "error", message: "Choose a CSV file first." });
       return;
@@ -270,6 +273,7 @@ export default function AdminBusinessLeads() {
     body.append("file", file);
     body.append("category", importCategory);
     setImporting(true);
+    setImportReport(null);
     try {
       const result = await api("/business-leads/import", { method: "POST", body });
       const parts = [
@@ -281,16 +285,25 @@ export default function AdminBusinessLeads() {
       ];
       if (result.duplicatesMerged) parts.push(`${Number(result.duplicatesMerged).toLocaleString()} duplicate company rows merged.`);
       if (result.skipped) parts.push(`${Number(result.skipped).toLocaleString()} empty rows skipped.`);
-      if (result.invalidEmailsIgnored) {
-        parts.push(`${Number(result.invalidEmailsIgnored).toLocaleString()} invalid email value${result.invalidEmailsIgnored === 1 ? "" : "s"} ignored.`);
-        if (result.invalidEmailExamples?.length) parts.push(`Examples: ${result.invalidEmailExamples.join("; ")}.`);
-      }
       setStatus({ message: parts.join(" ") });
-      event.currentTarget.reset();
+      setImportReport({
+        type: "success",
+        rowsRead: result.rowsRead || 0,
+        created: result.created || 0,
+        updated: result.updated || 0,
+        uniqueLeads: result.uniqueLeads || 0,
+        duplicatesMerged: result.duplicatesMerged || 0,
+        skipped: result.skipped || 0,
+        warnings: result.importReport?.warnings || []
+      });
+      formElement.reset();
       await load(1);
       loadStats();
     } catch (error) {
       setStatus({ type: "error", message: error.message });
+      if (error.data?.importReport) {
+        setImportReport({ type: "error", ...error.data.importReport });
+      }
     } finally {
       setImporting(false);
     }
@@ -535,6 +548,49 @@ export default function AdminBusinessLeads() {
             <p>Use columns like Company Name, Postcode, Phone, Email 1, Email 2, Website, Service Interest and Notes. Multiple emails stay under one company record.</p>
             <input name="file" type="file" accept=".csv,text/csv" />
             <SubmitButton loading={importing} loadingText="Importing leads...">Import CSV</SubmitButton>
+            {importReport && (
+              <div className={`csv-import-report ${importReport.type === "error" ? "error" : "success"}`}>
+                <div className="csv-import-report-head">
+                  <span>{importReport.type === "error" ? <FileUp size={18} /> : <CheckCircle2 size={18} />}</span>
+                  <div>
+                    <strong>{importReport.type === "error" ? "CSV needs attention before import" : "Business leads imported successfully"}</strong>
+                    <p>
+                      {importReport.type === "error"
+                        ? `${Number(importReport.issueCount || 0).toLocaleString()} issue${importReport.issueCount === 1 ? "" : "s"} found across ${Number(importReport.rowsRead || 0).toLocaleString()} rows.`
+                        : `${Number(importReport.created || 0).toLocaleString()} created, ${Number(importReport.updated || 0).toLocaleString()} updated from ${Number(importReport.rowsRead || 0).toLocaleString()} CSV rows.`}
+                    </p>
+                  </div>
+                </div>
+                {importReport.type === "success" && (
+                  <div className="csv-import-summary-grid">
+                    <span><strong>{Number(importReport.uniqueLeads || 0).toLocaleString()}</strong> unique companies</span>
+                    <span><strong>{Number(importReport.duplicatesMerged || 0).toLocaleString()}</strong> duplicates merged</span>
+                    <span><strong>{Number(importReport.skipped || 0).toLocaleString()}</strong> empty rows skipped</span>
+                  </div>
+                )}
+                {importReport.type === "error" && importReport.issues?.length > 0 && (
+                  <div className="csv-import-issues">
+                    {importReport.issues.map((issue, index) => (
+                      <article key={`${issue.row}-${issue.field}-${index}`}>
+                        <b>Row {issue.row}</b>
+                        <span>{issue.field}</span>
+                        <p>{issue.message}</p>
+                        {issue.value && <small>Value: {issue.value}</small>}
+                      </article>
+                    ))}
+                  </div>
+                )}
+                {importReport.warnings?.length > 0 && (
+                  <div className="csv-import-warnings">
+                    <strong>Warnings</strong>
+                    {importReport.warnings.slice(0, 8).map((warning, index) => (
+                      <p key={`${warning.row}-${warning.field}-${index}`}>Row {warning.row}: {warning.message}</p>
+                    ))}
+                  </div>
+                )}
+                {importReport.truncated && <p className="csv-import-report-note">Showing the first 250 report items. Please fix these and upload again to continue checking the remaining rows.</p>}
+              </div>
+            )}
           </form>
 
           <form className="card talent-outreach-card" onSubmit={sendOutreach}>

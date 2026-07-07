@@ -138,6 +138,7 @@ export default function AdminTalentPool() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importReport, setImportReport] = useState(null);
   const [matching, setMatching] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState("");
   const [matchRole, setMatchRole] = useState("");
@@ -268,7 +269,8 @@ export default function AdminTalentPool() {
 
   async function importCsv(event) {
     event.preventDefault();
-    const file = event.currentTarget.elements.file.files?.[0];
+    const formElement = event.currentTarget;
+    const file = formElement.elements.file.files?.[0];
     if (!file) {
       setStatus({ type: "error", message: "Choose a CSV file first." });
       return;
@@ -276,6 +278,7 @@ export default function AdminTalentPool() {
     const body = new FormData();
     body.append("file", file);
     setImporting(true);
+    setImportReport(null);
     try {
       const result = await api("/candidates/import", { method: "POST", body });
       const parts = [
@@ -288,11 +291,24 @@ export default function AdminTalentPool() {
       if (result.duplicatesMerged) parts.push(`${Number(result.duplicatesMerged).toLocaleString()} duplicate rows merged.`);
       if (result.skipped) parts.push(`${Number(result.skipped).toLocaleString()} empty rows skipped.`);
       setStatus({ message: parts.join(" ") });
-      event.currentTarget.reset();
+      setImportReport({
+        type: "success",
+        rowsRead: result.rowsRead || 0,
+        created: result.created || 0,
+        updated: result.updated || 0,
+        uniqueCandidates: result.uniqueCandidates || result.imported || 0,
+        duplicatesMerged: result.duplicatesMerged || 0,
+        skipped: result.skipped || 0,
+        warnings: result.importReport?.warnings || []
+      });
+      formElement.reset();
       await load(1);
       loadStats();
     } catch (error) {
       setStatus({ type: "error", message: error.message });
+      if (error.data?.importReport) {
+        setImportReport({ type: "error", ...error.data.importReport });
+      }
     } finally {
       setImporting(false);
     }
@@ -585,6 +601,53 @@ export default function AdminTalentPool() {
             <p>Accepted headers include name, email, phone/number, postcode, role, visa status, availability, shift, pay and notes. Email spacing is cleaned automatically; if a row needs attention, the exact row number will show.</p>
             <input name="file" type="file" accept=".csv,text/csv" />
             <SubmitButton loading={importing} loadingText="Importing candidates...">Import CSV</SubmitButton>
+            {importReport && (
+              <div className={`csv-import-report ${importReport.type === "success" ? "success" : "error"}`}>
+                <div className="csv-import-report-head">
+                  <span>{importReport.type === "success" ? <CheckCircle2 size={18} /> : <FileUp size={18} />}</span>
+                  <div>
+                    <strong>{importReport.type === "success" ? "Import completed successfully" : "CSV scan report"}</strong>
+                    <small>
+                      {importReport.type === "success"
+                        ? `${Number(importReport.uniqueCandidates || 0).toLocaleString()} candidates processed from ${Number(importReport.rowsRead || 0).toLocaleString()} rows.`
+                        : `${Number(importReport.issueCount || 0).toLocaleString()} issue${Number(importReport.issueCount || 0) === 1 ? "" : "s"} found across ${Number(importReport.rowsRead || 0).toLocaleString()} rows.`}
+                    </small>
+                  </div>
+                </div>
+
+                {importReport.type === "success" ? (
+                  <div className="csv-import-summary-grid">
+                    <span><strong>{Number(importReport.created || 0).toLocaleString()}</strong> Created</span>
+                    <span><strong>{Number(importReport.updated || 0).toLocaleString()}</strong> Updated</span>
+                    <span><strong>{Number(importReport.duplicatesMerged || 0).toLocaleString()}</strong> Duplicates merged</span>
+                    <span><strong>{Number(importReport.skipped || 0).toLocaleString()}</strong> Empty rows skipped</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="csv-import-report-note">Nothing has been imported yet. Fix these rows in your CSV, save it again, and re-upload.</p>
+                    <div className="csv-import-issues">
+                      {(importReport.issues || []).map((issue, index) => (
+                        <article key={`${issue.row}-${issue.field}-${index}`}>
+                          <strong>Row {issue.row}</strong>
+                          <span>{issue.field}: {issue.message}</span>
+                          <small>Value: {issue.value}</small>
+                        </article>
+                      ))}
+                    </div>
+                    {importReport.truncated && <p className="csv-import-report-note">Only the first 250 issues are shown. Fix these first, then upload again for the next scan.</p>}
+                  </>
+                )}
+
+                {!!importReport.warnings?.length && (
+                  <div className="csv-import-warnings">
+                    <strong>Warnings</strong>
+                    {importReport.warnings.slice(0, 8).map((warning, index) => (
+                      <small key={`${warning.row}-${index}`}>Row {warning.row}: {warning.message}</small>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </form>
 
           <form className="card talent-outreach-card" onSubmit={sendOutreach}>

@@ -30,6 +30,17 @@ const candidateFields = [
   "notes"
 ];
 
+const validCandidateStatuses = new Set([
+  "Available",
+  "Contacted",
+  "Interested",
+  "Not Interested",
+  "Shortlisted",
+  "Submitted",
+  "Placed",
+  "Do Not Contact"
+]);
+
 const headerMap = {
   name: "name",
   fullname: "name",
@@ -49,6 +60,7 @@ const headerMap = {
   town: "city",
   location: "city",
   desiredrole: "desiredRole",
+  desiredr: "desiredRole",
   role: "desiredRole",
   jobtitle: "desiredRole",
   position: "desiredRole",
@@ -188,6 +200,82 @@ function parseCsv(buffer) {
     record.__rowNumber = rowIndex + 2;
     return record;
   });
+}
+
+function visibleRowValue(row, key) {
+  const value = row?.[key];
+  return value === undefined || value === null || value === "" ? "-" : String(value).slice(0, 120);
+}
+
+function importIssue(row, field, message, value) {
+  return {
+    row: row.__rowNumber || "-",
+    field,
+    message,
+    value: value === undefined || value === null || value === "" ? "-" : String(value).slice(0, 120)
+  };
+}
+
+function validateCandidateImportRows(rows) {
+  const issues = [];
+  const warnings = [];
+  const seenKeys = new Map();
+  let emptyRows = 0;
+  let importableRows = 0;
+  let issueCount = 0;
+  let warningCount = 0;
+
+  rows.forEach((row) => {
+    const hasMainData = Boolean(row.name || row.email || row.phone || row.desiredRole || row.postcode);
+    if (!hasMainData) {
+      emptyRows += 1;
+      return;
+    }
+
+    importableRows += 1;
+    const email = cleanEmail(row.email);
+    const phone = String(row.phone || "").trim();
+
+    if (!email && !phone) {
+      issueCount += 1;
+      if (issues.length < 250) issues.push(importIssue(row, "Email / phone", "Add either a valid email address or a phone number so this candidate can be saved.", `${visibleRowValue(row, "email")} / ${visibleRowValue(row, "phone")}`));
+    }
+
+    if (email) {
+      try {
+        validateEmail(email);
+      } catch {
+        issueCount += 1;
+        if (issues.length < 250) issues.push(importIssue(row, "Email", "Email address format is not valid.", row.email));
+      }
+    }
+
+    if (row.status && !validCandidateStatuses.has(String(row.status).trim())) {
+      issueCount += 1;
+      if (issues.length < 250) issues.push(importIssue(row, "Status", `Use one of: ${Array.from(validCandidateStatuses).join(", ")}.`, row.status));
+    }
+
+    const key = email ? `email:${email}` : phone ? `phone:${phone}` : "";
+    if (key) {
+      if (seenKeys.has(key)) {
+        warningCount += 1;
+        if (warnings.length < 250) warnings.push(importIssue(row, email ? "Email" : "Phone", `Duplicate inside this CSV. It will be merged with row ${seenKeys.get(key)}.`, email || phone));
+      } else {
+        seenKeys.set(key, row.__rowNumber || "-");
+      }
+    }
+  });
+
+  return {
+    rowsRead: rows.length,
+    importableRows,
+    emptyRows,
+    issueCount,
+    warningCount,
+    issues,
+    warnings,
+    truncated: issueCount > issues.length || warningCount > warnings.length
+  };
 }
 
 function sanitizeCandidate(input, options = {}) {
@@ -660,12 +748,26 @@ router.post("/import", uploadCandidateCsv.single("file"), async (req, res, next)
   try {
     if (!req.file) return res.status(400).json({ message: "CSV file is required" });
     const rows = parseCsv(req.file.buffer);
+    if (!rows.length) {
+      return res.status(400).json({
+        message: "CSV file has no candidate rows. Keep one header row and at least one data row.",
+        importReport: { rowsRead: 0, importableRows: 0, emptyRows: 0, issueCount: 1, warningCount: 0, issues: [{ row: "-", field: "CSV", message: "No candidate data rows found.", value: "-" }], warnings: [] }
+      });
+    }
+    const importReport = validateCandidateImportRows(rows);
+    if (importReport.issueCount) {
+      return res.status(422).json({
+        message: `CSV scan found ${importReport.issueCount} issue${importReport.issueCount === 1 ? "" : "s"}. Fix the listed rows and upload again.`,
+        importReport
+      });
+    }
+
     const candidatesByKey = new Map();
     let skipped = 0;
     let duplicatesMerged = 0;
 
     for (const row of rows) {
-      if (!row.name && !row.email && !row.phone) {
+      if (!row.name && !row.email && !row.phone && !row.desiredRole && !row.postcode) {
         skipped += 1;
         continue;
       }
@@ -706,6 +808,7 @@ router.post("/import", uploadCandidateCsv.single("file"), async (req, res, next)
       updated: result.modifiedCount,
       duplicatesMerged,
       skipped,
+      importReport: { ...importReport, duplicatesMerged },
       message: "Candidate import completed"
     });
   } catch (error) {
