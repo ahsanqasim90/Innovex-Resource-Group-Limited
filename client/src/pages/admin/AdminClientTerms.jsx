@@ -302,15 +302,15 @@ export default function AdminClientTerms() {
             Use your fixed IRG terms. Only update the client details, role rates, payment due days and rebate terms before sending.
           </p>
           <div className="terms-hero-steps">
-            <span>1. Client details</span>
-            <span>2. Role rates</span>
-            <span>3. Send PDF</span>
+            <span>Client details</span>
+            <span>Rates & rebate</span>
+            <span>Send PDF</span>
           </div>
         </div>
         <div className="terms-simple-note">
           <FileSignature size={24} />
-          <strong>Fixed terms protected</strong>
-          <span>No clause editing is needed for normal client agreements.</span>
+          <strong>IRG terms locked</strong>
+          <span>Edit the commercial schedule only. Your standard terms stay consistent for every client.</span>
         </div>
       </div>
 

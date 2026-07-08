@@ -19,7 +19,7 @@ const RIGHT = 42;
 const CONTENT_WIDTH = PAGE_WIDTH - LEFT - RIGHT;
 
 function money(value) {
-  return `£${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${String.fromCharCode(163)}${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatDate(value) {
@@ -69,8 +69,12 @@ function labelValue(doc, x, y, label, value, width) {
 
 function sectionTitle(doc, y, eyebrow, title) {
   y = ensureSpace(doc, y, 44);
-  doc.fillColor("#00718a").font("Helvetica-Bold").fontSize(8).characterSpacing(1.4).text(eyebrow.toUpperCase(), LEFT, y);
-  doc.characterSpacing(0).fillColor(COLORS.ink).fontSize(16).text(title, LEFT, y + 14);
+  doc
+    .fillColor("#00718a")
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text(eyebrow.toUpperCase(), LEFT, y, { characterSpacing: 1.4 });
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(16).text(title, LEFT, y + 14);
   return y + 42;
 }
 
@@ -164,10 +168,10 @@ export function generateClientTermsPdf(terms) {
       .fillColor("#cdeff1")
       .font("Helvetica-Bold")
       .fontSize(8)
-      .characterSpacing(1.6)
-      .text("INNOVEX RESOURCE GROUP LIMITED", LEFT + 62, 42)
-      .characterSpacing(0)
+      .text("INNOVEX RESOURCE GROUP LIMITED", LEFT + 62, 42, { characterSpacing: 1.6 });
+    doc
       .fillColor("#ffffff")
+      .font("Helvetica-Bold")
       .fontSize(25)
       .text(terms.title || "Terms of Business", LEFT + 62, 56, { width: 300 })
       .fontSize(10)
