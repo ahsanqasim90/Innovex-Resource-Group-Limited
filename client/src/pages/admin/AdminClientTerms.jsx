@@ -59,14 +59,22 @@ function statusClass(status) {
   return String(status || "Draft").toLowerCase();
 }
 
+function cleanEmail(value) {
+  return String(value || "")
+    .replace(/^mailto:/i, "")
+    .replace(/\s+/g, "")
+    .trim()
+    .toLowerCase();
+}
+
 function isEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail(value));
 }
 
 function splitEmails(value) {
   return String(value || "")
     .split(/[,\n;]/)
-    .map((item) => item.trim().toLowerCase())
+    .map(cleanEmail)
     .filter(Boolean);
 }
 
@@ -88,7 +96,7 @@ function buildPayload(form) {
     agreementType: form.agreementType,
     clientName: form.clientName.trim(),
     contactName: form.contactName.trim(),
-    clientEmail: form.clientEmail.trim().toLowerCase(),
+    clientEmail: cleanEmail(form.clientEmail),
     clientAddress: form.clientAddress.trim(),
     clientCompanyNumber: form.clientCompanyNumber.trim(),
     effectiveDate: form.effectiveDate || today,
@@ -109,7 +117,7 @@ function buildPayload(form) {
       .filter((rate) => rate.roleTitle),
     specialTerms: form.specialTerms.trim(),
     internalNotes: form.internalNotes.trim(),
-    senderEmail: form.senderEmail.trim().toLowerCase(),
+    senderEmail: cleanEmail(form.senderEmail),
     cc: splitEmails(form.cc)
   };
 }
@@ -351,7 +359,7 @@ export default function AdminClientTerms() {
           </div>
           <div className="terms-rate-stack">
             {form.roleRates.map((rate, index) => (
-              <div className="terms-rate-card terms-commercial-row" key={`${index}-${rate.roleTitle}`}>
+              <div className="terms-rate-card terms-commercial-row" key={rate._id || `rate-${index}`}>
                 <label>Role title<input value={rate.roleTitle} onChange={(event) => updateRate(index, "roleTitle", event.target.value)} placeholder="Registered Manager" /></label>
                 <label>Fee type<select value={rate.feeType} onChange={(event) => updateRate(index, "feeType", event.target.value)}><option>Percentage</option><option>Flat Fee</option><option>Hourly Margin</option><option>Custom</option></select></label>
                 <label>Rate<input type="number" value={rate.rateValue} onChange={(event) => updateRate(index, "rateValue", event.target.value)} placeholder="8" /></label>

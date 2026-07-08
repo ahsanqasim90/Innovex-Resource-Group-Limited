@@ -4,10 +4,10 @@ import EmailLog from "../models/EmailLog.js";
 import { protect } from "../middleware/auth.js";
 import { hasPermission } from "../config/permissions.js";
 import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
-import { validateEmail } from "../utils.js";
 import { logActivity } from "../services/activityLogService.js";
 import { generateClientTermsPdf } from "../services/clientTermsPdfService.js";
 import { sendClientTermsEmail } from "../services/emailService.js";
+import validator from "validator";
 
 const router = express.Router();
 
@@ -31,11 +31,24 @@ function canManageTerms(req, res, next) {
 }
 
 function emailList(value) {
-  if (Array.isArray(value)) return value.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean);
+  if (Array.isArray(value)) return value.map(cleanEmail).filter(Boolean);
   return String(value || "")
     .split(/[,\n;]/)
-    .map((item) => item.trim().toLowerCase())
+    .map(cleanEmail)
     .filter(Boolean);
+}
+
+function cleanEmail(value) {
+  return String(value || "")
+    .replace(/^mailto:/i, "")
+    .replace(/\s+/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isValidEmail(value) {
+  const email = cleanEmail(value);
+  return Boolean(email) && validator.isEmail(email);
 }
 
 function escapeRegex(value = "") {
@@ -73,15 +86,15 @@ function normalizeClauses(clauses = []) {
 
 function normalizePayload(body, existing = null) {
   const cc = emailList(body.cc);
-  const invalidCc = cc.find((email) => !validateEmail(email));
+  const invalidCc = cc.find((email) => !isValidEmail(email));
   if (invalidCc) {
     const error = new Error(`Invalid CC email: ${invalidCc}`);
     error.statusCode = 400;
     throw error;
   }
 
-  const clientEmail = String(body.clientEmail || existing?.clientEmail || "").trim().toLowerCase();
-  if (!clientEmail || !validateEmail(clientEmail)) {
+  const clientEmail = cleanEmail(body.clientEmail || existing?.clientEmail || "");
+  if (!isValidEmail(clientEmail)) {
     const error = new Error("A valid client email is required");
     error.statusCode = 400;
     throw error;
@@ -229,12 +242,12 @@ router.post("/:id/send", canManageTerms, async (req, res, next) => {
   try {
     const terms = await ClientTerms.findById(req.params.id);
     if (!terms) return res.status(404).json({ message: "Client terms not found" });
-    const fromEmail = String(req.body.fromEmail || terms.senderEmail || "").trim().toLowerCase();
+    const fromEmail = cleanEmail(req.body.fromEmail || terms.senderEmail || "");
     if (!canUseSender(req.user, fromEmail)) {
       return res.status(403).json({ message: "You are not allowed to use this sender mailbox" });
     }
     const cc = emailList(req.body.cc || terms.cc);
-    const invalidCc = cc.find((email) => !validateEmail(email));
+    const invalidCc = cc.find((email) => !isValidEmail(email));
     if (invalidCc) return res.status(400).json({ message: `Invalid CC email: ${invalidCc}` });
 
     const pdf = await generateClientTermsPdf(terms);
