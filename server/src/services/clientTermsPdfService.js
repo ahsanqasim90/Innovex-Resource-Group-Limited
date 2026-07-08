@@ -63,6 +63,34 @@ function cleanTemplateText(text) {
     .trim();
 }
 
+function polishLegalTemplateText(text) {
+  const pound = String.fromCharCode(163);
+  const replacements = [
+    ["â€œ", '"'],
+    ["â€", '"'],
+    ["â€™", "'"],
+    ["â€˜", "'"],
+    ["â€¢", "-"],
+    ["â€“", "-"],
+    ["â€”", "-"],
+    ["Â£", pound],
+    ["Â", ""]
+  ];
+
+  let cleaned = String(text || "");
+  replacements.forEach(([from, to]) => {
+    cleaned = cleaned.replaceAll(from, to);
+  });
+
+  return cleaned
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\batthe\b/gi, "at the")
+    .replace(/Engagement\]/g, "Engagement")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function withClientSpecificTerms(text, terms) {
   const paymentDays = Number(terms.paymentDueDays || 7);
   const rebateDays = Number(terms.rebatePeriodDays || 15);
@@ -77,7 +105,7 @@ function loadTermsTemplate(terms) {
   if (!fs.existsSync(file)) {
     throw new Error("IRG terms template text file is missing.");
   }
-  return withClientSpecificTerms(cleanTemplateText(fs.readFileSync(file, "utf8")), terms);
+  return withClientSpecificTerms(polishLegalTemplateText(cleanTemplateText(fs.readFileSync(file, "utf8"))), terms);
 }
 
 function drawLogo(doc, x, y, size = 42) {
@@ -150,14 +178,14 @@ function drawCover(doc, terms) {
   labelValue(doc, LEFT + 280, y + 78, "Effective date", formatDate(terms.effectiveDate), 200);
 
   y += 144;
-  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 86, 14).fill(COLORS.mist).stroke(COLORS.line);
-  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12).text("Client-specific commercial settings", LEFT + 16, y + 16);
+  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 78, 14).fill(COLORS.mist).stroke(COLORS.line);
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12).text("Important notice", LEFT + 16, y + 16);
   doc
     .fillColor(COLORS.muted)
     .font("Helvetica")
     .fontSize(9.5)
     .text(
-      `Invoice due within ${terms.paymentDueDays || 7} days. Rebate/replacement support period: ${terms.rebatePeriodDays || 15} days. Role rates entered in the CRM are inserted into clause 3.4 of these Terms of Business.`,
+      "This document uses Innovex Resource Group Limited's standard Terms of Business. Only the client details and agreed fee structure in clause 3.4 are prepared from the CRM record.",
       LEFT + 16,
       y + 38,
       { width: CONTENT_WIDTH - 32, lineGap: 2 }
@@ -229,14 +257,7 @@ function drawFeeStructureTable(doc, y, terms) {
     y += height;
   });
 
-  doc
-    .fillColor(COLORS.muted)
-    .font("Helvetica")
-    .fontSize(8.5)
-    .text("This fee structure is generated from the role rates saved in the Innovex CRM for this client.", LEFT, y + 8, {
-      width: CONTENT_WIDTH
-    });
-  return y + 28;
+  return y + 16;
 }
 
 function isMajorHeading(paragraph) {
@@ -252,7 +273,13 @@ function isDocumentIntro(paragraph) {
 }
 
 function drawParagraph(doc, paragraph, y) {
-  const normalized = paragraph.replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
+  const normalized = paragraph
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
   if (!normalized) return y;
   if (isDocumentIntro(normalized)) return y;
 

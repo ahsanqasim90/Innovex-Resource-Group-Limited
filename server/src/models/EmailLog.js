@@ -19,7 +19,12 @@ const emailLogSchema = new mongoose.Schema(
     bcc: [{ type: String, trim: true, lowercase: true }],
     subject: { type: String, required: true, trim: true },
     message: { type: String, required: true },
-    targetType: { type: String, enum: ["Candidate", "BusinessLead", "WebLeadProspect", "Invoice", "Manual"], default: "Manual", index: true },
+    targetType: {
+      type: String,
+      enum: ["Candidate", "BusinessLead", "WebLeadProspect", "Invoice", "ClientTerms", "Newsletter", "Manual"],
+      default: "Manual",
+      index: true
+    },
     targetId: { type: mongoose.Schema.Types.ObjectId },
     status: { type: String, enum: ["Scheduled", "Sent", "Failed"], default: "Sent", index: true },
     error: { type: String, trim: true },

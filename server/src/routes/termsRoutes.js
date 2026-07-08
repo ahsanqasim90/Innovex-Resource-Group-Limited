@@ -276,7 +276,7 @@ router.post("/:id/send", canManageTerms, async (req, res, next) => {
       cc,
       subject: delivery.subject,
       message: delivery.message,
-      targetType: "Manual",
+      targetType: "ClientTerms",
       targetId: terms._id,
       status: "Sent",
       sentBy: actorFrom(req.user)
