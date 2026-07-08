@@ -299,7 +299,7 @@ export default function AdminClientTerms() {
           <span className="section-kicker">Client terms centre</span>
           <h1>Client terms and commercial schedule</h1>
           <p>
-            Use your fixed IRG terms. Only update the client details, role rates, payment due days and rebate terms before sending.
+            Use your original IRG Terms of Business. The CRM only prepares the client-specific schedule: client details, role rates, payment days and rebate period.
           </p>
           <div className="terms-hero-steps">
             <span>Client details</span>
@@ -309,8 +309,8 @@ export default function AdminClientTerms() {
         </div>
         <div className="terms-simple-note">
           <FileSignature size={24} />
-          <strong>IRG terms locked</strong>
-          <span>Edit the commercial schedule only. Your standard terms stay consistent for every client.</span>
+          <strong>Original IRG terms protected</strong>
+          <span>The final PDF attaches your fixed terms after the commercial schedule. Staff should not rewrite legal clauses.</span>
         </div>
       </div>
 
@@ -421,7 +421,7 @@ export default function AdminClientTerms() {
             <div className="terms-empty-preview">
               <Mail size={28} />
               <strong>Create a draft first</strong>
-              <span>After saving, you can download or send the fixed IRG terms PDF from here.</span>
+              <span>After saving, download or send the commercial schedule with your original IRG terms attached.</span>
             </div>
           )}
         </aside>

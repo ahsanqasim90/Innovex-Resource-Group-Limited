@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
+import { PDFDocument as PDFLibDocument } from "pdf-lib";
 
 const COLORS = {
   ink: "#063f4a",
@@ -17,6 +18,14 @@ const PAGE_HEIGHT = 841.89;
 const LEFT = 42;
 const RIGHT = 42;
 const CONTENT_WIDTH = PAGE_WIDTH - LEFT - RIGHT;
+
+function termsTemplatePath() {
+  const candidates = [
+    path.resolve(process.cwd(), "server/assets/irg-terms-template.pdf"),
+    path.resolve(process.cwd(), "assets/irg-terms-template.pdf")
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
+}
 
 function money(value) {
   return `${String.fromCharCode(163)}${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -132,28 +141,25 @@ function drawRoleRates(doc, y, roleRates = []) {
   return y + 22;
 }
 
-function drawClauses(doc, y, clauses = []) {
-  y = sectionTitle(doc, y, "Agreement clauses", "Terms of business");
-  clauses
-    .slice()
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
-    .forEach((clause, index) => {
-      const heading = `${index + 1}. ${clause.heading}`;
-      const body = clause.body || "";
-      const height = doc.heightOfString(body, { width: CONTENT_WIDTH - 24 }) + 50;
-      y = ensureSpace(doc, y, height);
-      doc.roundedRect(LEFT, y, CONTENT_WIDTH, height - 10, 8).fill("#ffffff").stroke(COLORS.line);
-      doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11).text(heading, LEFT + 12, y + 12, { width: CONTENT_WIDTH - 24 });
-      doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9.5).text(body, LEFT + 12, y + 31, {
-        width: CONTENT_WIDTH - 24,
-        lineGap: 2
-      });
-      y += height;
-    });
-  return y;
+function drawTemplateNotice(doc, y) {
+  y = sectionTitle(doc, y, "Protected terms", "Original IRG terms attached");
+  y = ensureSpace(doc, y, 88);
+  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 72, 12).fill(COLORS.mist).stroke(COLORS.line);
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11).text("Important", LEFT + 16, y + 15);
+  doc
+    .fillColor(COLORS.muted)
+    .font("Helvetica")
+    .fontSize(9.5)
+    .text(
+      "This commercial schedule is attached to the fixed Innovex Resource Group Limited Terms of Business. The original IRG terms are not rewritten by the CRM. Only client details, role rates, invoice payment days and rebate details are adjusted before sending.",
+      LEFT + 16,
+      y + 34,
+      { width: CONTENT_WIDTH - 32, lineGap: 2 }
+    );
+  return y + 94;
 }
 
-export function generateClientTermsPdf(terms) {
+function createCommercialSchedulePdf(terms) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 0, size: "A4", bufferPages: true });
     const chunks = [];
@@ -173,10 +179,10 @@ export function generateClientTermsPdf(terms) {
       .fillColor("#ffffff")
       .font("Helvetica-Bold")
       .fontSize(25)
-      .text(terms.title || "Terms of Business", LEFT + 62, 56, { width: 300 })
+      .text("Commercial Schedule", LEFT + 62, 56, { width: 300 })
       .fontSize(10)
       .fillColor("#d8f0f2")
-      .text("Client-specific commercial terms for recruitment, staffing and support services.", LEFT + 62, 92, { width: 330 });
+      .text("Client-specific rates, payment timing and rebate details attached to the fixed IRG terms.", LEFT + 62, 92, { width: 330 });
 
     doc.roundedRect(392, 35, 160, 76, 12).fill("#ffffff").stroke(COLORS.line);
     labelValue(doc, 410, 50, "Document", terms.documentNumber, 126);
@@ -223,10 +229,10 @@ export function generateClientTermsPdf(terms) {
       y += height + 22;
     }
 
-    y = drawClauses(doc, y, terms.clauses || []);
+    y = drawTemplateNotice(doc, y);
 
     y = ensureSpace(doc, y, 140);
-    y = sectionTitle(doc, y, "Acceptance", "Signatures");
+    y = sectionTitle(doc, y, "Acceptance", "Schedule acknowledgement");
     doc.roundedRect(LEFT, y, 240, 94, 12).fill("#ffffff").stroke(COLORS.line);
     doc.roundedRect(LEFT + 270, y, 240, 94, 12).fill("#ffffff").stroke(COLORS.line);
     labelValue(doc, LEFT + 16, y + 18, "For Innovex Resource Group Limited", "Authorised representative", 200);
@@ -238,4 +244,27 @@ export function generateClientTermsPdf(terms) {
 
     doc.end();
   });
+}
+
+async function mergeWithOriginalTermsTemplate(scheduleBuffer) {
+  const templatePath = termsTemplatePath();
+  if (!fs.existsSync(templatePath)) {
+    return scheduleBuffer;
+  }
+
+  const outputDoc = await PDFLibDocument.create();
+  const scheduleDoc = await PDFLibDocument.load(scheduleBuffer);
+  const schedulePages = await outputDoc.copyPages(scheduleDoc, scheduleDoc.getPageIndices());
+  schedulePages.forEach((page) => outputDoc.addPage(page));
+
+  const templateDoc = await PDFLibDocument.load(fs.readFileSync(templatePath));
+  const templatePages = await outputDoc.copyPages(templateDoc, templateDoc.getPageIndices());
+  templatePages.forEach((page) => outputDoc.addPage(page));
+
+  return Buffer.from(await outputDoc.save());
+}
+
+export async function generateClientTermsPdf(terms) {
+  const scheduleBuffer = await createCommercialSchedulePdf(terms);
+  return mergeWithOriginalTermsTemplate(scheduleBuffer);
 }
