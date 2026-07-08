@@ -94,7 +94,7 @@ function normalizePayload(body, existing = null) {
     throw error;
   }
 
-  return {
+  const payload = {
     title: String(body.title || existing?.title || "Terms of Business").trim(),
     agreementType: body.agreementType || existing?.agreementType || "Recruitment",
     clientName,
@@ -109,12 +109,20 @@ function normalizePayload(body, existing = null) {
     rebatePeriodDays: Number(body.rebatePeriodDays ?? existing?.rebatePeriodDays ?? 28),
     rebateTerms: String(body.rebateTerms || "").trim(),
     roleRates: normalizeRoleRates(body.roleRates),
-    clauses: normalizeClauses(body.clauses),
     specialTerms: String(body.specialTerms || "").trim(),
     internalNotes: String(body.internalNotes || "").trim(),
     senderEmail: String(body.senderEmail || existing?.senderEmail || "info@innovexresourcegroup.co.uk").trim().toLowerCase(),
     cc
   };
+
+  if (Array.isArray(body.clauses)) {
+    const clauses = normalizeClauses(body.clauses);
+    if (clauses.length) payload.clauses = clauses;
+  } else if (existing?.clauses?.length) {
+    payload.clauses = existing.clauses;
+  }
+
+  return payload;
 }
 
 router.use(protect);
