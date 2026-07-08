@@ -1,5 +1,6 @@
 import express from "express";
 import Candidate from "../models/Candidate.js";
+import EmailLog from "../models/EmailLog.js";
 import Job from "../models/Job.js";
 import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
@@ -840,6 +841,23 @@ router.post("/outreach", async (req, res, next) => {
         const result = await sendCandidateOutreachEmail({ candidate, subject, message, fromEmail });
         if (result.sent) sent += 1;
         else failed.push({ id: candidate._id, reason: result.reason });
+        await EmailLog.create({
+          fromEmail: result.fromEmail || fromEmail,
+          fromName: "Innovex Resource Group Limited",
+          to: [candidate.email].filter(Boolean),
+          subject,
+          message,
+          targetType: "Candidate",
+          targetId: candidate._id,
+          status: result.sent ? "Sent" : "Failed",
+          error: result.sent ? "" : result.reason || "Candidate outreach email was not sent",
+          sentBy: {
+            user: req.user?._id,
+            name: req.user?.name || "Innovex Admin",
+            email: req.user?.email || "",
+            role: req.user?.role || ""
+          }
+        });
         candidate.status = candidate.status === "Available" ? "Contacted" : candidate.status;
         candidate.lastContactedAt = new Date();
         candidate.outreachHistory.unshift({

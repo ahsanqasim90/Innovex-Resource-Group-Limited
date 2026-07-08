@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  ArrowRight,
   BriefcaseBusiness,
   CalendarClock,
   GraduationCap,
   LayoutDashboard,
   LineChart,
+  Search,
   ShieldCheck,
   TrendingUp,
   UserCheck,
@@ -12,7 +15,7 @@ import {
 } from "lucide-react";
 import { api } from "../../api/client.js";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { canViewFinance } from "../../auth/permissions.js";
+import { canViewFinance, hasPermission } from "../../auth/permissions.js";
 
 function money(value) {
   return `\u00a3${Number(value || 0).toLocaleString()}`;
@@ -38,9 +41,11 @@ function DashboardSection({ title, subtitle, children }) {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const showFinance = canViewFinance(user);
   const [data, setData] = useState({ stats: {}, recentApplications: [], recentInterviews: [], recentMeetings: [], trainingReminders: [], recentTrainingBookings: [], recentActivityLogs: [] });
+  const [sectionSearch, setSectionSearch] = useState("");
   useEffect(() => {
     api("/dashboard/stats").then(setData).catch(() => {});
   }, []);
@@ -107,6 +112,32 @@ export default function Dashboard() {
       ]
     }
   ];
+  const adminSections = useMemo(() => {
+    const sections = [
+      ["Dashboard", "/admin/dashboard", "overview stats operations", "dashboard.view"],
+      ["Jobs", "/admin/jobs", "vacancies roles job adverts", "jobs.view"],
+      ["Applications", "/admin/applications", "job applications applicants", "applications.view"],
+      ["CV Uploads", "/admin/cv-uploads", "candidate cvs documents", "cvs.view"],
+      ["Talent Pool", "/admin/talent-pool", "candidates search sourcing outreach", "talentPool.view"],
+      ["Business Leads", "/admin/business-leads", "care homes clients prospects", "businessLeads.view"],
+      ["Email Centre", "/admin/emails", "email compose bulk campaigns", "emails.view"],
+      ["Client Terms", "/admin/client-terms", "terms commercial schedule rates", "terms.view"],
+      ["Call Centre", "/admin/calls", "calls dialler phone outreach", "calls.view"],
+      ["Interviews", "/admin/interviews", "candidate interviews placements", "interviews.view"],
+      ["Meetings", "/admin/meetings", "appointments meetings reminders", "meetings.view"],
+      ["Courses", "/admin/courses", "training courses library", "courses.view"],
+      ["Training Bookings", "/admin/training-bookings", "training bookings quotes sessions", "trainingBookings.view"],
+      ["Finance Centre", "/admin/finance", "invoices expenses ledger payments", null],
+      ["Blogs", "/admin/blogs", "website content seo articles", "blogs.view"],
+      ["Testimonials", "/admin/testimonials", "reviews feedback approvals", "testimonials.view"],
+      ["Partners", "/admin/partners", "partner logos clients", "partners.view"]
+    ];
+    const query = sectionSearch.trim().toLowerCase();
+    return sections
+      .filter(([, path, , permission]) => (path === "/admin/finance" ? showFinance : hasPermission(user, permission)))
+      .filter(([label, , keywords]) => !query || `${label} ${keywords}`.toLowerCase().includes(query))
+      .slice(0, query ? 8 : 5);
+  }, [sectionSearch, showFinance, user]);
   return (
     <>
       <section className="dashboard-hero">
@@ -127,6 +158,25 @@ export default function Dashboard() {
               <span>{label}</span>
               <strong>{value}</strong>
             </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="dashboard-section-search" aria-label="Admin section search">
+        <div className="dashboard-section-search-box">
+          <Search size={19} />
+          <input
+            value={sectionSearch}
+            onChange={(event) => setSectionSearch(event.target.value)}
+            placeholder="Search CRM section, e.g. invoices, candidates, calls..."
+          />
+        </div>
+        <div className="dashboard-search-results">
+          {adminSections.map(([label, path]) => (
+            <button type="button" key={path} className="dashboard-search-card" onClick={() => navigate(path)}>
+              <span>{label}</span>
+              <ArrowRight size={16} />
+            </button>
           ))}
         </div>
       </section>

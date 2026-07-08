@@ -92,6 +92,31 @@ function systemEmailFooter() {
   return `<div style="margin-top:26px;padding-top:14px;border-top:1px solid #d8e5e7;color:#6b7f85;font-size:11px;line-height:1.5">This is a system-generated email from the Innovex Finance Centre. Please do not send payment information by email. For invoice queries, reply to this message or call 0330 0435 830.</div>`;
 }
 
+function crmComplianceFooterText(source = "Innovex Outreach Centre", hasAttachment = false) {
+  const attachmentLine = hasAttachment ? "If the attachment does not open, please reply and our team will resend it. " : "";
+  return `This is a system-generated email from the ${source}. ${attachmentLine}This email and any attachments are confidential and intended solely for the named recipient. If you have received it in error, please notify us and delete it from your system. Innovex Resource Group Limited processes personal data in accordance with the UK GDPR and the Data Protection Act 2018. If you would prefer not to receive emails from us, please reply with the word UNSUBSCRIBE.`;
+}
+
+function crmComplianceFooterHtml(source = "Innovex Outreach Centre", hasAttachment = false) {
+  return `<div style="margin-top:26px;padding-top:14px;border-top:1px solid #d8e5e7;color:#6b7f85;font-size:11px;line-height:1.55">${escapeHtml(crmComplianceFooterText(source, hasAttachment))}</div>`;
+}
+
+function messageHtml(message = "") {
+  return escapeHtml(message).replace(/\n/g, "<br />");
+}
+
+async function deliverMail(transporter, account, mailOptions) {
+  if (account?.imapHost && account?.imapPort && account?.user && account?.pass) {
+    return sendAndArchive(transporter, account, mailOptions);
+  }
+  const info = await transporter.sendMail(mailOptions);
+  return {
+    info,
+    sentFolderSaved: false,
+    sentFolderError: account ? "IMAP Sent folder is not configured for this sender" : ""
+  };
+}
+
 export async function sendContactEmail(message) {
   if (!hasSmtpConfig()) {
     return { sent: false, reason: "SMTP is not configured" };
@@ -258,27 +283,28 @@ export async function sendCandidateOutreachEmail({ candidate, subject, message, 
   }
 
   const transporter = makeTransporter(account);
-  const safeMessage = String(message || "").replace(/\n/g, "<br />");
-
-  await transporter.sendMail({
+  const source = "Innovex Outreach Centre";
+  const mailOptions = {
     from: formatSender(account),
     to: candidate.email,
     replyTo: replyTo || account?.address || recipient,
     subject,
-    text: message,
+    text: `${message}\n\nKind regards,\nInnovex Resource Group Limited\n${account?.address || "info@innovexresourcegroup.co.uk"}\n\n${crmComplianceFooterText(source)}`,
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.55;color:#10242c">
-        <p>${safeMessage}</p>
+        <p>${messageHtml(message)}</p>
         <hr style="border:none;border-top:1px solid #dce8eb;margin:20px 0" />
         <p style="font-size:13px;color:#667985">
           Innovex Resource Group Limited<br />
           ${account?.address || "info@innovexresourcegroup.co.uk"}
         </p>
+        ${crmComplianceFooterHtml(source)}
       </div>
     `
-  });
+  };
+  const archive = await deliverMail(transporter, account, mailOptions);
 
-  return { sent: true };
+  return { sent: true, ...archive };
 }
 
 export async function sendBusinessLeadOutreachEmail({ lead, subject, message, replyTo, fromEmail }) {
@@ -293,28 +319,29 @@ export async function sendBusinessLeadOutreachEmail({ lead, subject, message, re
   }
 
   const transporter = makeTransporter(account);
-  const safeMessage = String(message || "").replace(/\n/g, "<br />");
-
-  await transporter.sendMail({
+  const source = "Innovex Business Outreach Centre";
+  const mailOptions = {
     from: formatSender(account),
     to: emails[0],
     bcc: emails.slice(1),
     replyTo: replyTo || account?.address || recipient,
     subject,
-    text: message,
+    text: `${message}\n\nKind regards,\nInnovex Resource Group Limited\n${account?.address || "info@innovexresourcegroup.co.uk"}\n\n${crmComplianceFooterText(source)}`,
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.55;color:#10242c">
-        <p>${safeMessage}</p>
+        <p>${messageHtml(message)}</p>
         <hr style="border:none;border-top:1px solid #dce8eb;margin:20px 0" />
         <p style="font-size:13px;color:#667985">
           Innovex Resource Group Limited<br />
           ${account?.address || "info@innovexresourcegroup.co.uk"}
         </p>
+        ${crmComplianceFooterHtml(source)}
       </div>
     `
-  });
+  };
+  const archive = await deliverMail(transporter, account, mailOptions);
 
-  return { sent: true };
+  return { sent: true, ...archive };
 }
 
 export async function sendComposedEmail({ fromEmail, to = [], cc = [], bcc = [], subject, message, replyTo }) {
@@ -324,29 +351,30 @@ export async function sendComposedEmail({ fromEmail, to = [], cc = [], bcc = [],
   }
 
   const transporter = makeTransporter(account);
-  const safeMessage = String(message || "").replace(/\n/g, "<br />");
-
-  await transporter.sendMail({
+  const source = "Innovex Email Centre";
+  const mailOptions = {
     from: formatSender(account),
     to,
     cc,
     bcc,
     replyTo: replyTo || account.address,
     subject,
-    text: message,
+    text: `${message}\n\nKind regards,\nInnovex Resource Group Limited\n${account.address}\n\n${crmComplianceFooterText(source)}`,
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.55;color:#10242c">
-        <p>${safeMessage}</p>
+        <p>${messageHtml(message)}</p>
         <hr style="border:none;border-top:1px solid #dce8eb;margin:20px 0" />
         <p style="font-size:13px;color:#667985">
           Innovex Resource Group Limited<br />
           ${account.address}
         </p>
+        ${crmComplianceFooterHtml(source)}
       </div>
     `
-  });
+  };
+  const archive = await deliverMail(transporter, account, mailOptions);
 
-  return { sent: true };
+  return { sent: true, ...archive };
 }
 
 export async function sendInvoiceEmail({ invoice, pdfBuffer, fromEmail, customMessage = "", cc = [] }) {
@@ -396,11 +424,8 @@ export async function sendClientTermsEmail({ terms, pdfBuffer, fromEmail, custom
 
   const transporter = makeTransporter(account);
   const subject = `Terms of Business | ${terms.clientName} | Innovex Resource Group Limited`;
-  const message = customMessage || `Please find attached the Terms of Business prepared for ${terms.clientName}. These include the agreed commercial schedule, role rates, payment terms and rebate details for Innovex Resource Group Limited services.`;
-  const dueSummary = `${terms.paymentDueDays || 0} days from invoice date`;
-  const roleSummary = (terms.roleRates || [])
-    .map((rate) => `${rate.roleTitle}: ${rate.feeType} ${rate.rateValue || 0}${rate.feeType === "Percentage" ? "%" : ""}`)
-    .join("\n");
+  const message = customMessage || `Please find attached the Terms of Business prepared for ${terms.clientName}. The PDF includes your Innovex Resource Group Limited terms and the agreed client-specific commercial schedule for review.`;
+  const source = "Innovex Client Terms Centre";
 
   const mailOptions = {
     from: formatSender(account),
@@ -408,8 +433,8 @@ export async function sendClientTermsEmail({ terms, pdfBuffer, fromEmail, custom
     cc,
     replyTo: account.address,
     subject,
-    text: `${message}\n\nClient: ${terms.clientName}\nDocument: ${terms.documentNumber}\nPayment terms: ${dueSummary}\nRebate period: ${terms.rebatePeriodDays || 0} days\n\n${roleSummary ? `Role rates:\n${roleSummary}\n\n` : ""}Kind regards,\nInnovex Resource Group Limited\n\nThis is a system-generated email from the Innovex Client Terms Centre.`,
-    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Terms of Business</div></div><div style="padding:26px 28px"><p style="margin-top:0">Hello,</p><p style="line-height:1.65">${escapeHtml(message).replace(/\n/g, "<br />")}</p><table role="presentation" style="width:100%;margin:22px 0;border-collapse:separate;border-spacing:0;background:#eef7f7;border-radius:10px"><tr><td style="padding:16px 18px;color:#60777e;font-size:12px">DOCUMENT<br><strong style="display:block;color:#173840;font-size:15px;margin-top:6px">${escapeHtml(terms.documentNumber)}</strong></td><td style="padding:16px 18px;color:#60777e;font-size:12px">PAYMENT TERMS<br><strong style="display:block;color:#173840;font-size:15px;margin-top:6px">${escapeHtml(dueSummary)}</strong></td><td style="padding:16px 18px;color:#60777e;font-size:12px">REBATE PERIOD<br><strong style="display:block;color:#173840;font-size:15px;margin-top:6px">${Number(terms.rebatePeriodDays || 0)} days</strong></td></tr></table><p style="line-height:1.6">The PDF document is attached. Please review the terms and reply to this email if you would like any amendment before signing.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; info@innovexresourcegroup.co.uk</span></p><div style="margin-top:26px;padding-top:14px;border-top:1px solid #d8e5e7;color:#6b7f85;font-size:11px;line-height:1.5">This is a system-generated email from the Innovex Client Terms Centre. If the attachment does not open, please reply and our team will resend it.</div></div></div></div>`,
+    text: `${message}\n\nClient: ${terms.clientName}\nDocument: ${terms.documentNumber}\n\nThe PDF document is attached. Please review the terms and reply to this email if you would like any amendment before signing.\n\nKind regards,\nInnovex Resource Group Limited\n\n${crmComplianceFooterText(source, true)}`,
+    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Terms of Business</div></div><div style="padding:26px 28px"><p style="margin-top:0">Hello,</p><p style="line-height:1.65">${messageHtml(message)}</p><div style="margin:22px 0;padding:16px 18px;background:#eef7f7;border-left:4px solid #f4b942;border-radius:10px"><div style="color:#60777e;font-size:12px;letter-spacing:.08em">DOCUMENT</div><strong style="display:block;color:#173840;font-size:17px;margin-top:5px">${escapeHtml(terms.documentNumber)}</strong><span style="display:block;color:#60777e;margin-top:6px">${escapeHtml(terms.clientName)}</span></div><p style="line-height:1.6">The PDF document is attached. Please review the terms and reply to this email if you would like any amendment before signing.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; info@innovexresourcegroup.co.uk</span></p>${crmComplianceFooterHtml(source, true)}</div></div></div>`,
     attachments: [{ filename: `Innovex-Terms-${terms.documentNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
   };
 

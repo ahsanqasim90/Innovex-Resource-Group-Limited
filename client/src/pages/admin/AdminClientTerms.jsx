@@ -397,8 +397,8 @@ export default function AdminClientTerms() {
               <span className={`terms-status ${statusClass(selected.status)}`}>{selected.status}</span>
               <dl className="terms-preview-list">
                 <div><dt>Email</dt><dd>{selected.clientEmail}</dd></div>
-                <div><dt>Due in</dt><dd>{selected.paymentDueDays} days</dd></div>
-                <div><dt>Rebate</dt><dd>{selected.rebatePeriodDays} days</dd></div>
+                <div><dt>Status</dt><dd>{selected.status}</dd></div>
+                <div><dt>Rates</dt><dd>{selectedRates.length} role rate{selectedRates.length === 1 ? "" : "s"}</dd></div>
                 <div><dt>Effective</dt><dd>{formatDate(selected.effectiveDate)}</dd></div>
               </dl>
               <div className="terms-rate-preview">
@@ -441,7 +441,7 @@ export default function AdminClientTerms() {
         </div>
         <div className="table-wrap terms-table-wrap">
           <table>
-            <thead><tr><th>Document</th><th>Client</th><th>Type</th><th>Status</th><th>Payment</th><th>Updated</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Document</th><th>Client</th><th>Type</th><th>Status</th><th>Schedule</th><th>Updated</th><th>Actions</th></tr></thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item._id}>
@@ -449,7 +449,7 @@ export default function AdminClientTerms() {
                   <td><strong>{item.clientName}</strong><br /><span>{item.clientEmail}</span></td>
                   <td>{item.agreementType}</td>
                   <td><span className={`terms-status ${statusClass(item.status)}`}>{item.status}</span></td>
-                  <td>{item.paymentDueDays} days<br /><span>Rebate {item.rebatePeriodDays} days</span></td>
+                  <td><strong>{item.roleRates?.length || 0} rate{item.roleRates?.length === 1 ? "" : "s"}</strong><br /><span>{item.roleRates?.[0]?.roleTitle || "Commercial schedule"}</span></td>
                   <td>{formatDate(item.updatedAt)}</td>
                   <td>
                     <div className="table-actions">

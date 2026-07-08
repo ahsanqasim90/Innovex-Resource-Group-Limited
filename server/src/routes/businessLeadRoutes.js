@@ -1,5 +1,6 @@
 import express from "express";
 import BusinessLead from "../models/BusinessLead.js";
+import EmailLog from "../models/EmailLog.js";
 import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { uploadBusinessLeadCsv } from "../middleware/upload.js";
@@ -601,8 +602,25 @@ router.post("/outreach", async (req, res, next) => {
       const subject = applyTemplate(req.body.subject, lead);
       const message = applyTemplate(req.body.message, lead);
       const result = await sendBusinessLeadOutreachEmail({ lead, subject, message, fromEmail });
+      const sentTo = lead.emails.map((item) => item.email).filter(Boolean);
+      await EmailLog.create({
+        fromEmail: result.fromEmail || fromEmail,
+        fromName: "Innovex Resource Group Limited",
+        to: sentTo,
+        subject,
+        message,
+        targetType: "BusinessLead",
+        targetId: lead._id,
+        status: result.sent ? "Sent" : "Failed",
+        error: result.sent ? "" : result.reason || "Business lead outreach email was not sent",
+        sentBy: {
+          user: req.user?._id,
+          name: req.user?.name || "Innovex Admin",
+          email: req.user?.email || "",
+          role: req.user?.role || ""
+        }
+      });
       if (result.sent) {
-        const sentTo = lead.emails.map((item) => item.email).filter(Boolean);
         lead.status = "Contacted";
         lead.lastContactedAt = new Date();
         lead.outreachHistory.push({ service: req.body.service || "", subject, message, sentTo });

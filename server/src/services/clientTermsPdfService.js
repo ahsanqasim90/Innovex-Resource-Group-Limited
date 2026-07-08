@@ -52,6 +52,12 @@ function cleanTemplateText(text) {
     .replaceAll("â€˜", "'")
     .replaceAll("â€¢", "-")
     .replaceAll("Â£", String.fromCharCode(163))
+    .replaceAll("â€œ", '"')
+    .replaceAll("â€", '"')
+    .replaceAll("â€™", "'")
+    .replaceAll("â€˜", "'")
+    .replaceAll("â€¢", "-")
+    .replaceAll("Â£", String.fromCharCode(163))
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+\n/g, "\n")
     .trim();
