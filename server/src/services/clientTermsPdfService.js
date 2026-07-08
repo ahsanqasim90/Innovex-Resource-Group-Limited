@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
-import { PDFDocument as PDFLibDocument } from "pdf-lib";
 
 const COLORS = {
   ink: "#063f4a",
@@ -10,7 +9,8 @@ const COLORS = {
   mist: "#eef7f7",
   line: "#cfe4e8",
   muted: "#5f747c",
-  softGold: "#fff5d8"
+  softGold: "#fff5d8",
+  pale: "#f8fcfc"
 };
 
 const PAGE_WIDTH = 595.28;
@@ -18,17 +18,25 @@ const PAGE_HEIGHT = 841.89;
 const LEFT = 42;
 const RIGHT = 42;
 const CONTENT_WIDTH = PAGE_WIDTH - LEFT - RIGHT;
+const BOTTOM = 70;
 
 function termsTemplatePath() {
   const candidates = [
-    path.resolve(process.cwd(), "server/assets/irg-terms-template.pdf"),
-    path.resolve(process.cwd(), "assets/irg-terms-template.pdf")
+    path.resolve(process.cwd(), "server/assets/irg-terms-template.txt"),
+    path.resolve(process.cwd(), "assets/irg-terms-template.txt")
   ];
   return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
 }
 
-function money(value) {
-  return `${String.fromCharCode(163)}${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function logoPath() {
+  return path.resolve(process.cwd(), "../client/public/Logo.png");
+}
+
+function money(value, decimals = 0) {
+  return `${String.fromCharCode(163)}${Number(value || 0).toLocaleString("en-GB", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  })}`;
 }
 
 function formatDate(value) {
@@ -36,8 +44,34 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
 }
 
-function logoPath() {
-  return path.resolve(process.cwd(), "../client/public/Logo.png");
+function cleanTemplateText(text) {
+  return text
+    .replaceAll("â€œ", '"')
+    .replaceAll("â€", '"')
+    .replaceAll("â€™", "'")
+    .replaceAll("â€˜", "'")
+    .replaceAll("â€¢", "-")
+    .replaceAll("Â£", String.fromCharCode(163))
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .trim();
+}
+
+function withClientSpecificTerms(text, terms) {
+  const paymentDays = Number(terms.paymentDueDays || 7);
+  const rebateDays = Number(terms.rebatePeriodDays || 15);
+  return text
+    .replace(/within\s+7\s+days\s+of\s+the\s+date\s+of\s+invoice/gi, `within ${paymentDays} days of the date of invoice`)
+    .replace(/within\s+7\s+days\s+of\s+invoice/gi, `within ${paymentDays} days of invoice`)
+    .replace(/within\s+15\s+days\s+of\s+its\s+termination/gi, `within ${rebateDays} days of its termination`);
+}
+
+function loadTermsTemplate(terms) {
+  const file = termsTemplatePath();
+  if (!fs.existsSync(file)) {
+    throw new Error("IRG terms template text file is missing.");
+  }
+  return withClientSpecificTerms(cleanTemplateText(fs.readFileSync(file, "utf8")), terms);
 }
 
 function drawLogo(doc, x, y, size = 42) {
@@ -50,7 +84,7 @@ function drawLogo(doc, x, y, size = 42) {
   }
 }
 
-function addFooter(doc, pageNumber = 1) {
+function addFooter(doc, pageNumber) {
   doc
     .font("Helvetica")
     .fontSize(8)
@@ -64,11 +98,11 @@ function addFooter(doc, pageNumber = 1) {
 function addPage(doc) {
   doc.addPage({ margin: 0, size: "A4" });
   addFooter(doc, doc.bufferedPageRange().count);
-  return 56;
+  return 54;
 }
 
 function ensureSpace(doc, y, height) {
-  return y + height > PAGE_HEIGHT - 64 ? addPage(doc) : y;
+  return y + height > PAGE_HEIGHT - BOTTOM ? addPage(doc) : y;
 }
 
 function labelValue(doc, x, y, label, value, width) {
@@ -76,90 +110,203 @@ function labelValue(doc, x, y, label, value, width) {
   doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10).text(value || "-", x, y + 13, { width });
 }
 
-function sectionTitle(doc, y, eyebrow, title) {
-  y = ensureSpace(doc, y, 44);
+function drawCover(doc, terms) {
+  doc.rect(0, 0, PAGE_WIDTH, 176).fill(COLORS.teal);
+  doc.rect(0, 170, PAGE_WIDTH, 6).fill(COLORS.gold);
+  drawLogo(doc, LEFT, 34, 50);
   doc
-    .fillColor("#00718a")
+    .fillColor("#d8f0f2")
     .font("Helvetica-Bold")
     .fontSize(8)
-    .text(eyebrow.toUpperCase(), LEFT, y, { characterSpacing: 1.4 });
-  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(16).text(title, LEFT, y + 14);
-  return y + 42;
-}
-
-function drawCommercialRow(doc, y, items) {
-  const width = CONTENT_WIDTH / items.length;
-  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 58, 10).fill(COLORS.mist).stroke(COLORS.line);
-  items.forEach((item, index) => {
-    const x = LEFT + width * index + 14;
-    if (index > 0) doc.moveTo(LEFT + width * index, y).lineTo(LEFT + width * index, y + 58).strokeColor(COLORS.line).stroke();
-    labelValue(doc, x, y + 13, item.label, item.value, width - 24);
-  });
-  return y + 76;
-}
-
-function drawRoleRates(doc, y, roleRates = []) {
-  y = sectionTitle(doc, y, "Commercial schedule", "Role rates and payment triggers");
-  if (!roleRates.length) {
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(10).text("No role-specific rates added. Fees will be agreed in writing before service delivery.", LEFT, y);
-    return y + 28;
-  }
-
-  const columns = [150, 90, 80, 130, 61];
-  y = ensureSpace(doc, y, 40);
-  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 30, 8).fill(COLORS.teal);
-  ["Role", "Fee type", "Rate", "Payment trigger", "Notes"].forEach((heading, index) => {
-    const x = LEFT + columns.slice(0, index).reduce((sum, value) => sum + value, 0) + 10;
-    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(8).text(heading.toUpperCase(), x, y + 10, { width: columns[index] - 12 });
-  });
-  y += 30;
-
-  roleRates.forEach((rate, index) => {
-    const rowHeight = Math.max(
-      48,
-      doc.heightOfString(rate.roleTitle || "-", { width: columns[0] - 14 }) + 24,
-      doc.heightOfString(rate.paymentTrigger || "-", { width: columns[3] - 14 }) + 24,
-      doc.heightOfString(rate.notes || "-", { width: columns[4] - 14 }) + 24
-    );
-    y = ensureSpace(doc, y, rowHeight + 4);
-    doc.rect(LEFT, y, CONTENT_WIDTH, rowHeight).fill(index % 2 === 0 ? "#ffffff" : "#f7fbfb").stroke(COLORS.line);
-    const values = [
-      rate.roleTitle,
-      rate.feeType,
-      rate.feeType === "Flat Fee" ? money(rate.rateValue) : `${rate.rateValue || 0}${rate.rateUnit ? ` ${rate.rateUnit}` : ""}`,
-      rate.paymentTrigger,
-      rate.notes || "-"
-    ];
-    values.forEach((value, columnIndex) => {
-      const x = LEFT + columns.slice(0, columnIndex).reduce((sum, column) => sum + column, 0) + 10;
-      doc.fillColor(COLORS.ink).font(columnIndex === 0 ? "Helvetica-Bold" : "Helvetica").fontSize(8.5).text(String(value || "-"), x, y + 12, {
-        width: columns[columnIndex] - 14
-      });
+    .text("INNOVEX RESOURCE GROUP LIMITED", LEFT + 66, 42, { characterSpacing: 1.6 });
+  doc
+    .fillColor("#ffffff")
+    .font("Helvetica-Bold")
+    .fontSize(24)
+    .text("Terms of Business", LEFT + 66, 58, { width: 300 })
+    .fontSize(10)
+    .fillColor("#d8f0f2")
+    .text("Introduction of candidates to clients for direct employment or engagement.", LEFT + 66, 92, {
+      width: 340,
+      lineGap: 2
     });
-    y += rowHeight;
-  });
-  return y + 22;
-}
 
-function drawTemplateNotice(doc, y) {
-  y = sectionTitle(doc, y, "Protected terms", "Original IRG terms attached");
-  y = ensureSpace(doc, y, 88);
-  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 72, 12).fill(COLORS.mist).stroke(COLORS.line);
-  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11).text("Important", LEFT + 16, y + 15);
+  doc.roundedRect(392, 35, 160, 88, 12).fill("#ffffff").stroke(COLORS.line);
+  labelValue(doc, 410, 50, "Document", terms.documentNumber, 126);
+  labelValue(doc, 410, 80, "Status", terms.status, 126);
+
+  let y = 210;
+  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 116, 14).fill("#ffffff").stroke(COLORS.line);
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(15).text("Client details", LEFT + 16, y + 17);
+  labelValue(doc, LEFT + 16, y + 48, "Client / company", terms.clientName, 220);
+  labelValue(doc, LEFT + 280, y + 48, "Contact", terms.contactName || "-", 200);
+  labelValue(doc, LEFT + 16, y + 78, "Email", terms.clientEmail, 220);
+  labelValue(doc, LEFT + 280, y + 78, "Effective date", formatDate(terms.effectiveDate), 200);
+
+  y += 144;
+  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 86, 14).fill(COLORS.mist).stroke(COLORS.line);
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12).text("Client-specific commercial settings", LEFT + 16, y + 16);
   doc
     .fillColor(COLORS.muted)
     .font("Helvetica")
     .fontSize(9.5)
     .text(
-      "This commercial schedule is attached to the fixed Innovex Resource Group Limited Terms of Business. The original IRG terms are not rewritten by the CRM. Only client details, role rates, invoice payment days and rebate details are adjusted before sending.",
+      `Invoice due within ${terms.paymentDueDays || 7} days. Rebate/replacement support period: ${terms.rebatePeriodDays || 15} days. Role rates entered in the CRM are inserted into clause 3.4 of these Terms of Business.`,
       LEFT + 16,
-      y + 34,
+      y + 38,
       { width: CONTENT_WIDTH - 32, lineGap: 2 }
     );
-  return y + 94;
+
+  addFooter(doc, 1);
 }
 
-function createCommercialSchedulePdf(terms) {
+function splitTemplateAroundFeeTable(templateText) {
+  const match = templateText.match(/Salary Range\s+Percentage[\s\S]*?(?=\n\s*3\.5\.)/i);
+  if (!match || match.index === undefined) {
+    return { before: templateText, after: "", hasTable: false };
+  }
+  return {
+    before: templateText.slice(0, match.index).trimEnd(),
+    after: templateText.slice(match.index + match[0].length).trimStart(),
+    hasTable: true
+  };
+}
+
+function getRateDisplay(rate) {
+  const value = Number(rate.rateValue || 0);
+  if (rate.feeType === "Flat Fee") return `${money(value)} per placement`;
+  if (rate.feeType === "Percentage") return `${value}%`;
+  if (rate.feeType === "Hourly Margin") return `${money(value, 2)} ${rate.rateUnit || "margin"}`;
+  return `${value}${rate.rateUnit ? ` ${rate.rateUnit}` : ""}`;
+}
+
+function getRoleRateRows(terms) {
+  const rows = (terms.roleRates || [])
+    .filter((rate) => rate.roleTitle && Number(rate.rateValue || 0) > 0)
+    .map((rate) => ({
+      role: rate.roleTitle,
+      fee: getRateDisplay(rate)
+    }));
+
+  if (rows.length) return rows;
+  return [{ role: "All roles", fee: "Fee to be agreed in writing before introduction or engagement." }];
+}
+
+function drawFeeStructureTable(doc, y, terms) {
+  const rows = getRoleRateRows(terms);
+  const colA = 250;
+  const colB = CONTENT_WIDTH - colA;
+  const rowHeights = rows.map((row) =>
+    Math.max(
+      32,
+      doc.heightOfString(row.role, { width: colA - 24 }) + 18,
+      doc.heightOfString(row.fee, { width: colB - 24 }) + 18
+    )
+  );
+  const totalHeight = 34 + rowHeights.reduce((sum, height) => sum + height, 0);
+
+  y = ensureSpace(doc, y, totalHeight + 18);
+  doc.roundedRect(LEFT, y, CONTENT_WIDTH, totalHeight, 6).fill("#ffffff").stroke("#101010");
+  doc.rect(LEFT, y, colA, 34).fill(COLORS.pale).stroke("#101010");
+  doc.rect(LEFT + colA, y, colB, 34).fill(COLORS.pale).stroke("#101010");
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10).text("Salary Range", LEFT + 12, y + 11, { width: colA - 24 });
+  doc.text("Percentage", LEFT + colA + 12, y + 11, { width: colB - 24 });
+  y += 34;
+
+  rows.forEach((row, index) => {
+    const height = rowHeights[index];
+    y = ensureSpace(doc, y, height + 6);
+    doc.rect(LEFT, y, colA, height).fill(index % 2 === 0 ? "#ffffff" : "#fbfbfb").stroke("#101010");
+    doc.rect(LEFT + colA, y, colB, height).fill(index % 2 === 0 ? "#ffffff" : "#fbfbfb").stroke("#101010");
+    doc.fillColor("#111111").font("Helvetica").fontSize(10).text(row.role, LEFT + 12, y + 10, { width: colA - 24 });
+    doc.text(row.fee, LEFT + colA + 12, y + 10, { width: colB - 24 });
+    y += height;
+  });
+
+  doc
+    .fillColor(COLORS.muted)
+    .font("Helvetica")
+    .fontSize(8.5)
+    .text("This fee structure is generated from the role rates saved in the Innovex CRM for this client.", LEFT, y + 8, {
+      width: CONTENT_WIDTH
+    });
+  return y + 28;
+}
+
+function isMajorHeading(paragraph) {
+  return /^\d+\.\s+[A-Z][A-Z\s&]+$/.test(paragraph) || paragraph === "TERMS OF BUSINESS";
+}
+
+function isDocumentIntro(paragraph) {
+  return (
+    paragraph === "INNOVEX RESOURCE GROUP LIMITED" ||
+    paragraph === "TERMS OF BUSINESS" ||
+    paragraph === "INTRODUCTION OF CANDIDATES TO CLIENTS FOR DIRECT EMPLOYMENT/ENGAGEMENT"
+  );
+}
+
+function drawParagraph(doc, paragraph, y) {
+  const normalized = paragraph.replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!normalized) return y;
+  if (isDocumentIntro(normalized)) return y;
+
+  const bullet = normalized.startsWith("-");
+  const heading = isMajorHeading(normalized);
+  const numbered = /^\d+(\.\d+)?\./.test(normalized);
+  const width = bullet ? CONTENT_WIDTH - 18 : CONTENT_WIDTH;
+  const x = bullet ? LEFT + 18 : LEFT;
+  const fontSize = heading ? 13 : 9.6;
+  const font = heading || numbered ? "Helvetica-Bold" : "Helvetica";
+  const lineGap = heading ? 1 : 2.5;
+  const textHeight = doc.heightOfString(normalized, { width, lineGap });
+
+  y = ensureSpace(doc, y, textHeight + (heading ? 18 : 12));
+  if (heading) {
+    doc.fillColor(COLORS.ink).font(font).fontSize(fontSize).text(normalized, x, y, { width, lineGap });
+    return y + textHeight + 11;
+  }
+
+  if (bullet) {
+    doc.circle(LEFT + 5, y + 5, 2).fill(COLORS.teal);
+  }
+  doc.fillColor("#111111").font(font).fontSize(fontSize).text(normalized, x, y, { width, lineGap, align: "left" });
+  return y + textHeight + 8;
+}
+
+function drawTermsText(doc, text, y) {
+  const paragraphs = text
+    .split(/\n\s*\n/g)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  paragraphs.forEach((paragraph) => {
+    y = drawParagraph(doc, paragraph, y);
+  });
+  return y;
+}
+
+function drawSignatureSection(doc, y, terms) {
+  y = ensureSpace(doc, y, 152);
+  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 128, 12).fill(COLORS.mist).stroke(COLORS.line);
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12).text("Client acceptance", LEFT + 16, y + 16);
+  doc
+    .fillColor(COLORS.muted)
+    .font("Helvetica")
+    .fontSize(9)
+    .text(
+      "By signing below, the Client confirms acceptance of these Terms of Business and the client-specific fee structure shown in clause 3.4.",
+      LEFT + 16,
+      y + 36,
+      { width: CONTENT_WIDTH - 32 }
+    );
+  doc.moveTo(LEFT + 16, y + 84).lineTo(LEFT + 236, y + 84).strokeColor(COLORS.line).stroke();
+  doc.moveTo(LEFT + 276, y + 84).lineTo(LEFT + 496, y + 84).strokeColor(COLORS.line).stroke();
+  labelValue(doc, LEFT + 16, y + 93, "Client", terms.clientName, 220);
+  labelValue(doc, LEFT + 276, y + 93, "Signature / date", "", 220);
+  return y + 148;
+}
+
+export async function generateClientTermsPdf(terms) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 0, size: "A4", bufferPages: true });
     const chunks = [];
@@ -167,104 +314,19 @@ function createCommercialSchedulePdf(terms) {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.rect(0, 0, PAGE_WIDTH, 142).fill(COLORS.teal);
-    doc.rect(0, 136, PAGE_WIDTH, 6).fill(COLORS.gold);
-    drawLogo(doc, LEFT, 34, 48);
-    doc
-      .fillColor("#cdeff1")
-      .font("Helvetica-Bold")
-      .fontSize(8)
-      .text("INNOVEX RESOURCE GROUP LIMITED", LEFT + 62, 42, { characterSpacing: 1.6 });
-    doc
-      .fillColor("#ffffff")
-      .font("Helvetica-Bold")
-      .fontSize(25)
-      .text("Commercial Schedule", LEFT + 62, 56, { width: 300 })
-      .fontSize(10)
-      .fillColor("#d8f0f2")
-      .text("Client-specific rates, payment timing and rebate details attached to the fixed IRG terms.", LEFT + 62, 92, { width: 330 });
+    try {
+      const templateText = loadTermsTemplate(terms);
+      const { before, after } = splitTemplateAroundFeeTable(templateText);
 
-    doc.roundedRect(392, 35, 160, 76, 12).fill("#ffffff").stroke(COLORS.line);
-    labelValue(doc, 410, 50, "Document", terms.documentNumber, 126);
-    labelValue(doc, 410, 78, "Status", terms.status, 126);
-
-    addFooter(doc, 1);
-    let y = 174;
-
-    y = sectionTitle(doc, y, "Client agreement", "Parties and commercial summary");
-    doc.roundedRect(LEFT, y, CONTENT_WIDTH, 98, 12).fill("#ffffff").stroke(COLORS.line);
-    drawLogo(doc, LEFT + 16, y + 19, 42);
-    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12).text("Innovex Resource Group Limited", LEFT + 70, y + 22);
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9).text("33 Forsythia Drive, Cardiff, United Kingdom, CF23 7HP", LEFT + 70, y + 42, { width: 190 });
-    doc.moveTo(LEFT + 255, y + 16).lineTo(LEFT + 255, y + 82).strokeColor(COLORS.line).stroke();
-    labelValue(doc, LEFT + 278, y + 18, "Client", terms.clientName, 200);
-    labelValue(doc, LEFT + 278, y + 48, "Contact", terms.contactName || terms.clientEmail, 200);
-    labelValue(doc, LEFT + 278, y + 72, "Email", terms.clientEmail, 200);
-    y += 122;
-
-    y = drawCommercialRow(doc, y, [
-      { label: "Agreement type", value: terms.agreementType },
-      { label: "Effective date", value: formatDate(terms.effectiveDate) },
-      { label: "Payment due", value: `${terms.paymentDueDays || 0} days` },
-      { label: "Rebate period", value: `${terms.rebatePeriodDays || 0} days` }
-    ]);
-
-    y = drawRoleRates(doc, y, terms.roleRates || []);
-
-    y = sectionTitle(doc, y, "Payment cycle", "Invoice and rebate details");
-    y = ensureSpace(doc, y, 110);
-    doc.roundedRect(LEFT, y, CONTENT_WIDTH, 94, 12).fill(COLORS.softGold).stroke("#f0d58a");
-    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10).text("Invoice cycle", LEFT + 16, y + 16);
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9.5).text(terms.invoiceCycle || "-", LEFT + 16, y + 34, { width: 225 });
-    doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10).text("Rebate terms", LEFT + 278, y + 16);
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9.5).text(terms.rebateTerms || "-", LEFT + 278, y + 34, { width: 215 });
-    y += 116;
-
-    if (terms.specialTerms) {
-      y = sectionTitle(doc, y, "Special conditions", "Client-specific notes");
-      const height = Math.max(70, doc.heightOfString(terms.specialTerms, { width: CONTENT_WIDTH - 28 }) + 40);
-      y = ensureSpace(doc, y, height);
-      doc.roundedRect(LEFT, y, CONTENT_WIDTH, height, 10).fill("#ffffff").stroke(COLORS.line);
-      doc.fillColor(COLORS.muted).font("Helvetica").fontSize(9.5).text(terms.specialTerms, LEFT + 14, y + 16, { width: CONTENT_WIDTH - 28, lineGap: 2 });
-      y += height + 22;
+      drawCover(doc, terms);
+      let y = addPage(doc);
+      y = drawTermsText(doc, before, y);
+      y = drawFeeStructureTable(doc, y, terms);
+      y = drawTermsText(doc, after, y);
+      drawSignatureSection(doc, y, terms);
+      doc.end();
+    } catch (error) {
+      reject(error);
     }
-
-    y = drawTemplateNotice(doc, y);
-
-    y = ensureSpace(doc, y, 140);
-    y = sectionTitle(doc, y, "Acceptance", "Schedule acknowledgement");
-    doc.roundedRect(LEFT, y, 240, 94, 12).fill("#ffffff").stroke(COLORS.line);
-    doc.roundedRect(LEFT + 270, y, 240, 94, 12).fill("#ffffff").stroke(COLORS.line);
-    labelValue(doc, LEFT + 16, y + 18, "For Innovex Resource Group Limited", "Authorised representative", 200);
-    labelValue(doc, LEFT + 286, y + 18, "For client", terms.clientName, 200);
-    doc.moveTo(LEFT + 16, y + 66).lineTo(LEFT + 216, y + 66).strokeColor(COLORS.line).stroke();
-    doc.moveTo(LEFT + 286, y + 66).lineTo(LEFT + 486, y + 66).strokeColor(COLORS.line).stroke();
-    doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8).text("Signature / date", LEFT + 16, y + 72);
-    doc.text("Signature / date", LEFT + 286, y + 72);
-
-    doc.end();
   });
-}
-
-async function mergeWithOriginalTermsTemplate(scheduleBuffer) {
-  const templatePath = termsTemplatePath();
-  if (!fs.existsSync(templatePath)) {
-    return scheduleBuffer;
-  }
-
-  const outputDoc = await PDFLibDocument.create();
-  const scheduleDoc = await PDFLibDocument.load(scheduleBuffer);
-  const schedulePages = await outputDoc.copyPages(scheduleDoc, scheduleDoc.getPageIndices());
-  schedulePages.forEach((page) => outputDoc.addPage(page));
-
-  const templateDoc = await PDFLibDocument.load(fs.readFileSync(templatePath));
-  const templatePages = await outputDoc.copyPages(templateDoc, templateDoc.getPageIndices());
-  templatePages.forEach((page) => outputDoc.addPage(page));
-
-  return Buffer.from(await outputDoc.save());
-}
-
-export async function generateClientTermsPdf(terms) {
-  const scheduleBuffer = await createCommercialSchedulePdf(terms);
-  return mergeWithOriginalTermsTemplate(scheduleBuffer);
 }
