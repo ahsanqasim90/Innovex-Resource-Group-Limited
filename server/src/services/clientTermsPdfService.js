@@ -44,6 +44,46 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
 }
 
+function normalizeLegalTextForPdf(text) {
+  const pound = String.fromCharCode(163);
+  let cleaned = String(text || "");
+
+  const replacements = new Map([
+    ["â€œ", '"'],
+    ["â€", '"'],
+    ["â€™", "'"],
+    ["â€˜", "'"],
+    ["â€¢", "-"],
+    ["â€“", "-"],
+    ["â€”", "-"],
+    ["Â£", pound],
+    ["Â", ""]
+  ]);
+
+  replacements.forEach((to, from) => {
+    cleaned = cleaned.split(from).join(to);
+  });
+
+  return cleaned
+    .replace(/\r\n/g, "\n")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\u2022/g, "-")
+    .replace(/\u00a0/g, " ")
+    .replace(/\t+/g, " ")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "")
+    .replace(/\uFFFD/g, "")
+    .replace(/£(\d[\d,]*(?:\.\d+)?)/g, "$1 pounds")
+    .replace(/\s+([,.;:])/g, "$1")
+    .replace(/\batthe\b/gi, "at the")
+    .replace(/Engagement\]/g, "Engagement")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function cleanTemplateText(text) {
   return text
     .replaceAll("â€œ", '"')
@@ -105,7 +145,7 @@ function loadTermsTemplate(terms) {
   if (!fs.existsSync(file)) {
     throw new Error("IRG terms template text file is missing.");
   }
-  return withClientSpecificTerms(polishLegalTemplateText(cleanTemplateText(fs.readFileSync(file, "utf8"))), terms);
+  return normalizeLegalTextForPdf(withClientSpecificTerms(polishLegalTemplateText(cleanTemplateText(fs.readFileSync(file, "utf8"))), terms));
 }
 
 function drawLogo(doc, x, y, size = 42) {
@@ -208,7 +248,7 @@ function splitTemplateAroundFeeTable(templateText) {
 
 function getRateDisplay(rate) {
   const value = Number(rate.rateValue || 0);
-  if (rate.feeType === "Flat Fee") return `${money(value)} per placement`;
+  if (rate.feeType === "Flat Fee") return `${value.toLocaleString("en-GB")} pounds per placement`;
   if (rate.feeType === "Percentage") return `${value}%`;
   if (rate.feeType === "Hourly Margin") return `${money(value, 2)} ${rate.rateUnit || "margin"}`;
   return `${value}${rate.rateUnit ? ` ${rate.rateUnit}` : ""}`;
@@ -285,11 +325,10 @@ function drawParagraph(doc, paragraph, y) {
 
   const bullet = normalized.startsWith("-");
   const heading = isMajorHeading(normalized);
-  const numbered = /^\d+(\.\d+)?\./.test(normalized);
   const width = bullet ? CONTENT_WIDTH - 18 : CONTENT_WIDTH;
   const x = bullet ? LEFT + 18 : LEFT;
   const fontSize = heading ? 13 : 9.6;
-  const font = heading || numbered ? "Helvetica-Bold" : "Helvetica";
+  const font = heading ? "Helvetica-Bold" : "Helvetica";
   const lineGap = heading ? 1 : 2.5;
   const textHeight = doc.heightOfString(normalized, { width, lineGap });
 
@@ -356,7 +395,6 @@ export async function generateClientTermsPdf(terms) {
       y = drawTermsText(doc, before, y);
       y = drawFeeStructureTable(doc, y, terms);
       y = drawTermsText(doc, after, y);
-      drawSignatureSection(doc, y, terms);
       doc.end();
     } catch (error) {
       reject(error);
