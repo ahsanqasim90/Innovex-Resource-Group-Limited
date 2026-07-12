@@ -29,6 +29,13 @@ export const permissionGroups = [
     ]
   },
   {
+    label: "HR documents",
+    permissions: [
+      ["salarySlips.view", "Salary Slips"],
+      ["offerLetters.view", "Offer Letters"]
+    ]
+  },
+  {
     label: "Website content",
     permissions: [
       ["blogs.view", "Blogs"],

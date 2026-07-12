@@ -36,6 +36,8 @@ const AdminMeetings = React.lazy(() => import("./pages/admin/AdminMeetings.jsx")
 const AdminTrainingBookings = React.lazy(() => import("./pages/admin/AdminTrainingBookings.jsx"));
 const AdminClientTerms = React.lazy(() => import("./pages/admin/AdminClientTerms.jsx"));
 const AdminFinance = React.lazy(() => import("./pages/admin/AdminFinance.jsx"));
+const AdminSalarySlips = React.lazy(() => import("./pages/admin/AdminSalarySlips.jsx"));
+const AdminOfferLetters = React.lazy(() => import("./pages/admin/AdminOfferLetters.jsx"));
 const AdminTestimonials = React.lazy(() => import("./pages/admin/AdminTestimonials.jsx"));
 const AdminPartners = React.lazy(() => import("./pages/admin/AdminPartners.jsx"));
 const AdminTeam = React.lazy(() => import("./pages/admin/AdminTeam.jsx"));
@@ -124,6 +126,8 @@ createRoot(document.getElementById("root")).render(
             <Route path="training-bookings" element={<RequirePermission permission="trainingBookings.view"><AdminTrainingBookings /></RequirePermission>} />
             <Route path="client-terms" element={<RequirePermission permission="terms.view"><AdminClientTerms /></RequirePermission>} />
             <Route path="finance" element={<RequireFinance><AdminFinance /></RequireFinance>} />
+            <Route path="salary-slips" element={<RequirePermission permission="salarySlips.view"><AdminSalarySlips /></RequirePermission>} />
+            <Route path="offer-letters" element={<RequirePermission permission="offerLetters.view"><AdminOfferLetters /></RequirePermission>} />
             <Route path="blogs" element={<RequirePermission permission="blogs.view"><AdminBlogs /></RequirePermission>} />
             <Route path="testimonials" element={<RequirePermission permission="testimonials.view"><AdminTestimonials /></RequirePermission>} />
             <Route path="partners" element={<RequirePermission permission="partners.view"><AdminPartners /></RequirePermission>} />

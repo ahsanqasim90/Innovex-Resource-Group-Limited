@@ -441,3 +441,61 @@ export async function sendClientTermsEmail({ terms, pdfBuffer, fromEmail, custom
   const archive = await sendAndArchive(transporter, account, mailOptions);
   return { sent: true, fromEmail: account.address, subject, message, cc, ...archive };
 }
+
+function hrDocumentFooter(source) {
+  return `<div style="margin-top:24px;padding-top:14px;border-top:1px solid #d8e5e7;color:#6b7f85;font-size:11px;line-height:1.55">This is a system-generated email from the ${escapeHtml(source)}. This email and any attachments are confidential and intended solely for the named recipient. If you have received it in error, please notify us and delete it from your system.</div>`;
+}
+
+function hrMoney(value) {
+  return `\u00A3${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function hrDate(value) {
+  return value ? new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }) : "-";
+}
+
+export async function sendSalarySlipEmail({ salarySlip, pdfBuffer, fromEmail, customMessage = "", cc = [] }) {
+  const account = senderAccountOrDefault(fromEmail || salarySlip.senderEmail);
+  if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
+
+  const transporter = makeTransporter(account);
+  const source = "Innovex HR Centre";
+  const subject = `Salary slip ${salarySlip.slipNumber} | Innovex Resource Group Limited`;
+  const message = customMessage || `Please find attached your salary slip for the period ${hrDate(salarySlip.payPeriodStart)} to ${hrDate(salarySlip.payPeriodEnd)}.`;
+  const mailOptions = {
+    from: formatSender(account),
+    to: salarySlip.employeeEmail,
+    cc,
+    replyTo: account.address,
+    subject,
+    text: `${message}\n\nDocument: ${salarySlip.slipNumber}\nNet pay: ${hrMoney(salarySlip.netPay)}\nPayment date: ${hrDate(salarySlip.paymentDate)}\n\nKind regards,\nInnovex Resource Group Limited\n\nThis is a system-generated email from the ${source}. This email and any attachments are confidential and intended solely for the named recipient.`,
+    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Salary Slip</div></div><div style="padding:26px 28px"><p style="margin-top:0">Hello ${escapeHtml(salarySlip.employeeName)},</p><p style="line-height:1.65">${messageHtml(message)}</p><div style="margin:22px 0;padding:16px 18px;background:#eef7f7;border-left:4px solid #f4b942;border-radius:10px"><div style="color:#60777e;font-size:12px;letter-spacing:.08em">NET PAY</div><strong style="display:block;color:#173840;font-size:22px;margin-top:5px">${hrMoney(salarySlip.netPay)}</strong><span style="display:block;color:#60777e;margin-top:6px">Payment date: ${hrDate(salarySlip.paymentDate)}</span></div><p style="line-height:1.6">Your PDF salary slip is attached to this email. Please reply if any details require review.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">${escapeHtml(account.address)}</span></p>${hrDocumentFooter(source)}</div></div></div>`,
+    attachments: [{ filename: `Innovex-Salary-Slip-${salarySlip.slipNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
+  };
+
+  const archive = await sendAndArchive(transporter, account, mailOptions);
+  return { sent: true, fromEmail: account.address, subject, message, cc, ...archive };
+}
+
+export async function sendOfferLetterEmail({ offerLetter, pdfBuffer, fromEmail, customMessage = "", cc = [] }) {
+  const account = senderAccountOrDefault(fromEmail || offerLetter.senderEmail);
+  if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
+
+  const transporter = makeTransporter(account);
+  const source = "Innovex HR Centre";
+  const subject = `Offer letter | ${offerLetter.roleTitle} | Innovex Resource Group Limited`;
+  const message = customMessage || `Please find attached your offer letter for the ${offerLetter.roleTitle} role. Kindly review the document and reply to confirm acceptance or request any clarification.`;
+  const mailOptions = {
+    from: formatSender(account),
+    to: offerLetter.candidateEmail,
+    cc,
+    replyTo: account.address,
+    subject,
+    text: `${message}\n\nOffer reference: ${offerLetter.offerNumber}\nRole: ${offerLetter.roleTitle}\nStart date: ${hrDate(offerLetter.startDate)}\n\nKind regards,\nInnovex Resource Group Limited\n\nThis is a system-generated email from the ${source}. This email and any attachments are confidential and intended solely for the named recipient.`,
+    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Offer Letter</div></div><div style="padding:26px 28px"><p style="margin-top:0">Hello ${escapeHtml(offerLetter.candidateName)},</p><p style="line-height:1.65">${messageHtml(message)}</p><div style="margin:22px 0;padding:16px 18px;background:#eef7f7;border-left:4px solid #f4b942;border-radius:10px"><div style="color:#60777e;font-size:12px;letter-spacing:.08em">ROLE OFFERED</div><strong style="display:block;color:#173840;font-size:20px;margin-top:5px">${escapeHtml(offerLetter.roleTitle)}</strong><span style="display:block;color:#60777e;margin-top:6px">Start date: ${hrDate(offerLetter.startDate)}</span></div><p style="line-height:1.6">The PDF offer letter is attached. Please reply to this email with your acceptance or any questions.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">${escapeHtml(account.address)}</span></p>${hrDocumentFooter(source)}</div></div></div>`,
+    attachments: [{ filename: `Innovex-Offer-Letter-${offerLetter.offerNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
+  };
+
+  const archive = await sendAndArchive(transporter, account, mailOptions);
+  return { sent: true, fromEmail: account.address, subject, message, cc, ...archive };
+}

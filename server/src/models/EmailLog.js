@@ -21,7 +21,7 @@ const emailLogSchema = new mongoose.Schema(
     message: { type: String, required: true },
     targetType: {
       type: String,
-      enum: ["Candidate", "BusinessLead", "WebLeadProspect", "Invoice", "ClientTerms", "Newsletter", "Manual"],
+      enum: ["Candidate", "BusinessLead", "WebLeadProspect", "Invoice", "ClientTerms", "SalarySlip", "OfferLetter", "Newsletter", "Manual"],
       default: "Manual",
       index: true
     },

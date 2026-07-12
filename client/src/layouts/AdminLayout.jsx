@@ -19,6 +19,8 @@ const links = [
   ["/admin/training-bookings", "Training Bookings", GraduationCap, "trainingBookings.view"],
   ["/admin/client-terms", "Client Terms", FileText, "terms.view"],
   ["/admin/finance", "Finance Centre", ReceiptPoundSterling, null, true],
+  ["/admin/salary-slips", "Salary Slips", ReceiptPoundSterling, "salarySlips.view"],
+  ["/admin/offer-letters", "Offer Letters", FileText, "offerLetters.view"],
   ["/admin/blogs", "Blogs", BookOpenText, "blogs.view"],
   ["/admin/testimonials", "Testimonials", MessageSquare, "testimonials.view"],
   ["/admin/partners", "Partners", Building2, "partners.view"],
