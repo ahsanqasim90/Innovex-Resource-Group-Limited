@@ -12,6 +12,9 @@ const initialForm = {
   payPeriodEnd: "",
   paymentDate: "",
   paymentMethod: "Bank transfer",
+  exchangeRateLabel: "GBP exchange rate at issue",
+  exchangeRateValue: "",
+  paymentNotice: "Full payment may take additional time to be received because payment is processed through a broker. Payments may also be received partially before the remaining balance is completed.",
   basicSalary: "",
   overtime: "",
   bonus: "",
@@ -184,6 +187,8 @@ export default function AdminSalarySlips() {
             <label>Pay period end<input type="date" value={form.payPeriodEnd} onChange={(e) => update("payPeriodEnd", e.target.value)} required /></label>
             <label>Payment date<input type="date" value={form.paymentDate} onChange={(e) => update("paymentDate", e.target.value)} required /></label>
             <label>Payment method<input value={form.paymentMethod} onChange={(e) => update("paymentMethod", e.target.value)} /></label>
+            <label>Currency rate label<input value={form.exchangeRateLabel} onChange={(e) => update("exchangeRateLabel", e.target.value)} placeholder="GBP exchange rate at issue" /></label>
+            <label>Currency rate<input value={form.exchangeRateValue} onChange={(e) => update("exchangeRateValue", e.target.value)} placeholder="e.g. 1 GBP = 355 PKR" /></label>
             <label>Basic salary<input type="number" step="0.01" value={form.basicSalary} onChange={(e) => update("basicSalary", e.target.value)} /></label>
             <label>Overtime<input type="number" step="0.01" value={form.overtime} onChange={(e) => update("overtime", e.target.value)} /></label>
             <label>Bonus<input type="number" step="0.01" value={form.bonus} onChange={(e) => update("bonus", e.target.value)} /></label>
@@ -196,6 +201,7 @@ export default function AdminSalarySlips() {
             <label>Send from<select value={form.senderEmail} onChange={(e) => update("senderEmail", e.target.value)}>{senders.map((sender) => <option key={sender.address} value={sender.address}>{sender.label} ({sender.address})</option>)}</select></label>
             <label className="full">CC emails<input value={form.cc} onChange={(e) => update("cc", e.target.value)} placeholder="optional, comma separated" /></label>
             <label className="full">Optional message<textarea value={form.customMessage} onChange={(e) => update("customMessage", e.target.value)} placeholder="Leave blank to use the standard salary slip email." /></label>
+            <label className="full">Payment timing note<textarea value={form.paymentNotice} onChange={(e) => update("paymentNotice", e.target.value)} /></label>
             <label className="full">Internal notes<textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} /></label>
           </div>
           <div className="hr-totals">
@@ -220,6 +226,7 @@ export default function AdminSalarySlips() {
                 <span>Period <strong>{dateLabel(selected.payPeriodStart)} - {dateLabel(selected.payPeriodEnd)}</strong></span>
                 <span>Status <strong>{selected.status}</strong></span>
                 <span>Net pay <strong>{money(selected.netPay)}</strong></span>
+                {selected.exchangeRateValue && <span>Currency rate <strong>{selected.exchangeRateValue}</strong></span>}
               </div>
               <div className="hr-preview-actions">
                 <button type="button" className="secondary" onClick={() => downloadFile(`/hr/salary-slips/${selected._id}/pdf`, `Innovex-Salary-Slip-${selected.slipNumber}.pdf`)}>Download PDF</button>

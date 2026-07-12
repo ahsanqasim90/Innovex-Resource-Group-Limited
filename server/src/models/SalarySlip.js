@@ -26,6 +26,8 @@ const salarySlipSchema = new mongoose.Schema(
     paymentDate: { type: Date, required: true },
     paymentMethod: { type: String, trim: true, default: "Bank transfer" },
     currency: { type: String, trim: true, default: "GBP" },
+    exchangeRateLabel: { type: String, trim: true, default: "GBP exchange rate at issue" },
+    exchangeRateValue: { type: String, trim: true },
     basicSalary: moneyField,
     overtime: moneyField,
     bonus: moneyField,
@@ -38,6 +40,11 @@ const salarySlipSchema = new mongoose.Schema(
     grossPay: moneyField,
     totalDeductions: moneyField,
     netPay: moneyField,
+    paymentNotice: {
+      type: String,
+      trim: true,
+      default: "Full payment may take additional time to be received because payment is processed through a broker. Payments may also be received partially before the remaining balance is completed."
+    },
     notes: { type: String, trim: true },
     status: { type: String, enum: ["Draft", "Sent", "Cancelled"], default: "Draft", index: true },
     senderEmail: { type: String, trim: true, lowercase: true },

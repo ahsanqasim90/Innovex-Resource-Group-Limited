@@ -23,6 +23,8 @@ const salaryFields = [
   "payPeriodEnd",
   "paymentDate",
   "paymentMethod",
+  "exchangeRateLabel",
+  "exchangeRateValue",
   "basicSalary",
   "overtime",
   "bonus",
@@ -32,6 +34,7 @@ const salaryFields = [
   "nationalInsurance",
   "pension",
   "otherDeduction",
+  "paymentNotice",
   "notes",
   "senderEmail",
   "cc",
@@ -82,7 +85,9 @@ function validateCc(items) {
 }
 
 async function nextDocumentNumber(key, prefix) {
-  const counter = await HrCounter.findByIdAndUpdate(key, { $inc: { seq: 1 } }, { upsert: true, new: true });
+  const startAt = key === "salarySlip" ? 210 : 1;
+  await HrCounter.updateOne({ _id: key }, { $max: { seq: startAt - 1 } }, { upsert: true });
+  const counter = await HrCounter.findByIdAndUpdate(key, { $inc: { seq: 1 } }, { new: true });
   return `${prefix}-${String(counter.seq).padStart(6, "0")}`;
 }
 
