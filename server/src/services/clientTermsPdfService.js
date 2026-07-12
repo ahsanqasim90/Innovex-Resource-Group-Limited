@@ -246,6 +246,18 @@ function splitTemplateAroundFeeTable(templateText) {
   };
 }
 
+function splitTemplateAroundSignature(templateText) {
+  const signatureMatch = templateText.match(/\n\s*Terms of business agreement[\s\S]*$/i);
+  if (!signatureMatch || signatureMatch.index === undefined) {
+    return { termsBody: templateText, hasSignature: false };
+  }
+
+  return {
+    termsBody: templateText.slice(0, signatureMatch.index).trimEnd(),
+    hasSignature: true
+  };
+}
+
 function getRateDisplay(rate) {
   const value = Number(rate.rateValue || 0);
   if (rate.feeType === "Flat Fee") return `${value.toLocaleString("en-GB")} pounds per placement`;
@@ -357,25 +369,84 @@ function drawTermsText(doc, text, y) {
   return y;
 }
 
-function drawSignatureSection(doc, y, terms) {
-  y = ensureSpace(doc, y, 152);
-  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 128, 12).fill(COLORS.mist).stroke(COLORS.line);
-  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(12).text("Client acceptance", LEFT + 16, y + 16);
+function drawSignatureLine(doc, x, y, label, width) {
+  doc.strokeColor(COLORS.line).lineWidth(1).moveTo(x, y).lineTo(x + width, y).stroke();
+  doc.fillColor(COLORS.muted).font("Helvetica-Bold").fontSize(7.5).text(label.toUpperCase(), x, y + 6, { width });
+}
+
+function drawProfessionalSignatureSection(doc, y, terms) {
+  y = ensureSpace(doc, y, 310);
+
+  doc.roundedRect(LEFT, y, CONTENT_WIDTH, 286, 14).fill("#ffffff").stroke(COLORS.line);
+  doc.rect(LEFT, y, CONTENT_WIDTH, 8).fill(COLORS.gold);
+
+  doc
+    .fillColor(COLORS.ink)
+    .font("Helvetica-Bold")
+    .fontSize(14)
+    .text("Terms of business agreement", LEFT + 18, y + 24, { width: CONTENT_WIDTH - 36 });
+
+  doc
+    .fillColor("#263f46")
+    .font("Helvetica")
+    .fontSize(9.5)
+    .text(
+      `By signing this document, the Client agrees for Innovex Resource Group Limited (Company Registration no: 15975820) to supply candidates in accordance with the Terms of Business above.`,
+      LEFT + 18,
+      y + 48,
+      { width: CONTENT_WIDTH - 36, lineGap: 2 }
+    );
+
+  const cardGap = 18;
+  const cardWidth = (CONTENT_WIDTH - 36 - cardGap) / 2;
+  const cardY = y + 92;
+  const cardHeight = 150;
+  const leftCardX = LEFT + 18;
+  const rightCardX = leftCardX + cardWidth + cardGap;
+
+  doc.roundedRect(leftCardX, cardY, cardWidth, cardHeight, 12).fill(COLORS.pale).stroke(COLORS.line);
+  doc.roundedRect(rightCardX, cardY, cardWidth, cardHeight, 12).fill(COLORS.mist).stroke(COLORS.line);
+
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11).text("Client signature", leftCardX + 14, cardY + 15);
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8.5).text(terms.clientName || "Care Home / Group / Agency", leftCardX + 14, cardY + 34, {
+    width: cardWidth - 28
+  });
+  drawSignatureLine(doc, leftCardX + 14, cardY + 70, "Authorised signature", cardWidth - 28);
+  drawSignatureLine(doc, leftCardX + 14, cardY + 108, "Name / position", cardWidth - 28);
+  drawSignatureLine(doc, leftCardX + 14, cardY + 136, "Date", cardWidth - 28);
+
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11).text("Agency confirmation", rightCardX + 14, cardY + 15);
   doc
     .fillColor(COLORS.muted)
     .font("Helvetica")
-    .fontSize(9)
-    .text(
-      "By signing below, the Client confirms acceptance of these Terms of Business and the client-specific fee structure shown in clause 3.4.",
-      LEFT + 16,
-      y + 36,
-      { width: CONTENT_WIDTH - 32 }
-    );
-  doc.moveTo(LEFT + 16, y + 84).lineTo(LEFT + 236, y + 84).strokeColor(COLORS.line).stroke();
-  doc.moveTo(LEFT + 276, y + 84).lineTo(LEFT + 496, y + 84).strokeColor(COLORS.line).stroke();
-  labelValue(doc, LEFT + 16, y + 93, "Client", terms.clientName, 220);
-  labelValue(doc, LEFT + 276, y + 93, "Signature / date", "", 220);
-  return y + 148;
+    .fontSize(8.5)
+    .text("Innovex Resource Group Limited", rightCardX + 14, cardY + 34, { width: cardWidth - 28 });
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(9).text("Haider Zaman Syed", rightCardX + 14, cardY + 58, {
+    width: cardWidth - 28
+  });
+  doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8.3).text("Procurement Specialist", rightCardX + 14, cardY + 73, {
+    width: cardWidth - 28
+  });
+  doc
+    .fontSize(8)
+    .text("33 Forsythia Drive, Cardiff, Wales, CF23 7HP, United Kingdom", rightCardX + 14, cardY + 96, {
+      width: cardWidth - 28,
+      lineGap: 1.5
+    });
+  doc.fontSize(8).text("+44 330 043 5830", rightCardX + 14, cardY + 126, { width: cardWidth - 28 });
+
+  const contactY = y + 258;
+  doc.roundedRect(LEFT + 18, contactY, CONTENT_WIDTH - 36, 18, 8).fill(COLORS.ink);
+  doc
+    .fillColor("#ffffff")
+    .font("Helvetica-Bold")
+    .fontSize(7.7)
+    .text("33 Forsythia Drive, Cardiff, CF23 7HP  |  +44 330 043 5830  |  +44 292 2520491  |  info@innovexresourcegroup.co.uk", LEFT + 28, contactY + 5, {
+      width: CONTENT_WIDTH - 56,
+      align: "center"
+    });
+
+  return y + 306;
 }
 
 export async function generateClientTermsPdf(terms) {
@@ -388,13 +459,17 @@ export async function generateClientTermsPdf(terms) {
 
     try {
       const templateText = loadTermsTemplate(terms);
-      const { before, after } = splitTemplateAroundFeeTable(templateText);
+      const { termsBody, hasSignature } = splitTemplateAroundSignature(templateText);
+      const { before, after } = splitTemplateAroundFeeTable(termsBody);
 
       drawCover(doc, terms);
       let y = addPage(doc);
       y = drawTermsText(doc, before, y);
       y = drawFeeStructureTable(doc, y, terms);
       y = drawTermsText(doc, after, y);
+      if (hasSignature) {
+        y = drawProfessionalSignatureSection(doc, y, terms);
+      }
       doc.end();
     } catch (error) {
       reject(error);
