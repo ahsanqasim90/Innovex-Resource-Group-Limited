@@ -33,6 +33,8 @@ const salarySlipSchema = new mongoose.Schema(
     bonus: moneyField,
     commission: moneyField,
     otherAllowance: moneyField,
+    internetCommunicationAllowance: moneyField,
+    remoteWorkingAllowance: moneyField,
     tax: moneyField,
     nationalInsurance: moneyField,
     pension: moneyField,
@@ -44,6 +46,13 @@ const salarySlipSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "Full payment may take additional time to be received because payment is processed through a broker. Payments may also be received partially before the remaining balance is completed."
+    },
+    directorName: { type: String, trim: true, default: "Fawad Khan" },
+    directorTitle: { type: String, trim: true, default: "Director" },
+    attestationText: {
+      type: String,
+      trim: true,
+      default: "This salary slip has been issued by Innovex Resource Group Limited and is attested as a true record of the payment details shown above."
     },
     notes: { type: String, trim: true },
     status: { type: String, enum: ["Draft", "Sent", "Cancelled"], default: "Draft", index: true },
@@ -60,8 +69,8 @@ const salarySlipSchema = new mongoose.Schema(
 );
 
 salarySlipSchema.pre("validate", function calculateSalarySlipTotals(next) {
-  const earnings = ["basicSalary", "overtime", "bonus", "commission", "otherAllowance"].reduce((sum, field) => sum + Number(this[field] || 0), 0);
-  const deductions = ["tax", "nationalInsurance", "pension", "otherDeduction"].reduce((sum, field) => sum + Number(this[field] || 0), 0);
+  const earnings = ["basicSalary", "overtime", "bonus", "commission", "internetCommunicationAllowance", "remoteWorkingAllowance", "otherAllowance"].reduce((sum, field) => sum + Number(this[field] || 0), 0);
+  const deductions = ["tax", "otherDeduction"].reduce((sum, field) => sum + Number(this[field] || 0), 0);
   this.grossPay = Number(earnings.toFixed(2));
   this.totalDeductions = Number(deductions.toFixed(2));
   this.netPay = Number(Math.max(earnings - deductions, 0).toFixed(2));

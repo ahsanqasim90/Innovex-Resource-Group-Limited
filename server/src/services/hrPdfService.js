@@ -36,6 +36,17 @@ function drawLogo(doc, x, y, width = 72, height = 44) {
   }
 }
 
+function drawAsset(doc, filename, x, y, options = {}) {
+  const assetPath = path.join(process.cwd(), "server", "assets", filename);
+  if (!fs.existsSync(assetPath)) return false;
+  try {
+    doc.image(assetPath, x, y, options);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function drawHeader(doc, title, reference) {
   doc.rect(0, 0, PAGE_WIDTH, 10).fill(gold);
   doc.rect(0, 10, PAGE_WIDTH, 105).fill(deepTeal);
@@ -92,16 +103,21 @@ export function generateSalarySlipPdf(slip) {
     doc.on("error", reject);
 
     drawHeader(doc, "Salary Slip", slip.slipNumber);
-    doc.fillColor(teal).font("Helvetica-Bold").fontSize(8).text("EMPLOYEE PAY STATEMENT", LEFT, 145, { lineBreak: false });
-    doc.fillColor(ink).font("Helvetica-Bold").fontSize(17).text(slip.employeeName, LEFT, 164, { width: 300, lineBreak: false, ellipsis: true });
-    doc.fillColor(muted).font("Helvetica").fontSize(8.2).text([slip.jobTitle, slip.department, slip.employeeEmail].filter(Boolean).join(" | "), LEFT, 188, { width: 430, lineBreak: false, ellipsis: true });
+    doc.roundedRect(LEFT, 134, CONTENT_WIDTH, 72, 12).fill("#ffffff").strokeColor(line).stroke();
+    drawLogo(doc, LEFT + 16, 149, 68, 40);
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(7.6).text("EMPLOYEE PAY STATEMENT", LEFT + 102, 149, { lineBreak: false });
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(16).text(slip.employeeName, LEFT + 102, 165, { width: 260, lineBreak: false, ellipsis: true });
+    doc.fillColor(muted).font("Helvetica").fontSize(7.8).text([slip.jobTitle, slip.department, slip.employeeEmail].filter(Boolean).join(" | "), LEFT + 102, 187, { width: 275, lineBreak: false, ellipsis: true });
+    doc.roundedRect(438, 151, 86, 36, 9).fill("#fff7df").strokeColor("#f2d58a").stroke();
+    doc.fillColor(muted).font("Helvetica-Bold").fontSize(6.6).text("NET PAY", 451, 160, { width: 60, align: "center", lineBreak: false });
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(11.5).text(money(slip.netPay), 446, 173, { width: 70, align: "center", lineBreak: false });
 
     metaBox(doc, [
       ["Pay period", `${dateLabel(slip.payPeriodStart)} - ${dateLabel(slip.payPeriodEnd)}`],
       ["Payment date", dateLabel(slip.paymentDate)],
       ["Payment method", slip.paymentMethod || "Bank transfer"],
       ["Net pay", money(slip.netPay)]
-    ], 222);
+    ], 224);
 
     const columns = [
       { label: "EARNINGS", x: 56, width: 230 },
@@ -109,33 +125,63 @@ export function generateSalarySlipPdf(slip) {
       { label: "DEDUCTIONS", x: 398, width: 85 },
       { label: "AMOUNT", x: 482, width: 58, align: "right" }
     ];
-    let y = tableHeader(doc, 318, columns);
-    const earnings = [["Basic salary", slip.basicSalary], ["Overtime", slip.overtime], ["Bonus", slip.bonus], ["Commission", slip.commission], ["Other allowance", slip.otherAllowance]];
-    const deductions = [["Tax", slip.tax], ["National Insurance", slip.nationalInsurance], ["Pension", slip.pension], ["Other deduction", slip.otherDeduction], ["", ""]];
-    earnings.forEach((earning, index) => {
-      if (index % 2 === 0) doc.rect(LEFT, y, CONTENT_WIDTH, 31).fill(soft);
-      doc.fillColor(ink).font("Helvetica").fontSize(8.6).text(earning[0], 56, y + 11, { width: 210, lineBreak: false });
-      doc.fillColor(teal).font("Helvetica-Bold").text(money(earning[1]), 285, y + 11, { width: 90, align: "right", lineBreak: false });
-      doc.fillColor(ink).font("Helvetica").text(deductions[index][0], 398, y + 11, { width: 85, lineBreak: false });
-      doc.fillColor(teal).font("Helvetica-Bold").text(deductions[index][0] ? money(deductions[index][1]) : "", 482, y + 11, { width: 58, align: "right", lineBreak: false });
-      doc.moveTo(LEFT, y + 31).lineTo(LEFT + CONTENT_WIDTH, y + 31).strokeColor(line).stroke();
-      y += 31;
-    });
+    let y = tableHeader(doc, 306, columns);
+    const earnings = [
+      ["Basic salary", slip.basicSalary],
+      ["Overtime", slip.overtime],
+      ["Bonus", slip.bonus],
+      ["Commission", slip.commission],
+      ["Internet and Communication Allowance", slip.internetCommunicationAllowance],
+      ["Remote Working Allowance", slip.remoteWorkingAllowance],
+      ["Other allowance", slip.otherAllowance]
+    ].filter(([, value], index) => index === 0 || Number(value || 0) > 0);
+    const deductions = [
+      ["Tax", slip.tax],
+      ["Other deduction", slip.otherDeduction]
+    ].filter(([, value], index) => index === 0 || Number(value || 0) > 0);
+    const rowCount = Math.max(earnings.length, deductions.length);
+    for (let index = 0; index < rowCount; index += 1) {
+      const earning = earnings[index] || ["", ""];
+      const deduction = deductions[index] || ["", ""];
+      if (index % 2 === 0) doc.rect(LEFT, y, CONTENT_WIDTH, 24).fill(soft);
+      doc.fillColor(ink).font("Helvetica").fontSize(8).text(earning[0], 56, y + 8, { width: 210, lineBreak: false, ellipsis: true });
+      doc.fillColor(teal).font("Helvetica-Bold").text(earning[0] ? money(earning[1]) : "", 285, y + 8, { width: 90, align: "right", lineBreak: false });
+      doc.fillColor(ink).font("Helvetica").text(deduction[0], 398, y + 8, { width: 85, lineBreak: false });
+      doc.fillColor(teal).font("Helvetica-Bold").text(deduction[0] ? money(deduction[1]) : "", 482, y + 8, { width: 58, align: "right", lineBreak: false });
+      doc.moveTo(LEFT, y + 24).lineTo(LEFT + CONTENT_WIDTH, y + 24).strokeColor(line).stroke();
+      y += 24;
+    }
 
     metaBox(doc, [
       ["Gross pay", money(slip.grossPay)],
       ["Total deductions", money(slip.totalDeductions)],
       ["Net pay", money(slip.netPay)]
-    ], y + 24);
+    ], y + 16);
 
     const exchangeText = slip.exchangeRateValue
       ? `${slip.exchangeRateLabel || "Currency rate at issue"}: ${slip.exchangeRateValue}`
       : "Currency rate at issue: not provided";
     const paymentNotice = slip.paymentNotice || "Full payment may take additional time to be received because payment is processed through a broker. Payments may also be received partially before the remaining balance is completed.";
-    doc.roundedRect(LEFT, y + 112, CONTENT_WIDTH, 98, 10).fill("#fffaf0").strokeColor("#f4d48c").stroke();
-    doc.fillColor(teal).font("Helvetica-Bold").fontSize(8).text("CONFIDENTIAL PAYROLL NOTICE", 58, y + 129, { lineBreak: false });
-    doc.fillColor(ink).font("Helvetica-Bold").fontSize(8.2).text(exchangeText, 58, y + 148, { width: 470, lineBreak: false, ellipsis: true });
-    doc.fillColor(ink).font("Helvetica").fontSize(8.1).text(paymentNotice, 58, y + 166, { width: 470, lineGap: 2 });
+    doc.roundedRect(LEFT, y + 92, CONTENT_WIDTH, 76, 10).fill("#fffaf0").strokeColor("#f4d48c").stroke();
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(7.8).text("PAYMENT AND CURRENCY NOTE", 58, y + 106, { lineBreak: false });
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(8).text(exchangeText, 58, y + 123, { width: 470, lineBreak: false, ellipsis: true });
+    doc.fillColor(ink).font("Helvetica").fontSize(7.8).text(paymentNotice, 58, y + 140, { width: 470, lineGap: 1 });
+
+    const attestationY = y + 184;
+    doc.roundedRect(LEFT, attestationY, CONTENT_WIDTH, 88, 12).fill("#ffffff").strokeColor(line).stroke();
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(7.8).text("ATTESTATION", 58, attestationY + 15, { lineBreak: false });
+    doc.fillColor(ink).font("Helvetica").fontSize(8.2).text(
+      slip.attestationText || "This salary slip has been issued by Innovex Resource Group Limited and is attested as a true record of the payment details shown above.",
+      58,
+      attestationY + 32,
+      { width: 285, lineGap: 2 }
+    );
+    drawAsset(doc, "director-signature-fawad.png", 356, attestationY + 14, { fit: [86, 40], align: "center", valign: "center" });
+    drawAsset(doc, "innovex-stamp.png", 458, attestationY + 10, { fit: [62, 62], align: "center", valign: "center" });
+    doc.moveTo(356, attestationY + 60).lineTo(438, attestationY + 60).strokeColor(line).stroke();
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(8.2).text(safe(slip.directorName, "Fawad Khan"), 356, attestationY + 67, { width: 96, lineBreak: false });
+    doc.fillColor(muted).font("Helvetica").fontSize(7.2).text(safe(slip.directorTitle, "Director"), 356, attestationY + 78, { width: 96, lineBreak: false });
+    doc.fillColor(muted).font("Helvetica").fontSize(6.5).text("Authorised signatory", 456, attestationY + 72, { width: 70, align: "center" });
 
     finish(doc, resolve, chunks);
   });

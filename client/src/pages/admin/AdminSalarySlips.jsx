@@ -19,11 +19,14 @@ const initialForm = {
   overtime: "",
   bonus: "",
   commission: "",
+  internetCommunicationAllowance: "",
+  remoteWorkingAllowance: "",
   otherAllowance: "",
   tax: "",
-  nationalInsurance: "",
-  pension: "",
   otherDeduction: "",
+  directorName: "Fawad Khan",
+  directorTitle: "Director",
+  attestationText: "This salary slip has been issued by Innovex Resource Group Limited and is attested as a true record of the payment details shown above.",
   senderEmail: "",
   cc: "",
   customMessage: "",
@@ -49,8 +52,8 @@ export default function AdminSalarySlips() {
   const [loading, setLoading] = useState(false);
 
   const totals = useMemo(() => {
-    const gross = ["basicSalary", "overtime", "bonus", "commission", "otherAllowance"].reduce((sum, key) => sum + Number(form[key] || 0), 0);
-    const deductions = ["tax", "nationalInsurance", "pension", "otherDeduction"].reduce((sum, key) => sum + Number(form[key] || 0), 0);
+    const gross = ["basicSalary", "overtime", "bonus", "commission", "internetCommunicationAllowance", "remoteWorkingAllowance", "otherAllowance"].reduce((sum, key) => sum + Number(form[key] || 0), 0);
+    const deductions = ["tax", "otherDeduction"].reduce((sum, key) => sum + Number(form[key] || 0), 0);
     return { gross, deductions, net: gross - deductions };
   }, [form]);
 
@@ -193,15 +196,18 @@ export default function AdminSalarySlips() {
             <label>Overtime<input type="number" step="0.01" value={form.overtime} onChange={(e) => update("overtime", e.target.value)} /></label>
             <label>Bonus<input type="number" step="0.01" value={form.bonus} onChange={(e) => update("bonus", e.target.value)} /></label>
             <label>Commission<input type="number" step="0.01" value={form.commission} onChange={(e) => update("commission", e.target.value)} /></label>
+            <label>Internet and Communication Allowance<input type="number" step="0.01" value={form.internetCommunicationAllowance} onChange={(e) => update("internetCommunicationAllowance", e.target.value)} /></label>
+            <label>Remote Working Allowance<input type="number" step="0.01" value={form.remoteWorkingAllowance} onChange={(e) => update("remoteWorkingAllowance", e.target.value)} /></label>
             <label>Other allowance<input type="number" step="0.01" value={form.otherAllowance} onChange={(e) => update("otherAllowance", e.target.value)} /></label>
             <label>Tax<input type="number" step="0.01" value={form.tax} onChange={(e) => update("tax", e.target.value)} /></label>
-            <label>National Insurance<input type="number" step="0.01" value={form.nationalInsurance} onChange={(e) => update("nationalInsurance", e.target.value)} /></label>
-            <label>Pension<input type="number" step="0.01" value={form.pension} onChange={(e) => update("pension", e.target.value)} /></label>
             <label>Other deduction<input type="number" step="0.01" value={form.otherDeduction} onChange={(e) => update("otherDeduction", e.target.value)} /></label>
+            <label>Director name<input value={form.directorName} onChange={(e) => update("directorName", e.target.value)} /></label>
+            <label>Director title<input value={form.directorTitle} onChange={(e) => update("directorTitle", e.target.value)} /></label>
             <label>Send from<select value={form.senderEmail} onChange={(e) => update("senderEmail", e.target.value)}>{senders.map((sender) => <option key={sender.address} value={sender.address}>{sender.label} ({sender.address})</option>)}</select></label>
             <label className="full">CC emails<input value={form.cc} onChange={(e) => update("cc", e.target.value)} placeholder="optional, comma separated" /></label>
             <label className="full">Optional message<textarea value={form.customMessage} onChange={(e) => update("customMessage", e.target.value)} placeholder="Leave blank to use the standard salary slip email." /></label>
             <label className="full">Payment timing note<textarea value={form.paymentNotice} onChange={(e) => update("paymentNotice", e.target.value)} /></label>
+            <label className="full">Attestation text<textarea value={form.attestationText} onChange={(e) => update("attestationText", e.target.value)} /></label>
             <label className="full">Internal notes<textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} /></label>
           </div>
           <div className="hr-totals">
