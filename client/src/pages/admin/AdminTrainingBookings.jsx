@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, CircleDollarSign, GraduationCap, Mail, Phone, TrendingUp, Users } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarClock, CircleDollarSign, GraduationCap, Mail, Phone, Search, TrendingUp, Users } from "lucide-react";
 import { api } from "../../api/client.js";
 import { canViewFinance } from "../../auth/permissions.js";
 import StatusMessage from "../../components/StatusMessage.jsx";
@@ -42,7 +42,7 @@ function toBookingForm(booking = {}) {
   return {
     ...emptyBooking,
     ...booking,
-    selectedCourses: booking.selectedCourses?.map((item) => item.course || item._id || item) || [],
+    selectedCourses: booking.selectedCourses?.map((item) => item.course?._id || item.courseId?._id || item.courseId || item.course || item._id || item).filter(Boolean) || [],
     trainingDate: dateInput(booking.trainingDate),
     trainer: { ...emptyBooking.trainer, ...(booking.trainer || {}) }
   };
@@ -59,6 +59,12 @@ export default function AdminTrainingBookings() {
   const [selected, setSelected] = useState(null);
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [courseSearch, setCourseSearch] = useState("");
+  const [courseCategory, setCourseCategory] = useState("");
+  const [showAllCourses, setShowAllCourses] = useState(false);
+  const formRef = useRef(null);
+  const detailRef = useRef(null);
+  const tableRef = useRef(null);
 
   const profit = Number(form.quotedPrice || 0) - Number(form.actualTrainerCost || 0) - Number(form.otherExpenses || 0);
   const summary = useMemo(() => ({
@@ -69,6 +75,28 @@ export default function AdminTrainingBookings() {
     trainerCosts: bookings.reduce((sum, item) => sum + Number(item.actualTrainerCost || 0), 0),
     profit: bookings.reduce((sum, item) => sum + Number(item.profit || 0), 0)
   }), [bookings]);
+  const activeCourses = useMemo(() => courses.filter((course) => course.status !== "Inactive"), [courses]);
+  const courseCategories = useMemo(() => (
+    [...new Set(activeCourses.map((course) => course.category).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+  ), [activeCourses]);
+  const filteredCourses = useMemo(() => {
+    const search = courseSearch.trim().toLowerCase();
+    return activeCourses.filter((course) => {
+      const matchesCategory = !courseCategory || course.category === courseCategory;
+      const haystack = `${course.title || ""} ${course.description || ""} ${course.category || ""}`.toLowerCase();
+      return matchesCategory && (!search || haystack.includes(search));
+    });
+  }, [activeCourses, courseCategory, courseSearch]);
+  const visibleCourses = showAllCourses ? filteredCourses : filteredCourses.slice(0, 8);
+  const selectedCourseDocs = useMemo(() => (
+    form.selectedCourses
+      .map((courseId) => courses.find((course) => course._id === courseId))
+      .filter(Boolean)
+  ), [courses, form.selectedCourses]);
+
+  useEffect(() => {
+    setShowAllCourses(false);
+  }, [courseSearch, courseCategory]);
 
   function loadBookings() {
     const allowedFilters = showFinance ? filters : { ...filters, paymentStatus: "" };
@@ -120,6 +148,7 @@ export default function AdminTrainingBookings() {
       setForm(emptyBooking);
       setEditing(null);
       loadBookings();
+      setTimeout(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch (error) {
       setStatus({ type: "error", message: error.message });
     } finally {
@@ -142,7 +171,31 @@ export default function AdminTrainingBookings() {
   function edit(booking) {
     setEditing(booking._id);
     setForm(toBookingForm(booking));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function viewBooking(booking) {
+    setSelected(booking);
+    detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function clearCourseSelection() {
+    setForm({ ...form, selectedCourses: [], quotedPrice: showFinance ? "" : form.quotedPrice, actualTrainerCost: showFinance ? "" : form.actualTrainerCost });
+  }
+
+  function applyFilters() {
+    loadBookings();
+    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function resetFilters() {
+    setFilters({ search: "", bookingStatus: "", paymentStatus: "", course: "", dateFrom: "", dateTo: "" });
+    setTimeout(() => {
+      api("/training-bookings")
+        .then(setBookings)
+        .catch((error) => setStatus({ type: "error", message: error.message }));
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   }
 
   return (
@@ -160,7 +213,7 @@ export default function AdminTrainingBookings() {
       </div>
 
       <div className="training-admin-grid">
-        <form className="card form training-form" onSubmit={save}>
+        <form className="card form training-form" onSubmit={save} ref={formRef}>
           <div className="admin-form-title">
             <div>
               <span className="eyebrow">Training tracker</span>
@@ -181,16 +234,76 @@ export default function AdminTrainingBookings() {
           </div>
 
           <div className="interview-form-section">
-            <h3>Selected courses</h3>
-            <div className="course-select-grid">
-              {courses.map((course) => (
-                <label className={form.selectedCourses.includes(course._id) ? "course-select-card active" : "course-select-card"} key={course._id}>
-                  <input type="checkbox" checked={form.selectedCourses.includes(course._id)} onChange={() => toggleCourse(course._id)} />
-                  <strong>{course.title}</strong>
-                  <span>{course.category} - {course.duration}</span>
-                  {showFinance && <small>{money(course.defaultSellingPrice)} selling / {money(course.defaultTrainerCost)} trainer</small>}
-                </label>
-              ))}
+            <div className="course-picker-head">
+              <div>
+                <span className="eyebrow">Course picker</span>
+                <h3>Choose training courses</h3>
+                <p>Select only the courses required for this booking. Use search or category filters to keep the list focused.</p>
+              </div>
+              <span className="course-picker-count">{form.selectedCourses.length} selected</span>
+            </div>
+
+            <div className="course-picker-toolbar">
+              <label className="course-picker-search">
+                <Search size={16} />
+                <input placeholder="Search course title, category or description" value={courseSearch} onChange={(e) => setCourseSearch(e.target.value)} />
+              </label>
+              <select value={courseCategory} onChange={(e) => setCourseCategory(e.target.value)}>
+                <option value="">All categories</option>
+                {courseCategories.map((category) => <option key={category}>{category}</option>)}
+              </select>
+            </div>
+
+            <div className="course-picker-selected">
+              {selectedCourseDocs.length ? (
+                selectedCourseDocs.map((course) => (
+                  <button type="button" className="course-picker-chip" key={course._id} onClick={() => toggleCourse(course._id)}>
+                    {course.title}<span>Remove</span>
+                  </button>
+                ))
+              ) : (
+                <span>No courses selected yet.</span>
+              )}
+              {!!selectedCourseDocs.length && <button type="button" className="button secondary small" onClick={clearCourseSelection}>Clear courses</button>}
+            </div>
+
+            <div className="course-picker-list">
+              {visibleCourses.map((course) => {
+                const isSelected = form.selectedCourses.includes(course._id);
+                return (
+                  <label className={isSelected ? "course-picker-row selected" : "course-picker-row"} key={course._id}>
+                    <span className="course-picker-check">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleCourse(course._id)} />
+                    </span>
+                    <span className="course-picker-main">
+                      <strong>{course.title}</strong>
+                      <small>{course.category || "Training course"}{course.duration ? ` • ${course.duration}` : ""}</small>
+                    </span>
+                    {showFinance && (
+                      <span className="course-picker-money">
+                        <strong>{money(course.defaultSellingPrice)}</strong>
+                        <small>trainer {money(course.defaultTrainerCost)}</small>
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+              {!visibleCourses.length && (
+                <div className="course-picker-empty">
+                  <GraduationCap size={28} />
+                  <strong>No courses match this search</strong>
+                  <span>Try a different keyword or clear the category filter.</span>
+                </div>
+              )}
+            </div>
+
+            <div className="course-picker-footer">
+              <span>Showing {visibleCourses.length} of {filteredCourses.length} matching courses</span>
+              {filteredCourses.length > 8 && (
+                <button type="button" className="button secondary small" onClick={() => setShowAllCourses(!showAllCourses)}>
+                  {showAllCourses ? "Show fewer" : "Show more courses"}
+                </button>
+              )}
             </div>
           </div>
 
@@ -234,7 +347,7 @@ export default function AdminTrainingBookings() {
           <SubmitButton loading={saving} loadingText="Saving booking...">{editing ? "Update Booking" : "Create Booking"}</SubmitButton>
         </form>
 
-        <aside className="card training-detail">
+        <aside className="card training-detail" ref={detailRef}>
           {selected ? (
             <>
               <h2>{selected.clientName}</h2>
@@ -281,11 +394,12 @@ export default function AdminTrainingBookings() {
           <select value={filters.course} onChange={(e) => setFilters({ ...filters, course: e.target.value })}><option value="">All courses</option>{courses.map((course) => <option value={course._id} key={course._id}>{course.title}</option>)}</select>
           <input type="date" value={filters.dateFrom} onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })} />
           <input type="date" value={filters.dateTo} onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })} />
-          <button className="button" type="button" onClick={loadBookings}>Apply Filters</button>
+          <button className="button" type="button" onClick={applyFilters}>Apply Filters</button>
+          <button className="button secondary" type="button" onClick={resetFilters}>Reset</button>
         </div>
       </div>
 
-      <div className="table-wrap training-table" style={{ marginTop: 24 }}>
+      <div className="table-wrap training-table" style={{ marginTop: 24 }} ref={tableRef}>
         <table>
           <thead><tr><th>Client</th><th>Courses</th><th>Training</th><th>Status</th>{showFinance && <><th>Payment</th><th>Revenue</th><th>Profit</th></>}<th>Actions</th></tr></thead>
           <tbody>
@@ -296,7 +410,7 @@ export default function AdminTrainingBookings() {
                 <td>{dateLabel(booking.trainingDate)}<br /><span className="muted">{booking.trainingStartTime}{booking.trainingEndTime ? ` - ${booking.trainingEndTime}` : ""}</span></td>
                 <td><span className="status-chip table-chip">{booking.bookingStatus}</span></td>
                 {showFinance && <><td>{booking.paymentStatus}</td><td>{money(booking.quotedPrice)}</td><td>{money(booking.profit)}</td></>}
-                <td className="action-cell"><div className="compact-actions"><button className="button secondary small" onClick={() => setSelected(booking)}>View</button><button className="button small" onClick={() => edit(booking)}>Edit</button><button className="button small" onClick={() => remove(booking._id)}>Delete</button></div></td>
+                <td className="action-cell"><div className="compact-actions"><button className="button secondary small" onClick={() => viewBooking(booking)}>View</button><button className="button small" onClick={() => edit(booking)}>Edit</button><button className="button small" onClick={() => remove(booking._id)}>Delete</button></div></td>
               </tr>
             ))}
           </tbody>

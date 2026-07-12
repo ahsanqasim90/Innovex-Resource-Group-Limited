@@ -3278,6 +3278,174 @@ tbody tr:hover td {
 .training-table table {
   min-width: 1180px;
 }
+.course-picker-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.course-picker-head h3 {
+  margin: 4px 0 6px;
+  color: var(--teal);
+  font-size: 1.35rem;
+}
+.course-picker-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.course-picker-count {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #e6f7f4;
+  color: var(--teal);
+  font-weight: 950;
+  box-shadow: inset 0 0 0 1px rgba(11,95,117,.08);
+}
+.course-picker-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, .38fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.course-picker-search {
+  position: relative;
+  display: block;
+}
+.course-picker-search svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--blue);
+}
+.course-picker-search input {
+  width: 100%;
+  padding-left: 42px;
+}
+.course-picker-selected {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px dashed #9fd2db;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f7fcfc, #ffffff);
+}
+.course-picker-selected > span {
+  color: var(--muted);
+  font-weight: 800;
+}
+.course-picker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 9px 12px;
+  border: 1px solid rgba(11,95,117,.12);
+  border-radius: 999px;
+  background: #e6f7f4;
+  color: var(--teal);
+  font: inherit;
+  font-weight: 950;
+  cursor: pointer;
+}
+.course-picker-chip span {
+  color: var(--blue);
+  font-size: .76rem;
+}
+.course-picker-list {
+  display: grid;
+  gap: 10px;
+  max-height: 540px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.course-picker-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #d4e8ec;
+  border-radius: 18px;
+  background: white;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+}
+.course-picker-row:hover,
+.course-picker-row.selected {
+  transform: translateY(-2px);
+  border-color: rgba(244,185,66,.75);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(244,185,66,.14), transparent 34%),
+    #ffffff;
+  box-shadow: 0 14px 32px rgba(6,63,79,.08);
+}
+.course-picker-check {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: #eefafa;
+}
+.course-picker-main {
+  display: grid;
+  gap: 4px;
+}
+.course-picker-main strong {
+  color: var(--teal);
+  line-height: 1.25;
+}
+.course-picker-main small,
+.course-picker-money small {
+  color: var(--muted);
+  font-weight: 800;
+}
+.course-picker-money {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  color: var(--teal);
+  white-space: nowrap;
+}
+.course-picker-money strong {
+  font-size: 1rem;
+}
+.course-picker-empty {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 28px;
+  border: 1px dashed #9fd2db;
+  border-radius: 18px;
+  background: #f7fcfc;
+  text-align: center;
+}
+.course-picker-empty svg,
+.course-picker-empty strong {
+  color: var(--teal);
+}
+.course-picker-empty span {
+  color: var(--muted);
+}
+.course-picker-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #d4e8ec;
+  color: var(--muted);
+  font-weight: 850;
+}
 .talent-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, .42fr);
@@ -6965,6 +7133,7 @@ tbody tr:hover td {
   .calls-dialer-grid, .calls-history-filters { grid-template-columns: 1fr; }
   .jobs-filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .interview-admin-grid, .meeting-admin-grid, .training-admin-grid, .talent-admin-grid, .team-admin-grid { grid-template-columns: 1fr; }
+  .course-picker-toolbar { grid-template-columns: 1fr; }
   .interview-detail, .blog-cta-card { position: static; }
   .blog-detail-image { min-height: 280px; }
   .blog-image-link, .blog-card.featured .blog-image-link { height: 230px; min-height: 230px; }
@@ -6995,6 +7164,18 @@ tbody tr:hover td {
 
 @media (max-width: 620px) {
   .stats-grid, .card-grid, .form-grid, .compliance-badges, .digital-grid, .review-type-options, .interview-summary-grid, .interview-mini-grid, .placement-calculator, .blog-grid, .partners-grid, .testimonial-stats-grid, .testimonial-review-grid, .faq-grid, .training-summary-grid, .training-reminder-grid, .course-select-grid, .training-money-grid, .course-admin-grid, .course-admin-meta, .dashboard-hero-metrics, .dashboard-kpi-list, .talent-summary-grid, .talent-match-grid, .crm-segment-grid, .permission-grid, .public-course-grid, .public-course-loading, .training-process-grid, .public-course-meta, .course-stats-row, .admin-jobs-stats, .calls-stat-grid { grid-template-columns: 1fr; }
+  .course-picker-head,
+  .course-picker-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .course-picker-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .course-picker-money {
+    grid-column: 2;
+    justify-items: start;
+  }
   .calls-outcome-fields { grid-template-columns: 1fr; }
   .calls-api-banner, .calls-history-heading, .calls-filter-actions { align-items: stretch; flex-direction: column; }
   .calls-filter-actions .button { width: 100%; }
