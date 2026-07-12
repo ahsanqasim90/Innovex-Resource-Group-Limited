@@ -195,20 +195,34 @@ export function generateOfferLetterPdf(offer) {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
+    const signatoryName = safe(offer.signatoryName, "Muhammad Ahsan Qasim");
+    const signatoryTitle = safe(offer.signatoryTitle, "Co-founder & Director");
+
     drawHeader(doc, "Offer Letter", offer.offerNumber);
-    doc.fillColor(muted).font("Helvetica").fontSize(8).text(dateLabel(new Date()), LEFT, 145, { lineBreak: false });
-    doc.fillColor(ink).font("Helvetica-Bold").fontSize(16).text(`Dear ${offer.candidateName},`, LEFT, 174, { width: CONTENT_WIDTH, lineBreak: false });
-    doc.fillColor(teal).font("Helvetica-Bold").fontSize(18).text(`Offer of ${offer.roleTitle}`, LEFT, 214, { width: CONTENT_WIDTH, lineBreak: false, ellipsis: true });
-    doc.fillColor(ink).font("Helvetica").fontSize(9.2).text("We are pleased to confirm your offer with Innovex Resource Group Limited. This letter outlines the key terms of the offer and the next steps required before commencement.", LEFT, 247, { width: CONTENT_WIDTH, lineGap: 3 });
+
+    doc.roundedRect(LEFT, 134, CONTENT_WIDTH, 132, 12).fill("#ffffff").strokeColor(line).stroke();
+    doc.fillColor(muted).font("Helvetica").fontSize(8).text(dateLabel(new Date()), 58, 154, { lineBreak: false });
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(15.5).text(`Dear ${safe(offer.candidateName, "Candidate")},`, 58, 178, { width: 330, lineBreak: false, ellipsis: true });
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(20).text(`Offer of ${safe(offer.roleTitle, "Role")}`, 58, 208, { width: 355, lineBreak: false, ellipsis: true });
+    doc.fillColor(ink).font("Helvetica").fontSize(9).text(
+      "We are pleased to confirm your offer with Innovex Resource Group Limited. This letter summarises the key employment details, conditions and next steps for acceptance.",
+      58,
+      238,
+      { width: 350, lineGap: 2 }
+    );
+
+    doc.roundedRect(425, 156, 88, 58, 10).fill("#fff7df").strokeColor("#f2d58a").stroke();
+    doc.fillColor(muted).font("Helvetica-Bold").fontSize(7).text("OFFER STATUS", 437, 170, { width: 64, align: "center", lineBreak: false });
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(13).text(safe(offer.status, "Draft"), 437, 190, { width: 64, align: "center", lineBreak: false, ellipsis: true });
 
     metaBox(doc, [
       ["Role", offer.roleTitle],
       ["Employment type", offer.employmentType],
       ["Start date", dateLabel(offer.startDate)],
       ["Location", offer.workLocation || "To be confirmed"]
-    ], 304);
+    ], 292);
 
-    let y = tableHeader(doc, 397, [
+    let y = tableHeader(doc, 374, [
       { label: "OFFER DETAIL", x: 56, width: 180 },
       { label: "INFORMATION", x: 250, width: 290 }
     ]);
@@ -220,20 +234,37 @@ export function generateOfferLetterPdf(offer) {
       ["Offer expiry", dateLabel(offer.offerExpiryDate)]
     ];
     rows.forEach((row, index) => {
-      if (index % 2 === 0) doc.rect(LEFT, y, CONTENT_WIDTH, 34).fill(soft);
-      doc.fillColor(muted).font("Helvetica-Bold").fontSize(8).text(row[0].toUpperCase(), 56, y + 12, { width: 170, lineBreak: false });
-      doc.fillColor(ink).font("Helvetica").fontSize(8.8).text(row[1], 250, y + 12, { width: 290, lineBreak: false, ellipsis: true });
-      doc.moveTo(LEFT, y + 34).lineTo(LEFT + CONTENT_WIDTH, y + 34).strokeColor(line).stroke();
-      y += 34;
+      if (index % 2 === 0) doc.rect(LEFT, y, CONTENT_WIDTH, 28).fill(soft);
+      doc.fillColor(muted).font("Helvetica-Bold").fontSize(7.8).text(row[0].toUpperCase(), 56, y + 10, { width: 170, lineBreak: false });
+      doc.fillColor(ink).font("Helvetica").fontSize(8.6).text(row[1], 250, y + 10, { width: 290, lineBreak: false, ellipsis: true });
+      doc.moveTo(LEFT, y + 28).lineTo(LEFT + CONTENT_WIDTH, y + 28).strokeColor(line).stroke();
+      y += 28;
     });
 
-    doc.fillColor(teal).font("Helvetica-Bold").fontSize(9).text("Conditions and next steps", LEFT, y + 32, { lineBreak: false });
-    doc.fillColor(ink).font("Helvetica").fontSize(8.7).text(offer.conditions || "This offer is subject to satisfactory right-to-work checks, references, compliance documentation, and any role-specific requirements confirmed by the client or Innovex Resource Group Limited.", LEFT, y + 52, { width: CONTENT_WIDTH, lineGap: 3 });
-    doc.fillColor(teal).font("Helvetica-Bold").fontSize(9).text("Benefits / additional notes", LEFT, y + 122, { lineBreak: false });
-    doc.fillColor(ink).font("Helvetica").fontSize(8.7).text(offer.benefits || offer.notes || "Further onboarding information will be shared by the Innovex team once the offer is accepted.", LEFT, y + 142, { width: CONTENT_WIDTH, lineGap: 3 });
+    const conditionsText = offer.conditions || "This offer is subject to satisfactory right-to-work checks, references, compliance documentation, and any role-specific requirements confirmed by Innovex Resource Group Limited.";
+    const benefitsText = offer.benefits || offer.notes || "Further onboarding information will be shared by the Innovex team once the offer is accepted.";
 
-    doc.roundedRect(LEFT, 705, CONTENT_WIDTH, 54, 10).fill("#fffaf0").strokeColor("#f4d48c").stroke();
-    doc.fillColor(ink).font("Helvetica-Bold").fontSize(8.6).text("Please reply to this email to confirm acceptance or to request clarification.", 58, 724, { width: 468, lineBreak: false });
+    doc.roundedRect(LEFT, y + 18, CONTENT_WIDTH, 78, 10).fill("#ffffff").strokeColor(line).stroke();
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(8.4).text("CONDITIONS AND NEXT STEPS", 58, y + 34, { lineBreak: false });
+    doc.fillColor(ink).font("Helvetica").fontSize(8.4).text(conditionsText, 58, y + 52, { width: 470, height: 36, lineGap: 2, ellipsis: true });
+
+    doc.roundedRect(LEFT, y + 108, CONTENT_WIDTH, 62, 10).fill(soft).strokeColor(line).stroke();
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(8.4).text("BENEFITS / ADDITIONAL NOTES", 58, y + 124, { lineBreak: false });
+    doc.fillColor(ink).font("Helvetica").fontSize(8.4).text(benefitsText, 58, y + 142, { width: 470, height: 22, lineGap: 2, ellipsis: true });
+
+    const signY = 690;
+    doc.roundedRect(LEFT, signY, CONTENT_WIDTH, 82, 12).fill("#fffaf0").strokeColor("#f4d48c").stroke();
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(7.8).text("AUTHORISATION AND ACCEPTANCE", 58, signY + 14, { lineBreak: false });
+    doc.fillColor(ink).font("Helvetica").fontSize(8).text(
+      "Please reply to this email to confirm acceptance or request clarification. This offer letter is issued by an authorised Innovex signatory.",
+      58,
+      signY + 32,
+      { width: 280, lineGap: 2 }
+    );
+    drawAsset(doc, "director-signature-ahsan.png", 372, signY + 5, { fit: [136, 48], align: "center", valign: "center" });
+    doc.moveTo(360, signY + 57).lineTo(520, signY + 57).strokeColor(line).stroke();
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(8.2).text(signatoryName, 360, signY + 63, { width: 160, align: "center", lineBreak: false });
+    doc.fillColor(muted).font("Helvetica").fontSize(7.2).text(signatoryTitle, 360, signY + 74, { width: 160, align: "center", lineBreak: false });
 
     finish(doc, resolve, chunks);
   });

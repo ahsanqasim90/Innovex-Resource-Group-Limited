@@ -7968,6 +7968,54 @@ tbody tr:hover td {
   margin-top: 1rem;
 }
 
+.hr-actions button,
+.hr-preview-actions button,
+.action-row button {
+  border: 0;
+  border-radius: 999px;
+  background: #f4b942;
+  color: #062f3a;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 950;
+  min-height: 42px;
+  padding: 0.72rem 1.15rem;
+  box-shadow: 0 10px 22px rgba(244, 185, 66, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.hr-actions button:hover,
+.hr-preview-actions button:hover,
+.action-row button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(5, 58, 68, 0.12);
+}
+
+.hr-actions button.secondary,
+.hr-preview-actions button.secondary,
+.action-row button.secondary {
+  background: #eef8f8;
+  color: #064f5e;
+  border: 1px solid #cfe3e6;
+  box-shadow: none;
+}
+
+.hr-actions button.danger,
+.hr-preview-actions button.danger,
+.action-row button.danger {
+  background: #fde2e2;
+  color: #a32121;
+  box-shadow: none;
+}
+
+.hr-actions button:disabled,
+.hr-preview-actions button:disabled,
+.action-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
 .hr-preview-card {
   position: sticky;
   top: 1rem;

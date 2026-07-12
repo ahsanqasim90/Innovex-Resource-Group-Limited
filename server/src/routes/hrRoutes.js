@@ -63,6 +63,8 @@ const offerFields = [
   "conditions",
   "benefits",
   "notes",
+  "signatoryName",
+  "signatoryTitle",
   "senderEmail",
   "cc",
   "customMessage",

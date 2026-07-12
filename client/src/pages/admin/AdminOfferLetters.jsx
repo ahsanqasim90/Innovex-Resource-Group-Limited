@@ -7,7 +7,7 @@ const initialForm = {
   candidatePhone: "",
   roleTitle: "",
   department: "",
-  employmentType: "Full time",
+  employmentType: "Full-time",
   startDate: "",
   workLocation: "",
   salaryType: "Annual salary",
@@ -20,6 +20,8 @@ const initialForm = {
   benefits: "",
   notes: "",
   senderEmail: "",
+  signatoryName: "Muhammad Ahsan Qasim",
+  signatoryTitle: "Co-founder & Director",
   cc: "",
   customMessage: "",
   status: "Draft"
@@ -174,10 +176,10 @@ export default function AdminOfferLetters() {
             <label>Candidate phone<input value={form.candidatePhone} onChange={(e) => update("candidatePhone", e.target.value)} /></label>
             <label>Role title<input value={form.roleTitle} onChange={(e) => update("roleTitle", e.target.value)} required /></label>
             <label>Department<input value={form.department} onChange={(e) => update("department", e.target.value)} /></label>
-            <label>Employment type<select value={form.employmentType} onChange={(e) => update("employmentType", e.target.value)}><option>Full time</option><option>Part time</option><option>Temporary</option><option>Contract</option><option>Permanent</option></select></label>
+            <label>Employment type<select value={form.employmentType} onChange={(e) => update("employmentType", e.target.value)}><option value="Full-time">Full-time</option><option value="Part-time">Part-time</option><option value="Temporary">Temporary</option><option value="Contract">Contract</option><option value="Permanent">Permanent</option><option value="Other">Other</option></select></label>
             <label>Start date<input type="date" value={form.startDate} onChange={(e) => update("startDate", e.target.value)} /></label>
             <label>Work location<input value={form.workLocation} onChange={(e) => update("workLocation", e.target.value)} /></label>
-            <label>Salary type<select value={form.salaryType} onChange={(e) => update("salaryType", e.target.value)}><option>Annual salary</option><option>Hourly rate</option><option>Day rate</option><option>Fixed fee</option></select></label>
+            <label>Salary type<select value={form.salaryType} onChange={(e) => update("salaryType", e.target.value)}><option>Annual salary</option><option>Hourly rate</option><option>Day rate</option><option>Fixed fee</option><option>Other</option></select></label>
             <label>Salary / rate<input type="number" step="0.01" value={form.salaryAmount} onChange={(e) => update("salaryAmount", e.target.value)} /></label>
             <label>Hours per week<input type="number" step="0.01" value={form.hoursPerWeek} onChange={(e) => update("hoursPerWeek", e.target.value)} /></label>
             <label>Reporting to<input value={form.reportingTo} onChange={(e) => update("reportingTo", e.target.value)} /></label>
@@ -185,6 +187,8 @@ export default function AdminOfferLetters() {
             <label>Offer expiry date<input type="date" value={form.offerExpiryDate} onChange={(e) => update("offerExpiryDate", e.target.value)} /></label>
             <label>Status<select value={form.status} onChange={(e) => update("status", e.target.value)}><option>Draft</option><option>Sent</option><option>Accepted</option><option>Declined</option><option>Withdrawn</option></select></label>
             <label>Send from<select value={form.senderEmail} onChange={(e) => update("senderEmail", e.target.value)}>{senders.map((sender) => <option key={sender.address} value={sender.address}>{sender.label} ({sender.address})</option>)}</select></label>
+            <label>Authorised signatory<input value={form.signatoryName} onChange={(e) => update("signatoryName", e.target.value)} /></label>
+            <label>Signatory title<input value={form.signatoryTitle} onChange={(e) => update("signatoryTitle", e.target.value)} /></label>
             <label className="full">Conditions<textarea value={form.conditions} onChange={(e) => update("conditions", e.target.value)} placeholder="Subject to right-to-work checks, references, DBS checks, etc." /></label>
             <label className="full">Benefits<textarea value={form.benefits} onChange={(e) => update("benefits", e.target.value)} placeholder="Annual leave, pension, training, progression, etc." /></label>
             <label className="full">CC emails<input value={form.cc} onChange={(e) => update("cc", e.target.value)} placeholder="optional, comma separated" /></label>
