@@ -3,6 +3,7 @@ import { ArrowUpRight, BarChart3, BookOpenCheck, BookOpenText, Briefcase, Buildi
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { canViewFinance, hasPermission } from "../auth/permissions.js";
+import { company } from "../data/content.js";
 
 const links = [
   ["/admin/dashboard", "Dashboard", LayoutDashboard, "dashboard.view"],
@@ -71,10 +72,13 @@ export default function AdminLayout() {
       <aside className={`admin-sidebar${menuOpen ? " open" : ""}`}>
         <div className="admin-sidebar-inner">
           <div className="brand admin-brand">
-            <span className="brand-mark">IR</span>
-            <span>
-              <strong>Innovex Admin</strong>
-              <small>Operations centre</small>
+            <span className="admin-brand-logo-wrap">
+              <img src="/Logo.png" alt={`${company.name} logo`} className="admin-brand-logo" width="54" height="54" />
+            </span>
+            <span className="admin-brand-copy">
+              <small>Innovex CRM</small>
+              <strong>Admin Portal</strong>
+              <em>Operations centre</em>
             </span>
             <button className="admin-menu-toggle" type="button" onClick={() => setMenuOpen((current) => !current)} aria-label={menuOpen ? "Close admin menu" : "Open admin menu"}>
               {menuOpen ? <X size={20} /> : <Menu size={20} />}

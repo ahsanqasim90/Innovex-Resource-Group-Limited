@@ -2484,9 +2484,9 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
   left: 0;
   bottom: 0;
   z-index: 30;
-  width: 264px;
+  width: 292px;
   height: 100vh;
-  padding: 14px;
+  padding: 16px;
   background:
     radial-gradient(circle at 0% 0%, rgba(244,185,66,.18), transparent 28%),
     linear-gradient(180deg, #063f4f, #023340 72%, #012936);
@@ -2496,36 +2496,63 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
 .admin-sidebar-inner {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   height: 100%;
   min-height: 0;
 }
 .admin-brand {
   color: white;
-  margin-bottom: 12px;
-  padding: 10px;
-  border-radius: 16px;
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.1);
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.07));
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 18px 38px rgba(0,0,0,.13);
 }
-.admin-brand .brand-mark {
-  box-shadow: 0 14px 28px rgba(0,0,0,.16);
+.admin-brand-logo-wrap {
+  display: grid;
+  place-items: center;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  border-radius: 17px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 14px 32px rgba(0,0,0,.16);
 }
-.admin-brand span:last-child {
+.admin-brand-logo {
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+.admin-brand-copy {
   display: grid;
   gap: 2px;
+  min-width: 0;
+  line-height: 1.1;
 }
 .admin-brand strong {
   color: white;
+  font-size: 1.06rem;
   line-height: 1.1;
+  white-space: nowrap;
 }
 .admin-brand small {
-  color: #a9d7de;
-  font-size: .74rem;
+  color: var(--gold);
+  font-size: .64rem;
   font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.admin-brand em {
+  color: #bde4e9;
+  font-size: .75rem;
+  font-style: normal;
+  font-weight: 750;
 }
 .admin-nav-label {
-  margin: 0 8px 4px;
+  margin: 4px 8px 3px;
   color: #8ecbd3;
   font-size: .68rem;
   font-weight: 900;
@@ -2534,10 +2561,11 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
 }
 .admin-nav {
   display: grid;
-  gap: 5px;
+  gap: 4px;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 3px;
+  padding-right: 5px;
+  padding-bottom: 2px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,.24) transparent;
 }
@@ -2552,13 +2580,20 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
 .admin-sidebar button {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 11px;
   color: #d6edf1;
-  padding: 9px 10px;
-  border-radius: 12px;
-  font-size: .92rem;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: .91rem;
   font-weight: 850;
+  line-height: 1.15;
   transition: background .2s ease, color .2s ease, transform .2s ease;
+}
+.admin-sidebar a svg,
+.admin-sidebar button svg {
+  flex: 0 0 auto;
+  opacity: .9;
 }
 .admin-sidebar a:hover,
 .admin-sidebar button:hover {
@@ -2569,7 +2604,7 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
 .admin-sidebar a.active {
   background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.1));
   color: white;
-  box-shadow: inset 3px 0 0 var(--gold);
+  box-shadow: inset 4px 0 0 var(--gold), 0 12px 26px rgba(0,0,0,.08);
 }
 .admin-sidebar-card {
   display: flex;
@@ -2618,7 +2653,7 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
 }
 .admin-main {
   min-width: 0;
-  margin-left: 264px;
+  margin-left: 292px;
 }
 .admin-command-bar {
   position: sticky;
@@ -7202,7 +7237,7 @@ tbody tr:hover td {
   .courses-hero { padding-top: 44px; }
   .courses-hero-panel, .course-contact-card, .training-home-card { border-radius: 24px; }
   .site-header { padding: 14px 18px; }
-  .brand span:last-child { display: none; }
+  .site-header .brand span:last-child { display: none; }
   .file-drop { align-items: flex-start; flex-direction: column; }
   .file-copy strong { white-space: normal; }
   .file-button { width: 100%; text-align: center; }
