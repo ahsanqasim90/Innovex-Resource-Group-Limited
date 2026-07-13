@@ -57,6 +57,15 @@ function normalizeLegalTextForPdf(text) {
     ["â€“", "-"],
     ["â€”", "-"],
     ["Â£", pound],
+    ["Â", ""],
+    ["â€œ", '"'],
+    ["â€", '"'],
+    ["â€™", "'"],
+    ["â€˜", "'"],
+    ["â€¢", "-"],
+    ["â€“", "-"],
+    ["â€”", "-"],
+    ["Â£", pound],
     ["Â", ""]
   ]);
 
@@ -114,6 +123,15 @@ function polishLegalTemplateText(text) {
     ["â€“", "-"],
     ["â€”", "-"],
     ["Â£", pound],
+    ["Â", ""],
+    ["â€œ", '"'],
+    ["â€", '"'],
+    ["â€™", "'"],
+    ["â€˜", "'"],
+    ["â€¢", "-"],
+    ["â€“", "-"],
+    ["â€”", "-"],
+    ["Â£", pound],
     ["Â", ""]
   ];
 
@@ -127,6 +145,61 @@ function polishLegalTemplateText(text) {
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\batthe\b/gi, "at the")
     .replace(/Engagement\]/g, "Engagement")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function professionalizeTermsText(text) {
+  return String(text || "")
+    .replace(
+      /a company incorporated in England and Wales under company number 15975820 and whose\s+registered office is at 33 Forsythia Drive, Cardiff, Wales, CF23 7HP, United Kingdom\s+\("the Employment Agency"\);/i,
+      'Innovex Resource Group Limited is a company incorporated in England and Wales under company number 15975820, with its registered office at 33 Forsythia Drive, Cardiff, Wales, CF23 7HP, United Kingdom (the "Employment Agency" or "Agency").'
+    )
+    .replace(
+      /means the person; firm, organization or corporate body together with any subsidiary or associated Company as defined by the Companies Act 1985 to which the Applicant is introduced;/gi,
+      "means the person, firm, organisation or corporate body, together with any subsidiary or associated company as defined by the Companies Act 1985, to which the Applicant is introduced;"
+    )
+    .replace(
+      /Means the engagement, employment or use of the Applicant by the Client or any third party on a permanent or temporary basis, whether under a contract of service or for services; under an agency, license, franchise or partnership agreement; or any other engagement; directly or through a limited company of which the Applicant is an officer or employee/gi,
+      "means the engagement, employment or use of the Applicant by the Client, or by any third party, on a permanent or temporary basis, whether under a contract of service, a contract for services, an agency, licence, franchise, partnership agreement, or any other form of engagement, whether directly or through a limited company of which the Applicant is an officer or employee;"
+    )
+    .replace(/\bMeans:\b/g, "means:")
+    .replace(
+      /These Terms establish the contract between the Agency and the Client and are considered to be accepted by the Client by virtue of an Introduction to, or the Engagement of an Applicant or the passing of any information about the Applicant to any third party following an Introduction\./gi,
+      "These Terms establish the contract between the Agency and the Client. They are deemed accepted by the Client upon an Introduction, the Engagement of an Applicant, or the passing of any information about the Applicant to any third party following an Introduction."
+    )
+    .replace(
+      /This Agreement does not need to be signed for it to become binding upon the parties to it\. Furthermore, these Terms of Business can be electronically sent to the Client to deliver the Terms of Business to the Client\./gi,
+      "This Agreement does not need to be signed in order to become binding. These Terms of Business may be delivered electronically to the Client."
+    )
+    .replace(
+      /The Agency may require the Client to make a deposit or prepay all of the Agency fees before the Agency supplies staff to the Client\. Once the Client has paid the Agency or has made a prepayment to the Agency the Agency shall provide staff by the Terms of Business of the Agency\./gi,
+      "The Agency may require the Client to pay a deposit or prepay Agency fees before candidate support is provided. Once the agreed deposit or prepayment has been received, the Agency will provide staff or candidate introductions in accordance with these Terms of Business."
+    )
+    .replace(
+      /The responsibility for paying the Agency's fees lies solely with the Client as defined under this contract\. If the Client wishes to involve an external organisation in the payment of the Agency's fees, then the said the external organisation would only be liable under a separate contract\. If a third-party organisation is not bound by a separate contract, the responsibility of payment would lie with the Client\./gi,
+      "The responsibility for paying the Agency's fees lies solely with the Client as defined under this contract. If the Client wishes to involve an external organisation in payment of the Agency's fees, that organisation will only be liable where it has entered into a separate written contract with the Agency. Otherwise, payment responsibility remains with the Client."
+    )
+    .replace(
+      /If the ownership of the Client changes for whatsoever reason the Owners,\s+Partners, or Directors of the Client who agreed to these Terms of Business at the\s+time of the Introduction by the Agency will be personally liable for any matters\s+under this contract\. outstanding/gi,
+      "If ownership of the Client changes for any reason, the owners, partners or directors of the Client who agreed to these Terms of Business at the time of the Introduction by the Agency will remain personally liable for any outstanding matters under this contract."
+    )
+    .replace(
+      /If the Client subsequently engages or re-engages the Applicant within the period of 6 calendar months from the date of termination of the Engagement or withdrawal of the offer, a full fee calculated in accordance with clause 3\.4 above becomes payable\./gi,
+      "If the Client subsequently engages or re-engages the Applicant within 6 calendar months from the date of termination of the Engagement or withdrawal of the offer, a full fee calculated in accordance with clause 3.4 becomes payable."
+    )
+    .replace(/Cash refunds will be offered once agreed in writing by the Agency\./gi, "Cash refunds will only be offered where agreed in writing by the Agency.")
+    .replace(/If the candidate dies before completing the rebate period, the Agency will not issue any refund\./gi, "If the candidate dies before completing the rebate period, the Agency will not issue a refund.")
+    .replace(/The Agency endeavors to ensure/gi, "The Agency endeavours to ensure")
+    .replace(
+      /the Client undertakes to provide to the Agency details of the position which the Client seeks to fill/gi,
+      "the Client undertakes to provide the Agency with details of the position which the Client seeks to fill"
+    )
+    .replace(
+      /By signing this document, I the "Client" agree for Agency Innovex Resource Group Limited \(Company Registration no: 15975820\) to supply us with candidates in accordance with terms above\./gi,
+      "By signing this document, the Client confirms acceptance of these Terms of Business and authorises Innovex Resource Group Limited (Company Registration no: 15975820) to introduce candidates in accordance with the terms set out above."
+    )
+    .replace(/\s+([,.;:])/g, "$1")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
@@ -145,7 +218,8 @@ function loadTermsTemplate(terms) {
   if (!fs.existsSync(file)) {
     throw new Error("IRG terms template text file is missing.");
   }
-  return normalizeLegalTextForPdf(withClientSpecificTerms(polishLegalTemplateText(cleanTemplateText(fs.readFileSync(file, "utf8"))), terms));
+  const template = cleanTemplateText(fs.readFileSync(file, "utf8"));
+  return professionalizeTermsText(normalizeLegalTextForPdf(withClientSpecificTerms(polishLegalTemplateText(template), terms)));
 }
 
 function drawLogo(doc, x, y, size = 42) {
@@ -295,8 +369,8 @@ function drawFeeStructureTable(doc, y, terms) {
   doc.roundedRect(LEFT, y, CONTENT_WIDTH, totalHeight, 6).fill("#ffffff").stroke("#101010");
   doc.rect(LEFT, y, colA, 34).fill(COLORS.pale).stroke("#101010");
   doc.rect(LEFT + colA, y, colB, 34).fill(COLORS.pale).stroke("#101010");
-  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10).text("Salary Range", LEFT + 12, y + 11, { width: colA - 24 });
-  doc.text("Percentage", LEFT + colA + 12, y + 11, { width: colB - 24 });
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(10).text("Role / salary range", LEFT + 12, y + 11, { width: colA - 24 });
+  doc.text("Agreed fee", LEFT + colA + 12, y + 11, { width: colB - 24 });
   y += 34;
 
   rows.forEach((row, index) => {
@@ -391,7 +465,7 @@ function drawProfessionalSignatureSection(doc, y, terms) {
     .font("Helvetica")
     .fontSize(9.5)
     .text(
-      `By signing this document, the Client agrees for Innovex Resource Group Limited (Company Registration no: 15975820) to supply candidates in accordance with the Terms of Business above.`,
+      "Please complete the Client signature section only. The Agency confirmation section is completed by Innovex Resource Group Limited and confirms the issuing office for this document.",
       LEFT + 18,
       y + 48,
       { width: CONTENT_WIDTH - 36, lineGap: 2 }
@@ -411,11 +485,11 @@ function drawProfessionalSignatureSection(doc, y, terms) {
   doc.fillColor(COLORS.muted).font("Helvetica").fontSize(8.5).text(terms.clientName || "Care Home / Group / Agency", leftCardX + 14, cardY + 34, {
     width: cardWidth - 28
   });
-  drawSignatureLine(doc, leftCardX + 14, cardY + 70, "Authorised signature", cardWidth - 28);
+  drawSignatureLine(doc, leftCardX + 14, cardY + 70, "Authorised signature / acceptance", cardWidth - 28);
   drawSignatureLine(doc, leftCardX + 14, cardY + 108, "Name / position", cardWidth - 28);
   drawSignatureLine(doc, leftCardX + 14, cardY + 136, "Date", cardWidth - 28);
 
-  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11).text("Agency confirmation", rightCardX + 14, cardY + 15);
+  doc.fillColor(COLORS.ink).font("Helvetica-Bold").fontSize(11).text("Innovex confirmation", rightCardX + 14, cardY + 15);
   doc
     .fillColor(COLORS.muted)
     .font("Helvetica")
