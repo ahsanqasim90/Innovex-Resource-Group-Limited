@@ -54,6 +54,19 @@ export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSa
         <span>{interview.visaStatus || "Visa status not set"}</span>
       </div>
 
+      {(interview.careHomeAddress || interview.careHomePostcode || interview.careHomeContactName || interview.careHomeContactPhone || interview.interviewInstructions) && (
+        <div className="interview-location-card">
+          <span className="eyebrow">Care home / location</span>
+          <strong>{interview.clientName}</strong>
+          {(interview.careHomeAddress || interview.careHomePostcode) && (
+            <p>{[interview.careHomeAddress, interview.careHomePostcode].filter(Boolean).join("\n")}</p>
+          )}
+          {interview.careHomeContactName && <span>Contact: {interview.careHomeContactName}</span>}
+          {interview.careHomeContactPhone && <a href={`tel:${interview.careHomeContactPhone}`}>{interview.careHomeContactPhone}</a>}
+          {interview.interviewInstructions && <small>{interview.interviewInstructions}</small>}
+        </div>
+      )}
+
       {interview.candidateSelected === "No" && interview.feedback && (
         <div className="feedback-note"><strong>Feedback</strong><p>{interview.feedback}</p></div>
       )}

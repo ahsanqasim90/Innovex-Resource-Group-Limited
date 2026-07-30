@@ -5,6 +5,7 @@ import { canViewFinance } from "../config/permissions.js";
 import { logActivity } from "../services/activityLogService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 import { runInterviewReminders } from "../services/interviewReminderService.js";
+import { sendInterviewConfirmationEmail } from "../services/emailService.js";
 
 const router = express.Router();
 const fields = [
@@ -15,6 +16,11 @@ const fields = [
   "visaStatus",
   "jobTitle",
   "clientName",
+  "careHomeAddress",
+  "careHomePostcode",
+  "careHomeContactName",
+  "careHomeContactPhone",
+  "interviewInstructions",
   "interviewDate",
   "interviewTime",
   "interviewType",
@@ -151,15 +157,33 @@ router.get("/:id", async (req, res, next) => {
 router.post("/", async (req, res, next) => {
   try {
     requireFields(req.body, ["candidateName", "candidateEmail", "candidatePhone", "jobTitle", "clientName", "interviewDate", "interviewTime"]);
+    if (req.body.interviewType === "Face-to-face") {
+      requireFields(req.body, ["careHomeAddress", "careHomePostcode"]);
+    }
     validateEmail(req.body.candidateEmail);
     const interview = await Interview.create(toPayload(req.body, req.user));
+    try {
+      const confirmation = await sendInterviewConfirmationEmail(interview);
+      interview.confirmationEmailStatus = confirmation.sent ? "Sent" : "Failed";
+      interview.confirmationEmailSentAt = confirmation.sent ? new Date() : undefined;
+      interview.confirmationEmailError = confirmation.sent ? "" : confirmation.reason || "Email delivery failed";
+    } catch (emailError) {
+      interview.confirmationEmailStatus = "Failed";
+      interview.confirmationEmailError = emailError.message || "Email delivery failed";
+    }
+    await interview.save();
     await logActivity(req, {
       module: "Interviews",
       action: "Created",
       entityType: "Interview",
       entityId: interview._id,
       summary: `Booked interview for ${interview.candidateName} with ${interview.clientName}`,
-      metadata: { jobTitle: interview.jobTitle, interviewDate: interview.interviewDate, interviewTime: interview.interviewTime }
+      metadata: {
+        jobTitle: interview.jobTitle,
+        interviewDate: interview.interviewDate,
+        interviewTime: interview.interviewTime,
+        confirmationEmailStatus: interview.confirmationEmailStatus
+      }
     });
     res.status(201).json(sanitizeInterview(interview, req.user));
   } catch (error) {
@@ -173,6 +197,9 @@ router.put("/:id", async (req, res, next) => {
     const interview = await Interview.findById(req.params.id);
     if (!interview) return res.status(404).json({ message: "Interview not found" });
     Object.assign(interview, toPayload(req.body, req.user));
+    if (interview.interviewType === "Face-to-face") {
+      requireFields(interview, ["careHomeAddress", "careHomePostcode"]);
+    }
     await interview.save();
     await logActivity(req, {
       module: "Interviews",

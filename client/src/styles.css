@@ -2887,6 +2887,32 @@ tbody tr:hover td {
 .interview-form-section h3 {
   margin: 0;
 }
+.interview-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.interview-section-heading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+.interview-section-heading > span {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #8a5b00;
+  background: #fff1c9;
+  font-size: .7rem;
+  font-weight: 900;
+}
+.interview-full-field {
+  grid-column: 1 / -1;
+  min-height: 88px;
+  resize: vertical;
+}
 .status-choice-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2922,6 +2948,29 @@ tbody tr:hover td {
 .reminder-preview small {
   color: var(--muted);
   font-weight: 800;
+}
+.confirmation-preview {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid #9fd8cf;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(118,207,214,.22), transparent 34%),
+    linear-gradient(135deg, #eaf8f5, #ffffff);
+}
+.confirmation-preview strong {
+  color: var(--teal);
+}
+.confirmation-preview p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.55;
+}
+.confirmation-preview small {
+  color: #44666e;
+  font-weight: 800;
+  line-height: 1.5;
 }
 .checkbox-line {
   display: inline-flex;
@@ -3124,6 +3173,34 @@ tbody tr:hover td {
   color: var(--teal);
   font-weight: 900;
   overflow-wrap: anywhere;
+}
+.interview-location-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid #d7e9ed;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ffffff, #f8fcfd);
+}
+.interview-location-card strong {
+  color: var(--teal);
+  font-size: 1.05rem;
+}
+.interview-location-card p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.55;
+  white-space: pre-line;
+}
+.interview-location-card a {
+  color: var(--blue);
+  font-weight: 900;
+}
+.interview-location-card > span:not(.eyebrow),
+.interview-location-card small {
+  color: var(--muted);
+  line-height: 1.5;
 }
 .feedback-note {
   padding: 14px;

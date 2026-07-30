@@ -37,10 +37,20 @@ export default function AdminInterviews() {
 
   async function save(event) {
     event.preventDefault();
+    const isEditing = Boolean(editing);
     setSaving(true);
     try {
       const saved = await api(editing ? `/interviews/${editing}` : "/interviews", { method: editing ? "PUT" : "POST", body: form });
-      setStatus({ message: "Interview saved." });
+      if (isEditing) {
+        setStatus({ message: "Interview booking updated." });
+      } else if (saved.confirmationEmailStatus === "Sent") {
+        setStatus({ message: `Interview booked and confirmation email sent to ${saved.candidateEmail}.` });
+      } else {
+        setStatus({
+          type: "error",
+          message: `Interview booked, but the confirmation email was not sent${saved.confirmationEmailError ? `: ${saved.confirmationEmailError}` : "."}`
+        });
+      }
       setForm(emptyInterview);
       setEditing(null);
       setSelected(saved);
