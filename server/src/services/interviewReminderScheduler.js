@@ -17,7 +17,7 @@ export function startInterviewReminderScheduler() {
   const run = async () => {
     try {
       const result = await runInterviewReminders();
-      console.log(`Interview reminders checked: ${result.count}`);
+      console.log(`Interview reminders checked: ${result.count} (${result.candidateReminders.count} candidate reminders for tomorrow)`);
     } catch (error) {
       console.error("Interview reminder check failed", error);
     }

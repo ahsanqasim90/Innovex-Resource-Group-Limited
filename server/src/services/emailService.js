@@ -227,6 +227,92 @@ export function buildInterviewConfirmationEmail(interview) {
   };
 }
 
+export function buildCandidateInterviewReminderEmail(interview) {
+  const formattedDate = interviewDate(interview.interviewDate);
+  const formattedTime = interviewTime(interview.interviewTime);
+  const address = interviewAddress(interview);
+  const subject = `Interview reminder for tomorrow – ${interview.jobTitle} with ${interview.clientName}`;
+  const locationText = address ? `\nAddress: ${address}` : "";
+  const contactText = interview.careHomeContactName ? `\nCare home contact: ${interview.careHomeContactName}` : "";
+  const phoneText = interview.careHomeContactPhone ? `\nCare home telephone: ${interview.careHomeContactPhone}` : "";
+  const instructionsText = interview.interviewInstructions ? `\nJoining / arrival instructions: ${interview.interviewInstructions}` : "";
+  const text = [
+    `Dear ${interview.candidateName},`,
+    "",
+    "REMINDER: YOUR INTERVIEW IS TOMORROW",
+    "",
+    `This is a reminder that your confirmed interview for the ${interview.jobTitle} position with ${interview.clientName} is scheduled for tomorrow.`,
+    "",
+    `Date: ${formattedDate}`,
+    `Time: ${formattedTime}`,
+    `Interview format: ${interview.interviewType}`,
+    `Care home / employer: ${interview.clientName}${locationText}${contactText}${phoneText}${instructionsText}`,
+    "",
+    "Please arrive or join 10 minutes early and keep this email available for reference.",
+    "",
+    "If you have not already confirmed your attendance, please reply to this email now. If you are unable to attend or any detail appears incorrect, contact us immediately by replying to this email or calling 0330 0435 830.",
+    "",
+    "Kind regards,",
+    "Recruitment Team",
+    "Innovex Resource Group Limited",
+    "0330 0435 830",
+    "info@innovexresourcegroup.co.uk"
+  ].join("\n");
+
+  const locationHtml = address || interview.careHomeContactName || interview.careHomeContactPhone
+    ? `<div style="margin:20px 0;padding:18px;border:1px solid #d7e9ed;border-radius:12px;background:#f7fbfc">
+        <div style="margin-bottom:9px;color:#0b5f75;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Care home / interview location</div>
+        <strong style="display:block;color:#063f4f;font-size:17px">${escapeHtml(interview.clientName)}</strong>
+        ${address ? `<div style="margin-top:9px;color:#304b54;line-height:1.6">${messageHtml(address)}</div>` : ""}
+        ${interview.careHomeContactName ? `<div style="margin-top:9px;color:#304b54"><strong>Contact:</strong> ${escapeHtml(interview.careHomeContactName)}</div>` : ""}
+        ${interview.careHomeContactPhone ? `<div style="margin-top:5px;color:#304b54"><strong>Telephone:</strong> ${escapeHtml(interview.careHomeContactPhone)}</div>` : ""}
+      </div>`
+    : "";
+  const instructionsHtml = interview.interviewInstructions
+    ? `<div style="margin:20px 0;padding:16px 18px;border-left:4px solid #0b5f75;border-radius:8px;background:#eef7f7">
+        <strong style="display:block;margin-bottom:7px;color:#063f4f">Joining / arrival instructions</strong>
+        <div style="color:#304b54;line-height:1.6">${messageHtml(interview.interviewInstructions)}</div>
+      </div>`
+    : "";
+  const html = `<div style="margin:0;padding:30px 12px;background:#eef5f6;font-family:Arial,sans-serif;color:#173840">
+    <div style="max-width:660px;margin:auto;overflow:hidden;border:1px solid #d3e3e6;border-radius:16px;background:#ffffff;box-shadow:0 18px 45px rgba(6,63,79,.10)">
+      <div style="height:7px;background:#f4b942"></div>
+      <div style="padding:26px 30px;background:linear-gradient(135deg,#063f4f,#0b5f75);color:#ffffff">
+        <div style="color:#bde0e4;font-size:11px;font-weight:700;letter-spacing:.14em">INNOVEX RESOURCE GROUP LIMITED</div>
+        <div style="margin-top:14px"><span style="display:inline-block;padding:7px 11px;border-radius:999px;background:#f4b942;color:#173840;font-size:11px;font-weight:800;letter-spacing:.08em">INTERVIEW REMINDER</span></div>
+        <h1 style="margin:14px 0 0;color:#ffffff;font-size:27px;line-height:1.25">Your interview is tomorrow</h1>
+      </div>
+      <div style="padding:28px 30px">
+        <p style="margin-top:0;font-size:16px">Dear ${escapeHtml(interview.candidateName)},</p>
+        <p style="line-height:1.7">This is a reminder that your confirmed interview for the <strong>${escapeHtml(interview.jobTitle)}</strong> position with <strong>${escapeHtml(interview.clientName)}</strong> is scheduled for tomorrow.</p>
+        <table role="presentation" style="width:100%;margin:22px 0;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid #d7e9ed;border-radius:12px">
+          <tr><td style="width:34%;padding:12px 15px;border-bottom:1px solid #d7e9ed;background:#f7fbfc;color:#60777e;font-size:12px;font-weight:700">DATE</td><td style="padding:12px 15px;border-bottom:1px solid #d7e9ed;font-weight:700">${escapeHtml(formattedDate)}</td></tr>
+          <tr><td style="padding:12px 15px;border-bottom:1px solid #d7e9ed;background:#f7fbfc;color:#60777e;font-size:12px;font-weight:700">TIME</td><td style="padding:12px 15px;border-bottom:1px solid #d7e9ed;font-weight:700">${escapeHtml(formattedTime)}</td></tr>
+          <tr><td style="padding:12px 15px;border-bottom:1px solid #d7e9ed;background:#f7fbfc;color:#60777e;font-size:12px;font-weight:700">ROLE</td><td style="padding:12px 15px;border-bottom:1px solid #d7e9ed;font-weight:700">${escapeHtml(interview.jobTitle)}</td></tr>
+          <tr><td style="padding:12px 15px;background:#f7fbfc;color:#60777e;font-size:12px;font-weight:700">FORMAT</td><td style="padding:12px 15px;font-weight:700">${escapeHtml(interview.interviewType)}</td></tr>
+        </table>
+        ${locationHtml}
+        ${instructionsHtml}
+        <div style="margin:24px 0;padding:20px;border:2px solid #f4b942;border-radius:12px;background:#fff8e8">
+          <strong style="display:block;color:#8a5b00;font-size:12px;letter-spacing:.08em">BE READY 10 MINUTES EARLY</strong>
+          <p style="margin:9px 0 0;color:#3f3217;line-height:1.65">Please keep this email available for reference. If you have not already confirmed attendance, reply now. If you cannot attend or any detail is incorrect, contact us immediately.</p>
+        </div>
+        <p style="margin:26px 0 0;line-height:1.6">Kind regards,<br><strong>Recruitment Team</strong><br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; info@innovexresourcegroup.co.uk</span></p>
+        <div style="margin-top:24px;padding-top:14px;border-top:1px solid #d8e5e7;color:#6b7f85;font-size:11px;line-height:1.55">This is an automatic one-day interview reminder intended for the named recipient. If you received it in error, please notify Innovex Resource Group Limited and delete it.</div>
+      </div>
+    </div>
+  </div>`;
+
+  return {
+    from: formatSender(),
+    to: interview.candidateEmail,
+    replyTo: recipient,
+    subject,
+    text,
+    html
+  };
+}
+
 async function deliverMail(transporter, account, mailOptions) {
   if (account?.imapHost && account?.imapPort && account?.user && account?.pass) {
     return sendAndArchive(transporter, account, mailOptions);
@@ -245,6 +331,16 @@ export async function sendInterviewConfirmationEmail(interview) {
   }
 
   const mailOptions = buildInterviewConfirmationEmail(interview);
+  const delivery = await deliverMail(makeTransporter(), null, mailOptions);
+  return { sent: true, subject: mailOptions.subject, ...delivery };
+}
+
+export async function sendCandidateInterviewReminderEmail(interview) {
+  if (!hasSmtpConfig()) {
+    return { sent: false, reason: "SMTP is not configured" };
+  }
+
+  const mailOptions = buildCandidateInterviewReminderEmail(interview);
   const delivery = await deliverMail(makeTransporter(), null, mailOptions);
   return { sent: true, subject: mailOptions.subject, ...delivery };
 }

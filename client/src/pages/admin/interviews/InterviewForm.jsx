@@ -45,7 +45,7 @@ export function toInterviewForm(interview = {}) {
 }
 
 export default function InterviewForm({ form, setForm, editing, saving, onSubmit, onCancel }) {
-  const reminderText = `Reminder: ${form.candidateName || "[Candidate Name]"} has an interview today for ${form.jobTitle || "[Job Title]"} at ${form.interviewTime || "[Interview Time]"} with ${form.clientName || "[Client Name]"}.`;
+  const reminderText = `${form.candidateName || "[Candidate Name]"} will receive an interview reminder for ${form.jobTitle || "[Job Title]"} with ${form.clientName || "[Client Name]"} exactly one day before the interview.`;
   const faceToFace = form.interviewType === "Face-to-face";
 
   return (
@@ -122,9 +122,9 @@ export default function InterviewForm({ form, setForm, editing, saving, onSubmit
         <small>The email clearly confirms the booking and asks the candidate to reply so attendance can be added to Innovex records.</small>
       </div>
       <div className="reminder-preview">
-        <label className="checkbox-line"><input type="checkbox" checked={form.reminderEmailEnabled} onChange={(e) => setForm({ ...form, reminderEmailEnabled: e.target.checked })} /> Auto email reminder enabled</label>
+        <label className="checkbox-line"><input type="checkbox" checked={form.reminderEmailEnabled} onChange={(e) => setForm({ ...form, reminderEmailEnabled: e.target.checked })} /> Send candidate reminder 1 day before</label>
         <p>{reminderText}</p>
-        <small>Subject: Interview reminder</small>
+        <small>Subject: Interview reminder for tomorrow</small>
       </div>
       <SubmitButton loading={saving} loadingText="Saving booking...">{editing ? "Update Booking" : "Create Interview"}</SubmitButton>
     </form>

@@ -37,7 +37,8 @@ export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSa
       <div className="interview-chip-row">
         <span className="status-chip">{interview.interviewStatus}</span>
         <span className="status-chip gold">{outcomeLabel(interview.candidateSelected)}</span>
-        {interview.reminderEmailEnabled && <span className="status-chip soft">Reminder on</span>}
+        {interview.reminderEmailEnabled && <span className="status-chip soft">1-day reminder on</span>}
+        {interview.candidateReminderEmailStatus === "Sent" && <span className="status-chip soft">Reminder sent</span>}
       </div>
 
       <div className="interview-mini-grid">
