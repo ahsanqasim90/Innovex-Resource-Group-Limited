@@ -7,6 +7,7 @@ import SectionHeading from "../components/SectionHeading.jsx";
 import StarRatingInput from "../components/StarRatingInput.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import SubmitButton from "../components/SubmitButton.jsx";
+import TestimonialReviewText from "../components/TestimonialReviewText.jsx";
 
 export default function Testimonials() {
   const [items, setItems] = useState([]);
@@ -86,7 +87,7 @@ export default function Testimonials() {
                   <RatingStars rating={item.rating} />
                   <span>{item.reviewType || "Review"}</span>
                 </div>
-                <p>{item.message}</p>
+                <TestimonialReviewText text={item.message} />
                 <div className="testimonial-author">
                   <strong>{item.name}</strong>
                   <span>{item.role}{item.company ? `, ${item.company}` : ""}</span>

@@ -1,14 +1,15 @@
 import { MessageCircle, Quote } from "lucide-react";
 import { Link } from "react-router-dom";
 import RatingStars from "./RatingStars.jsx";
+import TestimonialReviewText from "./TestimonialReviewText.jsx";
 
 function TestimonialSlide({ item }) {
   return (
     <article className="testimonial-slide-card">
       <Quote className="quote-mark" size={28} />
       <RatingStars rating={item.rating} />
-      <p>{item.message}</p>
-      <div>
+      <TestimonialReviewText text={item.message} />
+      <div className="testimonial-slide-author">
         <h3>{item.name}</h3>
         <span>{item.role}{item.company ? `, ${item.company}` : ""}</span>
       </div>

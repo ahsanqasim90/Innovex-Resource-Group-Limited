@@ -1884,6 +1884,7 @@ main { min-height: 70vh; }
 }
 .testimonial-slider-track {
   display: flex;
+  align-items: stretch;
   width: max-content;
   gap: 18px;
   padding: 12px 0 22px;
@@ -1894,11 +1895,10 @@ main { min-height: 70vh; }
 }
 .testimonial-slide-card {
   position: relative;
-  display: grid;
-  align-content: space-between;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
   width: min(390px, 84vw);
-  min-height: 270px;
+  height: 310px;
   padding: 24px;
   border: 1px solid #d4e8ec;
   border-radius: 28px;
@@ -1917,6 +1917,11 @@ main { min-height: 70vh; }
   margin: 0;
   color: #243942;
   line-height: 1.65;
+}
+.testimonial-slide-author {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
 .testimonial-slide-card h3 {
   margin: 0 0 4px;
@@ -2061,14 +2066,16 @@ main { min-height: 70vh; }
 .testimonial-review-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 330px;
+  align-items: stretch;
   gap: 22px;
 }
 .testimonial-review-card {
   position: relative;
-  display: grid;
-  align-content: space-between;
-  gap: 18px;
-  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   padding: 24px;
   border: 1px solid #d4e8ec;
   border-radius: 28px;
@@ -2104,6 +2111,7 @@ main { min-height: 70vh; }
 .testimonial-author {
   display: grid;
   gap: 4px;
+  margin-top: auto;
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
@@ -8372,5 +8380,118 @@ tbody tr:hover td {
   .hr-totals,
   .hr-table-tools {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Public header and equal-height testimonial cards */
+.innovex-public-header {
+  min-height: 76px;
+  gap: clamp(24px, 3vw, 48px);
+}
+
+.innovex-public-header .innovex-public-brand-name {
+  white-space: nowrap;
+  font-size: clamp(0.88rem, 1vw, 1rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.innovex-public-header .innovex-public-nav {
+  margin-left: auto;
+  gap: clamp(0.7rem, 1.15vw, 1.15rem);
+}
+
+.innovex-public-header .innovex-public-nav a {
+  font-size: clamp(0.76rem, 0.9vw, 0.9rem);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.innovex-public-header .header-upload-button {
+  min-height: 42px;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid #e1a82e;
+  background: linear-gradient(135deg, #f8c654, var(--gold));
+  box-shadow: 0 10px 24px rgba(244,185,66,.28);
+}
+
+.testimonial-copy-region {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin: 18px 0;
+}
+
+.testimonial-copy-text {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+}
+
+.testimonial-copy-region.is-expanded .testimonial-copy-text {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 8px;
+  overflow-y: auto;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  scrollbar-color: rgba(11,95,117,.4) transparent;
+}
+
+.testimonial-read-more {
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--blue);
+  font-size: .82rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 1180px) {
+  .innovex-public-header .innovex-public-brand-name {
+    max-width: 150px;
+    white-space: normal;
+  }
+
+  .innovex-public-header .innovex-public-nav {
+    gap: 0.6rem;
+  }
+
+  .innovex-public-header .innovex-public-nav a {
+    font-size: 0.74rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .innovex-public-header {
+    min-height: 70px;
+  }
+
+  .innovex-public-header .innovex-public-brand-name {
+    max-width: 210px;
+    font-size: .88rem;
+  }
+
+  .innovex-public-header .innovex-public-nav {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .testimonial-review-grid {
+    grid-auto-rows: 320px;
+  }
+
+  .testimonial-slide-card {
+    height: 300px;
   }
 }

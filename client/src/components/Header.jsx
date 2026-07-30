@@ -1,6 +1,6 @@
 import { LockKeyhole, Menu, X } from "lucide-react";
-import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { company } from "../data/content.js";
 
 const links = [
@@ -17,18 +17,31 @@ const links = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   return (
-    <header className="site-header">
+    <header className="site-header innovex-public-header">
       <Link className="brand" to="/" aria-label="Innovex home">
         <img src="/Logo.png" alt="Innovex Resource Group Limited logo" className="brand-logo" width="56" height="56" fetchPriority="high" />
-        <span>{company.name}</span>
+        <span className="innovex-public-brand-name">{company.name}</span>
       </Link>
-      <button className="menu-button" onClick={() => setOpen(!open)} aria-label="Toggle navigation">
+      <button
+        className="menu-button"
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-label={open ? "Close navigation" : "Open navigation"}
+        aria-controls="primary-navigation"
+        aria-expanded={open}
+      >
         {open ? <X /> : <Menu />}
       </button>
-      <nav className={`nav ${open ? "open" : ""}`}>
+      <nav id="primary-navigation" className={`nav innovex-public-nav ${open ? "open" : ""}`}>
         {links.map(([href, label]) => (
-          <NavLink key={href} to={href} onClick={() => setOpen(false)}>
+          <NavLink key={href} to={href} end={href === "/"} onClick={() => setOpen(false)}>
             {label}
           </NavLink>
         ))}
