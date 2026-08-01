@@ -605,6 +605,30 @@ export async function sendComposedEmail({ fromEmail, to = [], cc = [], bcc = [],
   return { sent: true, ...archive };
 }
 
+export async function sendProspectExportEmail({ fromEmail, to, subject, message, workbookBuffer, filename, recordCount }) {
+  const account = senderAccountOrDefault(fromEmail);
+  if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
+
+  const transporter = makeTransporter(account);
+  const source = "Innovex Web Leads CRM";
+  const safeMessage = message || "Please find attached the requested Innovex prospect register export.";
+  const mailOptions = {
+    from: formatSender(account),
+    to,
+    replyTo: account.address,
+    subject,
+    text: `${safeMessage}\n\nThe attached professional Excel workbook contains ${Number(recordCount || 0).toLocaleString("en-GB")} prospect records, an export summary and a filterable prospect register.\n\nThis file contains confidential business information. Please store and share it securely.\n\nKind regards,\nInnovex Resource Group Limited\n${account.address}\n\n${crmComplianceFooterText(source, true)}`,
+    html: `<div style="margin:0;background:#f3f8f8;padding:30px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:16px;overflow:hidden;box-shadow:0 14px 40px rgba(6,79,94,.10)"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:24px 30px;color:#ffffff"><div style="font-size:11px;letter-spacing:1.6px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Prospect register export</div></div><div style="padding:28px 30px"><p style="margin-top:0;line-height:1.65">${messageHtml(safeMessage)}</p><div style="margin:22px 0;padding:18px;border:1px solid #d6e8eb;border-left:4px solid #f4b942;border-radius:12px;background:#eef7f7"><div style="color:#60777e;font-size:11px;font-weight:700;letter-spacing:.08em">ATTACHED WORKBOOK</div><strong style="display:block;color:#173840;font-size:17px;margin-top:7px">${escapeHtml(filename)}</strong><span style="display:block;color:#60777e;margin-top:7px">${Number(recordCount || 0).toLocaleString("en-GB")} prospect records · Summary and filterable register</span></div><p style="line-height:1.6">This workbook contains confidential business information. Please store it securely and only share it with authorised recipients.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; ${escapeHtml(account.address)}</span></p>${crmComplianceFooterHtml(source, true)}</div></div></div>`,
+    attachments: [{
+      filename,
+      content: workbookBuffer,
+      contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    }]
+  };
+  const archive = await deliverMail(transporter, account, mailOptions);
+  return { sent: true, fromEmail: account.address, subject, ...archive };
+}
+
 export async function sendInvoiceEmail({ invoice, pdfBuffer, fromEmail, customMessage = "", cc = [] }) {
   const account = senderAccountOrDefault(fromEmail || invoice.senderEmail);
   if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };

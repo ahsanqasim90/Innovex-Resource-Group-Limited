@@ -11,7 +11,8 @@ import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccou
 import { hasPermission } from "../config/permissions.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../services/activityLogService.js";
-import { sendComposedEmail } from "../services/emailService.js";
+import { sendComposedEmail, sendProspectExportEmail } from "../services/emailService.js";
+import { generateWebLeadProspectsWorkbook, prospectExportFilename } from "../services/webLeadExportService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
@@ -55,6 +56,8 @@ const prospectFields = [
 ];
 
 const emailLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 100, standardHeaders: true, legacyHeaders: false });
+const EXPORT_LIMIT = 25000;
+const exportFilterFields = ["search", "status", "category", "service", "agent", "from", "to"];
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const isManager = (user) => ["admin", "super_admin", "sales_manager"].includes(user?.role) || hasPermission(user, "webLeads.manage");
 const isSettingsManager = (user) => ["admin", "super_admin"].includes(user?.role);
@@ -138,6 +141,26 @@ function buildListFilter(req) {
     if (req.query.to) filter.createdAt.$lte = new Date(`${req.query.to}T23:59:59.999`);
   }
   return ownerFilter(req, filter);
+}
+
+async function buildProspectExport(req, query = {}, scopeLabel = "All accessible prospects") {
+  const exportReq = { user: req.user, query: pick(query, exportFilterFields) };
+  const filter = buildListFilter(exportReq);
+  const total = await WebLeadProspect.countDocuments(filter);
+  if (total > EXPORT_LIMIT) {
+    const error = new Error(`This export contains ${total.toLocaleString("en-GB")} records. Please apply filters to export no more than ${EXPORT_LIMIT.toLocaleString("en-GB")} records at a time.`);
+    error.statusCode = 413;
+    throw error;
+  }
+  const items = await WebLeadProspect.find(filter)
+    .select([...prospectFields, "createdByName", "createdAt", "updatedAt", "followUps"].join(" "))
+    .sort({ updatedAt: -1 })
+    .lean();
+  const workbookBuffer = await generateWebLeadProspectsWorkbook(items, {
+    scopeLabel,
+    preparedFor: req.user.name || req.user.email || "Innovex CRM user"
+  });
+  return { items, workbookBuffer, filename: prospectExportFilename(), total };
 }
 
 router.get("/meta", async (req, res, next) => {
@@ -232,6 +255,56 @@ router.get("/prospects", async (req, res, next) => {
       WebLeadProspect.countDocuments(filter)
     ]);
     res.json({ items: items.map((item) => safeProspect(item, req.user)), total, page, pages: Math.ceil(total / limit) || 1, limit });
+  } catch (error) { next(error); }
+});
+
+router.get("/prospects/export.xlsx", async (req, res, next) => {
+  try {
+    const filtered = exportFilterFields.some((field) => req.query[field]);
+    const result = await buildProspectExport(req, req.query, filtered ? "Current filtered results" : "All accessible prospects");
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${result.filename}"`);
+    res.setHeader("Content-Length", result.workbookBuffer.length);
+    res.send(result.workbookBuffer);
+  } catch (error) { next(error); }
+});
+
+router.post("/prospects/export/email", emailLimiter, async (req, res, next) => {
+  try {
+    requireFields(req.body, ["fromEmail", "recipient"]);
+    validateEmail(req.body.recipient);
+    const fromEmail = String(req.body.fromEmail || "").toLowerCase().trim();
+    if (!canUseSender(req.user, fromEmail)) return res.status(403).json({ message: "You are not allowed to use this sender mailbox" });
+    const filtered = req.body.scope === "filtered";
+    const result = await buildProspectExport(
+      req,
+      filtered ? req.body.filters : {},
+      filtered ? "Current filtered results" : "All accessible prospects"
+    );
+    const subject = String(req.body.subject || `Innovex prospect register | ${new Date().toLocaleDateString("en-GB")}`).trim();
+    const message = String(req.body.message || "Please find attached the requested Innovex prospect register export.").trim();
+    const delivery = await sendProspectExportEmail({
+      fromEmail,
+      to: req.body.recipient,
+      subject,
+      message,
+      workbookBuffer: result.workbookBuffer,
+      filename: result.filename,
+      recordCount: result.total
+    });
+    await EmailLog.create({
+      fromEmail,
+      to: [req.body.recipient],
+      subject,
+      message,
+      targetType: "Manual",
+      status: delivery.sent ? "Sent" : "Failed",
+      error: delivery.reason || "",
+      sentBy: { user: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role }
+    });
+    if (!delivery.sent) return res.status(400).json({ message: delivery.reason || "Unable to email the prospect export" });
+    await logActivity(req, { module: "Web Leads CRM", action: "Export emailed", entityType: "WebLeadProspect", summary: `${result.total} prospect records emailed to ${req.body.recipient}` });
+    res.json({ message: `Professional Excel export with ${result.total.toLocaleString("en-GB")} prospects was emailed successfully.` });
   } catch (error) { next(error); }
 });
 

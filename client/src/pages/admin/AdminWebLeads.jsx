@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Bell, Building2, CalendarClock, ChevronDown, CircleHelp, ClipboardList, FileCheck2, Filter, LayoutDashboard, Mail, MessageSquareText, Plus, Search, Send, Settings, Target, UserCheck, UsersRound } from "lucide-react";
-import { api } from "../../api/client.js";
+import { Bell, Building2, CalendarClock, ChevronDown, CircleHelp, ClipboardList, Download, FileCheck2, FileSpreadsheet, Filter, LayoutDashboard, Mail, MailPlus, MessageSquareText, Plus, Search, Send, Settings, Target, UserCheck, UsersRound, X } from "lucide-react";
+import { api, downloadFile } from "../../api/client.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
@@ -368,6 +368,9 @@ export default function AdminWebLeads({ mode = "dashboard" }) {
   const [dashboardFilters, setDashboardFilters] = useState({ period: "This month", from: "", to: "", agent: "", category: "", status: "", service: "" });
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [emailingExport, setEmailingExport] = useState(false);
+  const [exportEmail, setExportEmail] = useState({ open: false, scope: "all", fromEmail: "", recipient: "", subject: "Innovex prospect register", message: "Please find attached the requested Innovex prospect register export." });
 
   const listMode = ["prospects", "emails", "followups", "qualified", "meetings"].includes(mode);
 
@@ -420,6 +423,52 @@ export default function AdminWebLeads({ mode = "dashboard" }) {
     return mode === "followups" ? loadFollowUps(1, followUpView, emptyFilters) : loadList(1, emptyFilters);
   }
 
+  function prospectExportFilters() {
+    return Object.fromEntries(Object.entries(filters).filter(([, value]) => value));
+  }
+
+  async function downloadProspectExport(scope = "all") {
+    setExporting(true);
+    setStatus(null);
+    try {
+      const query = scope === "filtered" ? new URLSearchParams(prospectExportFilters()).toString() : "";
+      const stamp = new Date().toISOString().slice(0, 10);
+      await downloadFile(`/web-leads/prospects/export.xlsx${query ? `?${query}` : ""}`, `Innovex-Prospects-${stamp}.xlsx`);
+      setStatus({ message: `${scope === "filtered" ? "Filtered" : "Complete"} professional prospect workbook downloaded.` });
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function openExportEmail() {
+    setExportEmail((current) => ({
+      ...current,
+      open: true,
+      fromEmail: current.fromEmail || meta.senders?.[0]?.address || "",
+      recipient: current.recipient || user?.email || ""
+    }));
+  }
+
+  async function emailProspectExport(event) {
+    event.preventDefault();
+    setEmailingExport(true);
+    setStatus(null);
+    try {
+      const result = await api("/web-leads/prospects/export/email", {
+        method: "POST",
+        body: { ...exportEmail, filters: prospectExportFilters() }
+      });
+      setStatus({ message: result.message });
+      setExportEmail((current) => ({ ...current, open: false }));
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    } finally {
+      setEmailingExport(false);
+    }
+  }
+
   return <>
     <PageHero mode={mode} notifications={notifications.filter((item) => !item.read).length} />
     <StatusMessage status={status} />
@@ -430,6 +479,28 @@ export default function AdminWebLeads({ mode = "dashboard" }) {
     {!loading && mode === "add" && <ProspectForm meta={meta} onSaved={(item) => setStatus({ message: `${item.businessName} was added successfully.` })} />}
     {!loading && listMode && <>
       <section className="card webcrm-filter-bar"><div className="webcrm-section-title"><Filter size={19} /><div><h2>Find the right records</h2><p>{meta.manager ? "Search the full team pipeline, then add advanced filters only when needed." : "Search your prospects, then add advanced filters only when needed."}</p></div><HelpHint text="Start with a keyword or status. Open More filters only for category, service, agent or date-specific searches." /></div><form onSubmit={(e) => { e.preventDefault(); mode === "followups" ? loadFollowUps(1) : loadList(1); }}><div className="webcrm-filter-primary"><div className="input-with-icon"><Search size={17} /><input placeholder="Business, contact, phone, email, website or postcode" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} /></div><select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}><option value="">All statuses</option>{meta.statuses.map((item) => <option key={item}>{item}</option>)}</select><button className="button">Search</button><button type="button" className="button secondary" onClick={clearListFilters}>Clear</button></div><details className="webcrm-filter-more"><summary><span>More filters</span><ChevronDown size={17} /></summary><div><select value={filters.category} onChange={(e) => setFilters({ ...filters, category: e.target.value })}><option value="">All categories</option>{meta.categories.filter((item) => item.isActive !== false).map((item) => <option key={item._id || item.name}>{item.name}</option>)}</select><select value={filters.service} onChange={(e) => setFilters({ ...filters, service: e.target.value })}><option value="">All services</option>{meta.services.map((item) => <option key={item}>{item}</option>)}</select>{meta.manager && <select value={filters.agent} onChange={(e) => setFilters({ ...filters, agent: e.target.value })}><option value="">All agents</option>{meta.agents.map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}</select>}<label><span>Created from</span><input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} /></label><label><span>Created to</span><input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} /></label></div></details></form></section>
+      {mode === "prospects" && <section className="card webcrm-export-centre">
+        <div className="webcrm-export-copy">
+          <div className="webcrm-export-icon"><FileSpreadsheet size={25} /></div>
+          <div><span className="eyebrow">Professional data export</span><h2>Prospect Excel centre</h2><p>Download every accessible prospect or export the current filtered results. Email addresses and websites remain clickable inside the workbook.</p></div>
+        </div>
+        <div className="webcrm-export-actions">
+          <button type="button" className="button" disabled={exporting} onClick={() => downloadProspectExport("all")}><Download size={17} /> {exporting ? "Preparing..." : "Export all prospects"}</button>
+          <button type="button" className="button secondary" disabled={exporting || !pagination.total} onClick={() => downloadProspectExport("filtered")}><FileSpreadsheet size={17} /> Export filtered ({Number(pagination.total || 0).toLocaleString()})</button>
+          <button type="button" className="button secondary webcrm-email-export-button" onClick={openExportEmail}><MailPlus size={17} /> Email Excel export</button>
+        </div>
+        {exportEmail.open && <form className="webcrm-export-email" onSubmit={emailProspectExport}>
+          <div className="webcrm-export-email-head"><div><strong>Email the workbook securely</strong><span>The generated Excel file will be attached to a professional Innovex email.</span></div><button type="button" aria-label="Close email export" onClick={() => setExportEmail((current) => ({ ...current, open: false }))}><X size={18} /></button></div>
+          <div className="webcrm-export-email-grid">
+            <label><span>Export scope</span><select value={exportEmail.scope} onChange={(event) => setExportEmail({ ...exportEmail, scope: event.target.value })}><option value="all">All accessible prospects</option><option value="filtered">Current filtered results ({Number(pagination.total || 0).toLocaleString()})</option></select></label>
+            <label><span>Send from</span><select required value={exportEmail.fromEmail} onChange={(event) => setExportEmail({ ...exportEmail, fromEmail: event.target.value })}><option value="">Choose sender mailbox</option>{(meta.senders || []).map((item) => <option key={item.address} value={item.address}>{item.label} · {item.address}</option>)}</select></label>
+            <label><span>Recipient email</span><input type="email" required value={exportEmail.recipient} onChange={(event) => setExportEmail({ ...exportEmail, recipient: event.target.value })} placeholder="name@company.co.uk" /></label>
+            <label><span>Email subject</span><input required value={exportEmail.subject} onChange={(event) => setExportEmail({ ...exportEmail, subject: event.target.value })} /></label>
+          </div>
+          <label><span>Email message</span><textarea rows="3" required value={exportEmail.message} onChange={(event) => setExportEmail({ ...exportEmail, message: event.target.value })} /></label>
+          <div className="webcrm-export-email-footer"><small>Confidential CRM data is sent only through an authorised Innovex mailbox.</small><SubmitButton loading={emailingExport} loadingText="Generating and sending..."><Send size={17} /> Generate & email workbook</SubmitButton></div>
+        </form>}
+      </section>}
       {mode === "followups" ? <section className="card"><div className="webcrm-followup-head"><h2>Follow-up schedule</h2><div>{["Due today", "Upcoming", "Overdue", "Completed"].map((item) => <button className={followUpView === item ? "active" : ""} key={item} onClick={() => { setFollowUpView(item); loadFollowUps(1, item); }}>{item}</button>)}</div></div><div className="webcrm-followup-list">{followUps.map((item) => <button key={item._id} onClick={() => openProspect(item.prospect._id)}><span className={`webcrm-priority ${item.priority.toLowerCase()}`}>{item.priority}</span><strong>{item.prospect.businessName}</strong><span>{dateTime(item.dueAt)}</span><small>{item.completed ? "Completed" : followUpView}</small></button>)}{!followUps.length && <p>No follow-ups found.</p>}</div></section> : <ProspectTable items={prospects} onSelect={openProspect} />}
       <div className="talent-pagination"><button className="button secondary" disabled={pagination.page <= 1} onClick={() => loadPage(pagination.page - 1)}>Previous</button><span>Page {pagination.page} of {pagination.pages} · {Number(pagination.total || 0).toLocaleString()} {mode === "followups" ? "follow-ups" : "prospects"}</span><button className="button secondary" disabled={pagination.page >= pagination.pages} onClick={() => loadPage(pagination.page + 1)}>Next</button></div>
       {selected && <ProspectDetail prospect={selected} meta={meta} user={user} onRefresh={refreshSelected} />}
