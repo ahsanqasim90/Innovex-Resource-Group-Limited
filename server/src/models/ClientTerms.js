@@ -115,6 +115,17 @@ const clientTermsSchema = new mongoose.Schema(
     sentAt: { type: Date },
     sentFolderSaved: { type: Boolean, default: false },
     sentFolderError: { type: String, trim: true, default: "" },
+    unsignedReminderEnabled: { type: Boolean, default: true },
+    unsignedReminderCount: { type: Number, default: 0, min: 0 },
+    lastUnsignedReminderDate: { type: String, trim: true, default: "" },
+    lastUnsignedReminderAt: { type: Date },
+    unsignedReminderProcessingDate: { type: String, trim: true, default: "" },
+    unsignedReminderStatus: {
+      type: String,
+      enum: ["Not started", "Sent", "Failed", "Stopped"],
+      default: "Not started"
+    },
+    unsignedReminderError: { type: String, trim: true, default: "" },
     signedAt: { type: Date },
     signedBy: { type: String, trim: true, default: "" },
     signatureNotes: { type: String, trim: true, default: "" },

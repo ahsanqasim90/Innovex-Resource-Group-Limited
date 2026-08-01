@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  BellRing,
+  CalendarClock,
   CheckCircle2,
   Download,
+  FileCheck2,
   FileSignature,
   Mail,
   Plus,
   RefreshCw,
   Send,
   Trash2,
+  ShieldCheck,
   XCircle
 } from "lucide-react";
 import { api, downloadFile } from "../../api/client.js";
@@ -291,6 +295,8 @@ export default function AdminClientTerms() {
   }
 
   const selectedRates = selected?.roleRates || [];
+  const reminderActive = selected?.status === "Sent" && selected?.unsignedReminderEnabled !== false;
+  const reminderStatus = selected?.unsignedReminderStatus || "Not started";
 
   return (
     <section className="admin-page admin-client-terms-page terms-simple-page">
@@ -308,19 +314,19 @@ export default function AdminClientTerms() {
           </div>
         </div>
         <div className="terms-simple-note">
-          <FileSignature size={24} />
-          <strong>Original IRG terms protected</strong>
-          <span>The final PDF attaches your fixed terms after the commercial schedule. Staff should not rewrite legal clauses.</span>
+          <ShieldCheck size={24} />
+          <strong>Professional, protected client pack</strong>
+          <span>Branded legal terms, commercial fee table, rebate schedule and signature section are generated as one PDF.</span>
         </div>
       </div>
 
       <StatusMessage status={status} />
 
       <div className="terms-stat-grid terms-simple-stats">
-        <div className="terms-stat"><span>Total terms</span><strong>{stats.total}</strong></div>
-        <div className="terms-stat"><span>Draft schedules</span><strong>{stats.draft}</strong></div>
-        <div className="terms-stat"><span>Sent to clients</span><strong>{stats.sent}</strong></div>
-        <div className="terms-stat"><span>Signed terms</span><strong>{stats.signed}</strong></div>
+        <div className="terms-stat"><FileSignature size={20} /><span>Total terms</span><strong>{stats.total}</strong></div>
+        <div className="terms-stat"><CalendarClock size={20} /><span>Draft schedules</span><strong>{stats.draft}</strong></div>
+        <div className="terms-stat"><BellRing size={20} /><span>Awaiting signature</span><strong>{stats.sent}</strong></div>
+        <div className="terms-stat"><FileCheck2 size={20} /><span>Signed terms</span><strong>{stats.signed}</strong></div>
       </div>
 
       <div className="terms-simple-workspace">
@@ -331,52 +337,64 @@ export default function AdminClientTerms() {
             <p>Fill only the details that change from client to client.</p>
           </div>
 
-          <div className="terms-step-title">Client information</div>
-          <div className="terms-form-grid">
-            <label>Client / company name<input value={form.clientName} onChange={(event) => updateField("clientName", event.target.value)} required /></label>
-            <label>Contact person<input value={form.contactName} onChange={(event) => updateField("contactName", event.target.value)} /></label>
-            <label>Client email<input type="email" value={form.clientEmail} onChange={(event) => updateField("clientEmail", event.target.value)} placeholder="manager@carehome.co.uk" required /></label>
-            <label>Agreement type<select value={form.agreementType} onChange={(event) => updateField("agreementType", event.target.value)}><option>Recruitment</option><option>Healthcare Staffing</option><option>Training</option><option>Website</option><option>SEO</option><option>Compliance</option><option>Other</option></select></label>
-            <label className="terms-full">Registered / trading address<textarea value={form.clientAddress} onChange={(event) => updateField("clientAddress", event.target.value)} rows="2" /></label>
-          </div>
-
-          <div className="terms-step-title">Payment and rebate settings</div>
-          <div className="terms-form-grid">
-            <label>Effective date<input type="date" value={form.effectiveDate} onChange={(event) => updateField("effectiveDate", event.target.value)} /></label>
-            <label>Valid until<input type="date" value={form.validUntil} onChange={(event) => updateField("validUntil", event.target.value)} /></label>
-            <label>Invoice due within days<input type="number" min="0" value={form.paymentDueDays} onChange={(event) => updateField("paymentDueDays", event.target.value)} /></label>
-            <label>Rebate period days<input type="number" min="0" value={form.rebatePeriodDays} onChange={(event) => updateField("rebatePeriodDays", event.target.value)} /></label>
-            <label className="terms-full">Invoice/payment cycle<textarea value={form.invoiceCycle} onChange={(event) => updateField("invoiceCycle", event.target.value)} rows="2" /></label>
-            <label className="terms-full">Rebate note<textarea value={form.rebateTerms} onChange={(event) => updateField("rebateTerms", event.target.value)} rows="2" /></label>
-          </div>
-
-          <div className="terms-section-title">
-            <div>
-              <h3>Role rates</h3>
-              <p>Add the role-specific fees you normally change for each client.</p>
+          <div className="terms-form-section">
+            <div className="terms-step-title">Client information</div>
+            <div className="terms-form-grid">
+              <label>Client / company name<input value={form.clientName} onChange={(event) => updateField("clientName", event.target.value)} required /></label>
+              <label>Contact person<input value={form.contactName} onChange={(event) => updateField("contactName", event.target.value)} /></label>
+              <label>Client email<input type="email" value={form.clientEmail} onChange={(event) => updateField("clientEmail", event.target.value)} placeholder="manager@carehome.co.uk" required /></label>
+              <label>Agreement type<select value={form.agreementType} onChange={(event) => updateField("agreementType", event.target.value)}><option>Recruitment</option><option>Healthcare Staffing</option><option>Training</option><option>Website</option><option>SEO</option><option>Compliance</option><option>Other</option></select></label>
+              <label className="terms-full">Registered / trading address<textarea value={form.clientAddress} onChange={(event) => updateField("clientAddress", event.target.value)} rows="2" /></label>
             </div>
-            <button type="button" className="ghost compact" onClick={addRate}><Plus size={16} /> Add role</button>
-          </div>
-          <div className="terms-rate-stack">
-            {form.roleRates.map((rate, index) => (
-              <div className="terms-rate-card terms-commercial-row" key={rate._id || `rate-${index}`}>
-                <label>Role title<input value={rate.roleTitle} onChange={(event) => updateRate(index, "roleTitle", event.target.value)} placeholder="Registered Manager" /></label>
-                <label>Fee type<select value={rate.feeType} onChange={(event) => updateRate(index, "feeType", event.target.value)}><option>Percentage</option><option>Flat Fee</option><option>Hourly Margin</option><option>Custom</option></select></label>
-                <label>Rate<input type="number" value={rate.rateValue} onChange={(event) => updateRate(index, "rateValue", event.target.value)} placeholder="8" /></label>
-                <label>Rate unit<input value={rate.rateUnit} onChange={(event) => updateRate(index, "rateUnit", event.target.value)} placeholder="% of annual salary" /></label>
-                <label className="terms-full">Payment trigger<input value={rate.paymentTrigger} onChange={(event) => updateRate(index, "paymentTrigger", event.target.value)} /></label>
-                <label className="terms-full">Role notes<input value={rate.notes} onChange={(event) => updateRate(index, "notes", event.target.value)} placeholder="Optional client-specific note" /></label>
-                {form.roleRates.length > 1 && <button type="button" className="ghost danger compact terms-remove-rate" onClick={() => removeRate(index)}><Trash2 size={15} /> Remove role</button>}
-              </div>
-            ))}
           </div>
 
-          <div className="terms-step-title">Send settings</div>
-          <div className="terms-form-grid">
-            <label>Send from<select value={form.senderEmail} onChange={(event) => updateField("senderEmail", event.target.value)}>{senders.map((sender) => <option key={sender.address} value={sender.address}>{sender.label} ({sender.address})</option>)}</select></label>
-            <label>CC emails<input value={form.cc} onChange={(event) => updateField("cc", event.target.value)} placeholder="optional, comma separated" /></label>
-            <label className="terms-full">Optional internal note<textarea value={form.internalNotes} onChange={(event) => updateField("internalNotes", event.target.value)} rows="2" placeholder="Only visible inside CRM" /></label>
-            <label className="terms-full">Optional email message<textarea value={form.message} onChange={(event) => updateField("message", event.target.value)} rows="3" placeholder="Leave blank to use the standard professional email." /></label>
+          <div className="terms-form-section">
+            <div className="terms-step-title">Payment and rebate settings</div>
+            <div className="terms-form-grid">
+              <label>Effective date<input type="date" value={form.effectiveDate} onChange={(event) => updateField("effectiveDate", event.target.value)} /></label>
+              <label>Valid until<input type="date" value={form.validUntil} onChange={(event) => updateField("validUntil", event.target.value)} /></label>
+              <label>Invoice due within days<input type="number" min="0" value={form.paymentDueDays} onChange={(event) => updateField("paymentDueDays", event.target.value)} /></label>
+              <label>Rebate period days<input type="number" min="0" value={form.rebatePeriodDays} onChange={(event) => updateField("rebatePeriodDays", event.target.value)} /></label>
+              <label className="terms-full">Invoice/payment cycle<textarea value={form.invoiceCycle} onChange={(event) => updateField("invoiceCycle", event.target.value)} rows="2" /></label>
+              <label className="terms-full">Rebate note<textarea value={form.rebateTerms} onChange={(event) => updateField("rebateTerms", event.target.value)} rows="2" /></label>
+            </div>
+          </div>
+
+          <div className="terms-form-section">
+            <div className="terms-section-title">
+              <div>
+                <div className="terms-step-title">Role rates</div>
+                <p>Add the role-specific fees you normally change for each client.</p>
+              </div>
+              <button type="button" className="ghost compact" onClick={addRate}><Plus size={16} /> Add role</button>
+            </div>
+            <div className="terms-rate-stack">
+              {form.roleRates.map((rate, index) => (
+                <div className="terms-rate-card terms-commercial-row" key={rate._id || `rate-${index}`}>
+                  <label>Role title<input value={rate.roleTitle} onChange={(event) => updateRate(index, "roleTitle", event.target.value)} placeholder="Registered Manager" /></label>
+                  <label>Fee type<select value={rate.feeType} onChange={(event) => updateRate(index, "feeType", event.target.value)}><option>Percentage</option><option>Flat Fee</option><option>Hourly Margin</option><option>Custom</option></select></label>
+                  <label>Rate<input type="number" min="0" max={rate.feeType === "Percentage" ? "100" : undefined} value={rate.rateValue} onChange={(event) => updateRate(index, "rateValue", event.target.value)} placeholder="8" /></label>
+                  <label>Rate unit<input value={rate.rateUnit} onChange={(event) => updateRate(index, "rateUnit", event.target.value)} placeholder="% of annual salary" /></label>
+                  <label className="terms-full">Payment trigger<input value={rate.paymentTrigger} onChange={(event) => updateRate(index, "paymentTrigger", event.target.value)} /></label>
+                  <label className="terms-full">Role notes<input value={rate.notes} onChange={(event) => updateRate(index, "notes", event.target.value)} placeholder="Optional client-specific note" /></label>
+                  {form.roleRates.length > 1 && <button type="button" className="ghost danger compact terms-remove-rate" onClick={() => removeRate(index)}><Trash2 size={15} /> Remove role</button>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="terms-form-section">
+            <div className="terms-step-title">Send settings</div>
+            <div className="terms-automation-note">
+              <BellRing size={19} />
+              <div><strong>Daily unsigned follow-up included</strong><span>Starts the next day after sending and stops automatically when terms are marked signed or cancelled.</span></div>
+            </div>
+            <div className="terms-form-grid">
+              <label>Send from<select value={form.senderEmail} onChange={(event) => updateField("senderEmail", event.target.value)}>{senders.map((sender) => <option key={sender.address} value={sender.address}>{sender.label} ({sender.address})</option>)}</select></label>
+              <label>CC emails<input value={form.cc} onChange={(event) => updateField("cc", event.target.value)} placeholder="optional, comma separated" /></label>
+              <label className="terms-full">Optional internal note<textarea value={form.internalNotes} onChange={(event) => updateField("internalNotes", event.target.value)} rows="2" placeholder="Only visible inside CRM" /></label>
+              <label className="terms-full">Optional email message<textarea value={form.message} onChange={(event) => updateField("message", event.target.value)} rows="3" placeholder="Leave blank to use the standard professional email." /></label>
+            </div>
           </div>
 
           <div className="terms-actions">
@@ -394,13 +412,29 @@ export default function AdminClientTerms() {
 
           {selected ? (
             <>
-              <span className={`terms-status ${statusClass(selected.status)}`}>{selected.status}</span>
+              <div className="terms-document-status">
+                <span className={`terms-status ${statusClass(selected.status)}`}>{selected.status}</span>
+                <span>{selected.documentNumber}</span>
+              </div>
               <dl className="terms-preview-list">
                 <div><dt>Email</dt><dd>{selected.clientEmail}</dd></div>
                 <div><dt>Status</dt><dd>{selected.status}</dd></div>
                 <div><dt>Rates</dt><dd>{selectedRates.length} role rate{selectedRates.length === 1 ? "" : "s"}</dd></div>
                 <div><dt>Effective</dt><dd>{formatDate(selected.effectiveDate)}</dd></div>
               </dl>
+              <div className={`terms-reminder-card ${reminderActive ? "active" : "stopped"}`}>
+                <BellRing size={20} />
+                <div>
+                  <strong>{reminderActive ? "Daily follow-up active" : "Daily follow-up stopped"}</strong>
+                  <span>
+                    {reminderActive
+                      ? `${Number(selected.unsignedReminderCount || 0)} reminder${Number(selected.unsignedReminderCount || 0) === 1 ? "" : "s"} sent. Latest status: ${reminderStatus}.`
+                      : selected.status === "Draft" ? "Follow-ups start the day after these terms are sent." : `No more automatic reminders for ${selected.status.toLowerCase()} terms.`}
+                  </span>
+                  {selected.lastUnsignedReminderAt && <small>Last sent {formatDate(selected.lastUnsignedReminderAt)}</small>}
+                  {selected.unsignedReminderError && <small className="terms-reminder-error">{selected.unsignedReminderError}</small>}
+                </div>
+              </div>
               <div className="terms-rate-preview">
                 <h3>Commercial rates</h3>
                 {selectedRates.length ? selectedRates.map((rate) => (
@@ -413,8 +447,8 @@ export default function AdminClientTerms() {
               <div className="terms-preview-actions">
                 <button type="button" className="ghost" onClick={() => downloadFile(`/terms/${selected._id}/pdf`, `Innovex-Terms-${selected.documentNumber}.pdf`)}><Download size={16} /> Download PDF</button>
                 <button type="button" className="button" disabled={sending} onClick={sendTerms}>{sending ? <RefreshCw size={16} className="spin" /> : <Send size={16} />} Send Terms</button>
-                <button type="button" className="ghost success" onClick={markSigned}><CheckCircle2 size={16} /> Mark signed</button>
-                <button type="button" className="ghost danger" onClick={cancelTerms}><XCircle size={16} /> Cancel</button>
+                <button type="button" className="ghost success" disabled={selected.status !== "Sent"} onClick={markSigned}><CheckCircle2 size={16} /> Mark signed</button>
+                <button type="button" className="ghost danger" disabled={["Signed", "Cancelled"].includes(selected.status)} onClick={cancelTerms}><XCircle size={16} /> Cancel</button>
               </div>
             </>
           ) : (
@@ -441,7 +475,7 @@ export default function AdminClientTerms() {
         </div>
         <div className="table-wrap terms-table-wrap">
           <table>
-            <thead><tr><th>Document</th><th>Client</th><th>Type</th><th>Status</th><th>Schedule</th><th>Updated</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Document</th><th>Client</th><th>Type</th><th>Status</th><th>Follow-up</th><th>Schedule</th><th>Updated</th><th>Actions</th></tr></thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item._id}>
@@ -449,6 +483,7 @@ export default function AdminClientTerms() {
                   <td><strong>{item.clientName}</strong><br /><span>{item.clientEmail}</span></td>
                   <td>{item.agreementType}</td>
                   <td><span className={`terms-status ${statusClass(item.status)}`}>{item.status}</span></td>
+                  <td>{item.status === "Sent" ? <span className="terms-followup-label"><BellRing size={13} /> Daily · {item.unsignedReminderCount || 0}</span> : <span className="terms-followup-muted">Stopped</span>}</td>
                   <td><strong>{item.roleRates?.length || 0} rate{item.roleRates?.length === 1 ? "" : "s"}</strong><br /><span>{item.roleRates?.[0]?.roleTitle || "Commercial schedule"}</span></td>
                   <td>{formatDate(item.updatedAt)}</td>
                   <td>
@@ -460,7 +495,7 @@ export default function AdminClientTerms() {
                   </td>
                 </tr>
               ))}
-              {!items.length && <tr><td colSpan="7">No client terms found.</td></tr>}
+              {!items.length && <tr><td colSpan="8">No client terms found.</td></tr>}
             </tbody>
           </table>
         </div>

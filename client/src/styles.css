@@ -2710,6 +2710,7 @@ label { display: grid; gap: 7px; color: var(--teal); font-weight: 800; }
   color: var(--teal);
 }
 .admin-content {
+  min-width: 0;
   padding: 28px;
   overflow: auto;
 }
@@ -7685,6 +7686,11 @@ tbody tr:hover td {
   --terms-teal-soft: #e8f7f6;
   --terms-gold: #f4b942;
   gap: 1.35rem;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  width: 100%;
+  max-width: 1680px;
+  margin-inline: auto;
 }
 
 .terms-simple-hero {
@@ -7807,6 +7813,33 @@ tbody tr:hover td {
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
+.terms-simple-stats .terms-stat > svg {
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  padding: 0.72rem;
+  border-radius: 14px;
+  background: var(--terms-teal-soft);
+  color: #0d7888;
+}
+
+.terms-simple-stats .terms-stat {
+  grid-template-columns: auto 1fr;
+  column-gap: 0.85rem;
+  align-items: center;
+}
+
+.terms-simple-stats .terms-stat span,
+.terms-simple-stats .terms-stat strong {
+  grid-column: 2;
+}
+
+.terms-simple-stats .terms-stat strong {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
 .terms-simple-stats .terms-stat:hover {
   transform: translateY(-2px);
   box-shadow: 0 18px 38px rgba(5, 58, 68, 0.12);
@@ -7814,12 +7847,14 @@ tbody tr:hover td {
 
 .terms-simple-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.75fr);
+  grid-template-columns: minmax(0, 1.55fr) minmax(360px, 0.72fr);
   gap: 1.25rem;
   align-items: start;
+  min-width: 0;
 }
 
 .terms-simple-card {
+  min-width: 0;
   border: 1px solid rgba(8, 80, 65, 0.15);
   border-radius: 26px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(245, 251, 251, 0.94));
@@ -7827,7 +7862,7 @@ tbody tr:hover td {
 }
 
 .terms-simple-form {
-  padding: 1.35rem;
+  padding: 1.45rem;
   border-top: 0;
 }
 
@@ -7883,7 +7918,7 @@ tbody tr:hover td {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  margin: 1.4rem 0 0.8rem;
+  margin: 0 0 0.9rem;
   padding: 0.55rem 0.8rem;
   border: 1px solid rgba(8, 80, 65, 0.1);
   border-radius: 999px;
@@ -7891,6 +7926,30 @@ tbody tr:hover td {
   color: var(--terms-ink);
   font-weight: 950;
   letter-spacing: 0.02em;
+}
+
+.terms-form-section {
+  margin-top: 1rem;
+  padding: 1.15rem;
+  border: 1px solid rgba(8, 80, 65, 0.1);
+  border-radius: 20px;
+  background: rgba(247, 252, 252, 0.78);
+}
+
+.terms-form-section:nth-of-type(even) {
+  background: rgba(255, 251, 240, 0.55);
+}
+
+.terms-form-section .terms-section-title {
+  margin: 0 0 0.9rem;
+}
+
+.terms-form-section .terms-section-title .terms-step-title {
+  margin-bottom: 0.35rem;
+}
+
+.terms-form-section .terms-section-title p {
+  margin: 0;
 }
 
 .terms-step-title::before {
@@ -7946,12 +8005,56 @@ tbody tr:hover td {
   letter-spacing: 0.05em;
 }
 
+.terms-automation-note {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #cde5df;
+  border-radius: 15px;
+  background: #eaf8f4;
+  color: var(--terms-ink);
+}
+
+.terms-automation-note svg {
+  flex: 0 0 auto;
+  margin-top: 0.08rem;
+  color: #0a7b69;
+}
+
+.terms-automation-note div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.terms-automation-note span {
+  color: #55736e;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 .terms-remove-rate {
   justify-self: start;
 }
 
 .terms-client-preview .terms-status {
-  margin-bottom: 0.85rem;
+  margin-bottom: 0;
+}
+
+.terms-document-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.terms-document-status > span:last-child {
+  color: #6a7d83;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
 }
 
 .terms-preview-list {
@@ -7963,6 +8066,45 @@ tbody tr:hover td {
   border: 1px solid rgba(8, 80, 65, 0.1);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.terms-reminder-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0.9rem 0;
+  padding: 0.9rem;
+  border: 1px solid #cfe3df;
+  border-radius: 16px;
+  background: #eef9f5;
+  color: #07564d;
+}
+
+.terms-reminder-card.stopped {
+  border-color: #dde5e7;
+  background: #f5f7f7;
+  color: #62767b;
+}
+
+.terms-reminder-card > svg {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+.terms-reminder-card > div {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.terms-reminder-card span,
+.terms-reminder-card small {
+  color: #5b7474;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.terms-reminder-card .terms-reminder-error {
+  color: #ad3d3d;
 }
 
 .terms-rate-preview {
@@ -7988,6 +8130,25 @@ tbody tr:hover td {
   justify-content: center;
   width: 100%;
   border-radius: 999px;
+}
+
+.terms-preview-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.terms-followup-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  color: #087361;
+  font-weight: 900;
+}
+
+.terms-followup-muted {
+  color: #7b8a8f;
+  font-size: 0.82rem;
 }
 
 .terms-empty-preview {
@@ -8025,6 +8186,16 @@ tbody tr:hover td {
   color: #ffffff;
 }
 
+.terms-simple-page .terms-table-wrap table {
+  min-width: 1120px;
+}
+
+.terms-simple-page .terms-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .terms-simple-page .terms-table-wrap tbody tr:nth-child(even) {
   background: #f6fbfb;
 }
@@ -8042,6 +8213,10 @@ tbody tr:hover td {
   .terms-client-preview {
     position: static;
   }
+
+  .terms-simple-page .terms-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -8054,6 +8229,25 @@ tbody tr:hover td {
 
   .terms-hero-steps {
     display: grid;
+  }
+
+  .terms-form-section {
+    padding: 0.9rem;
+  }
+
+  .terms-section-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .terms-preview-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .terms-simple-page .terms-stat-grid,
+  .terms-simple-page .terms-form-grid,
+  .terms-simple-page .terms-rate-card {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

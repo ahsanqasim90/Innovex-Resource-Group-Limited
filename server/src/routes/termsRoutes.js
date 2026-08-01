@@ -7,6 +7,7 @@ import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccou
 import { logActivity } from "../services/activityLogService.js";
 import { generateClientTermsPdf } from "../services/clientTermsPdfService.js";
 import { sendClientTermsEmail } from "../services/emailService.js";
+import { processClientTermsReminders } from "../services/clientTermsReminderService.js";
 import validator from "validator";
 
 const router = express.Router();
@@ -138,6 +139,18 @@ function normalizePayload(body, existing = null) {
   return payload;
 }
 
+router.get("/reminders/run", async (req, res, next) => {
+  try {
+    const secret = process.env.CRON_SECRET;
+    if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+      return res.status(401).json({ message: "Invalid cron authorization" });
+    }
+    res.json(await processClientTermsReminders());
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.use(protect);
 
 router.get("/senders", canViewTerms, (req, res) => {
@@ -266,6 +279,13 @@ router.post("/:id/send", canManageTerms, async (req, res, next) => {
     terms.sentAt = new Date();
     terms.sentFolderSaved = Boolean(delivery.sentFolderSaved);
     terms.sentFolderError = delivery.sentFolderError || "";
+    terms.unsignedReminderEnabled = true;
+    terms.unsignedReminderStatus = "Not started";
+    terms.unsignedReminderError = "";
+    terms.unsignedReminderProcessingDate = "";
+    terms.lastUnsignedReminderDate = "";
+    terms.lastUnsignedReminderAt = undefined;
+    terms.unsignedReminderCount = 0;
     terms.updatedBy = actorFrom(req.user);
     await terms.save();
 
@@ -304,6 +324,9 @@ router.post("/:id/mark-signed", canManageTerms, async (req, res, next) => {
     terms.signedAt = req.body.signedAt || new Date();
     terms.signedBy = String(req.body.signedBy || terms.contactName || terms.clientName).trim();
     terms.signatureNotes = String(req.body.signatureNotes || "").trim();
+    terms.unsignedReminderEnabled = false;
+    terms.unsignedReminderStatus = "Stopped";
+    terms.unsignedReminderError = "";
     terms.updatedBy = actorFrom(req.user);
     await terms.save();
     await logActivity(req, {
@@ -326,6 +349,9 @@ router.post("/:id/cancel", canManageTerms, async (req, res, next) => {
     terms.status = "Cancelled";
     terms.cancelledAt = new Date();
     terms.cancellationReason = String(req.body.cancellationReason || "").trim();
+    terms.unsignedReminderEnabled = false;
+    terms.unsignedReminderStatus = "Stopped";
+    terms.unsignedReminderError = "";
     terms.updatedBy = actorFrom(req.user);
     await terms.save();
     await logActivity(req, {

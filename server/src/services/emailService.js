@@ -670,6 +670,57 @@ export async function sendClientTermsEmail({ terms, pdfBuffer, fromEmail, custom
   return { sent: true, fromEmail: account.address, subject, message, cc, ...archive };
 }
 
+export function buildClientTermsUnsignedReminderEmail(terms) {
+  const contact = terms.contactName || terms.clientName || "there";
+  const source = "Innovex Client Terms Centre";
+  const subject = `Action required: Terms of Business awaiting signature | ${terms.documentNumber}`;
+  const message = `Our records show that the Terms of Business sent to ${terms.clientName} have not yet been marked as signed.`;
+  const text = `Hello ${contact},
+
+${message}
+
+Document: ${terms.documentNumber}
+Client: ${terms.clientName}
+
+Please review and sign the attached terms at your earliest convenience. If you have already signed them, please reply to this email with the signed copy so that we can update our records.
+
+If you do not wish to proceed, please reply and let us know. This is an automatically generated follow-up; once you confirm that you do not wish to proceed, we can close the record and remove your details from our active follow-up system.
+
+If you have any questions or require an amendment, simply reply to this email and our team will assist you.
+
+Kind regards,
+Innovex Resource Group Limited
+
+${crmComplianceFooterText(source, true)}`;
+  const html = `<div style="margin:0;background:#f3f8f8;padding:30px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:16px;overflow:hidden;box-shadow:0 14px 40px rgba(6,79,94,.10)"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:24px 30px;color:#ffffff"><div style="font-size:11px;letter-spacing:1.6px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:23px;font-weight:700;margin-top:7px">Terms awaiting signature</div></div><div style="padding:28px 30px"><p style="margin-top:0">Hello ${escapeHtml(contact)},</p><p style="line-height:1.65">${escapeHtml(message)}</p><div style="margin:22px 0;padding:18px 20px;background:#eef7f7;border-left:4px solid #f4b942;border-radius:10px"><div style="color:#60777e;font-size:11px;letter-spacing:.08em">DOCUMENT REQUIRING ACTION</div><strong style="display:block;color:#173840;font-size:18px;margin-top:6px">${escapeHtml(terms.documentNumber)}</strong><span style="display:block;color:#60777e;margin-top:5px">${escapeHtml(terms.clientName)}</span></div><p style="line-height:1.65"><strong>Please review and sign the attached terms at your earliest convenience.</strong> If you have already signed them, please reply to this email with the signed copy so that we can update our records.</p><div style="margin:20px 0;padding:15px 17px;background:#fff8e8;border:1px solid #efd58c;border-radius:10px;line-height:1.6"><strong style="display:block;color:#173840;margin-bottom:5px">Not proceeding?</strong>If you do not wish to proceed, please reply and let us know. This is an automatically generated follow-up; once confirmed, we can close the record and remove your details from our active follow-up system.</div><p style="line-height:1.65">If you have any questions or require an amendment, simply reply to this email and our team will assist you.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; info@innovexresourcegroup.co.uk</span></p>${crmComplianceFooterHtml(source, true)}</div></div></div>`;
+  return { subject, message, text, html };
+}
+
+export async function sendClientTermsUnsignedReminderEmail({ terms, pdfBuffer, fromEmail, cc = [] }) {
+  const account = senderAccountOrDefault(fromEmail || terms.senderEmail);
+  if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
+
+  const email = buildClientTermsUnsignedReminderEmail(terms);
+  const mailOptions = {
+    from: formatSender(account),
+    to: terms.clientEmail,
+    cc,
+    replyTo: account.address,
+    subject: email.subject,
+    text: email.text,
+    html: email.html,
+    attachments: [
+      {
+        filename: `Innovex-Terms-${terms.documentNumber}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf"
+      }
+    ]
+  };
+  const archive = await sendAndArchive(makeTransporter(account), account, mailOptions);
+  return { sent: true, fromEmail: account.address, cc, ...email, ...archive };
+}
+
 function hrDocumentFooter(source) {
   return `<div style="margin-top:24px;padding-top:14px;border-top:1px solid #d8e5e7;color:#6b7f85;font-size:11px;line-height:1.55">This is a system-generated email from the ${escapeHtml(source)}. This email and any attachments are confidential and intended solely for the named recipient. If you have received it in error, please notify us and delete it from your system.</div>`;
 }
