@@ -13,6 +13,7 @@ import { protect, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../services/activityLogService.js";
 import { sendComposedEmail, sendProspectExportEmail } from "../services/emailService.js";
 import { generateWebLeadProspectsWorkbook, prospectExportFilename } from "../services/webLeadExportService.js";
+import { generateWebLeadProspectsPdf, prospectPdfFilename } from "../services/webLeadProspectsPdfService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
@@ -143,7 +144,7 @@ function buildListFilter(req) {
   return ownerFilter(req, filter);
 }
 
-async function buildProspectExport(req, query = {}, scopeLabel = "All accessible prospects") {
+async function loadProspectExportData(req, query = {}, scopeLabel = "All accessible prospects") {
   const exportReq = { user: req.user, query: pick(query, exportFilterFields) };
   const filter = buildListFilter(exportReq);
   const total = await WebLeadProspect.countDocuments(filter);
@@ -156,11 +157,21 @@ async function buildProspectExport(req, query = {}, scopeLabel = "All accessible
     .select([...prospectFields, "createdByName", "createdAt", "updatedAt", "followUps"].join(" "))
     .sort({ updatedAt: -1 })
     .lean();
-  const workbookBuffer = await generateWebLeadProspectsWorkbook(items, {
+  return {
+    items,
+    total,
     scopeLabel,
     preparedFor: req.user.name || req.user.email || "Innovex CRM user"
+  };
+}
+
+async function buildProspectExport(req, query = {}, scopeLabel = "All accessible prospects") {
+  const exportData = await loadProspectExportData(req, query, scopeLabel);
+  const workbookBuffer = await generateWebLeadProspectsWorkbook(exportData.items, {
+    scopeLabel: exportData.scopeLabel,
+    preparedFor: exportData.preparedFor
   });
-  return { items, workbookBuffer, filename: prospectExportFilename(), total };
+  return { ...exportData, workbookBuffer, filename: prospectExportFilename() };
 }
 
 router.get("/meta", async (req, res, next) => {
@@ -266,6 +277,23 @@ router.get("/prospects/export.xlsx", async (req, res, next) => {
     res.setHeader("Content-Disposition", `attachment; filename="${result.filename}"`);
     res.setHeader("Content-Length", result.workbookBuffer.length);
     res.send(result.workbookBuffer);
+  } catch (error) { next(error); }
+});
+
+router.get("/prospects/export.pdf", async (req, res, next) => {
+  try {
+    const filtered = exportFilterFields.some((field) => req.query[field]);
+    const scopeLabel = filtered ? "Current filtered results" : "All accessible prospects";
+    const result = await loadProspectExportData(req, req.query, scopeLabel);
+    const pdfBuffer = await generateWebLeadProspectsPdf(result.items, {
+      scopeLabel: result.scopeLabel,
+      preparedFor: result.preparedFor
+    });
+    const filename = prospectPdfFilename();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.send(pdfBuffer);
   } catch (error) { next(error); }
 });
 

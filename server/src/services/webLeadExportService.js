@@ -44,6 +44,18 @@ const columns = [
   ["Notes", "notes", 42]
 ];
 
+const emailDirectoryColumns = [
+  ["Business name", "businessName", 30],
+  ["Contact person", "contactPerson", 24],
+  ["Primary email", "email", 34],
+  ["Secondary email", "secondaryEmail", 34],
+  ["Primary phone", "telephone", 19],
+  ["Status", "status", 21],
+  ["Category", "businessCategory", 23],
+  ["Agent / owner", "createdByName", 23],
+  ["Last updated", "updatedAt", 19]
+];
+
 const successStatuses = new Set(["Won", "Accepted by Innovex", "Qualified", "Meeting Booked"]);
 const warningStatuses = new Set(["Interested", "Email Requested", "Follow-Up Required", "Proposal Required", "Proposal Sent"]);
 const dangerStatuses = new Set(["Lost", "Rejected by Innovex", "Not Interested", "Do Not Contact"]);
@@ -188,6 +200,57 @@ function addSummarySheet(workbook, items, metadata) {
   return sheet;
 }
 
+function addEmailDirectorySheet(workbook, items, metadata) {
+  const sheet = workbook.addWorksheet("Email Directory", {
+    views: [{ showGridLines: false, zoomScale: 90, state: "frozen", xSplit: 2, ySplit: 5, topLeftCell: "C6", activeCell: "A6" }],
+    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } }
+  });
+  emailDirectoryColumns.forEach(([, , width], index) => { sheet.getColumn(index + 1).width = width; });
+  styleTitle(sheet, "Prospect Email Directory", `${items.length.toLocaleString("en-GB")} records  |  Email contacts shown first for immediate access  |  Generated ${metadata.generatedAt.toLocaleDateString("en-GB")}`, emailDirectoryColumns.length);
+  addLogo(workbook, sheet);
+
+  const headerRow = sheet.getRow(5);
+  headerRow.values = emailDirectoryColumns.map(([label]) => label);
+  headerRow.height = 30;
+  headerRow.eachCell((cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.tealDark } };
+    cell.font = { name: "Aptos", size: 10, bold: true, color: { argb: BRAND.white } };
+    cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+    cell.border = { bottom: { style: "medium", color: { argb: BRAND.gold } } };
+  });
+
+  items.forEach((item, itemIndex) => {
+    const row = sheet.addRow(emailDirectoryColumns.map(([, key]) => rowValue(item, key)));
+    row.height = 29;
+    const fill = itemIndex % 2 ? "F7FBFB" : BRAND.white;
+    row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
+      cell.font = { name: "Aptos", size: 9, color: { argb: BRAND.ink } };
+      cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+      cell.border = { bottom: { style: "hair", color: { argb: BRAND.line } } };
+      if (columnNumber === 9 && cell.value) cell.numFmt = "dd mmm yyyy hh:mm";
+    });
+    [3, 4].forEach((columnNumber) => {
+      const cell = row.getCell(columnNumber);
+      if (cell.value) {
+        const address = String(cell.value);
+        cell.value = { text: address, hyperlink: `mailto:${address}`, tooltip: `Email ${address}` };
+        cell.font = { name: "Aptos", size: 9, color: { argb: "0D7182" }, underline: true };
+      }
+    });
+    const statusCell = row.getCell(6);
+    const status = String(statusCell.value || "");
+    const statusFill = successStatuses.has(status) ? "DFF4E8" : dangerStatuses.has(status) ? "FCE2E2" : warningStatuses.has(status) ? BRAND.goldSoft : "E5F3F8";
+    statusCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: statusFill } };
+    statusCell.font = { name: "Aptos", size: 9, bold: true, color: { argb: BRAND.ink } };
+  });
+
+  const finalRow = Math.max(5 + items.length, 6);
+  sheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: finalRow, column: emailDirectoryColumns.length } };
+  sheet.headerFooter.oddFooter = "&LInnovex Resource Group Limited&CConfidential email directory&RPage &P of &N";
+  return sheet;
+}
+
 function addProspectsSheet(workbook, items, metadata) {
   const sheet = workbook.addWorksheet("Prospects", {
     views: [{ showGridLines: false, zoomScale: 80, state: "frozen", xSplit: 2, ySplit: 5, topLeftCell: "C6", activeCell: "A6" }],
@@ -259,6 +322,8 @@ export async function generateWebLeadProspectsWorkbook(items = [], options = {})
   workbook.created = metadata.generatedAt;
   workbook.modified = metadata.generatedAt;
   workbook.calcProperties.fullCalcOnLoad = true;
+  workbook.views = [{ x: 0, y: 0, width: 16000, height: 9000, firstSheet: 0, activeTab: 0, visibility: "visible" }];
+  addEmailDirectorySheet(workbook, items, metadata);
   addSummarySheet(workbook, items, metadata);
   addProspectsSheet(workbook, items, metadata);
   const output = await workbook.xlsx.writeBuffer();

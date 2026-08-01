@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, Building2, CalendarClock, ChevronDown, CircleHelp, ClipboardList, Download, FileCheck2, FileSpreadsheet, Filter, LayoutDashboard, Mail, MailPlus, MessageSquareText, Plus, Search, Send, Settings, Target, UserCheck, UsersRound, X } from "lucide-react";
+import { Bell, Building2, CalendarClock, ChevronDown, CircleHelp, ClipboardList, FileCheck2, FileSpreadsheet, FileText, Filter, LayoutDashboard, Mail, MailPlus, MessageSquareText, Plus, Search, Send, Settings, Target, UserCheck, UsersRound, X } from "lucide-react";
 import { api, downloadFile } from "../../api/client.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
@@ -427,14 +427,14 @@ export default function AdminWebLeads({ mode = "dashboard" }) {
     return Object.fromEntries(Object.entries(filters).filter(([, value]) => value));
   }
 
-  async function downloadProspectExport(scope = "all") {
-    setExporting(true);
+  async function downloadProspectExport(scope = "all", format = "xlsx") {
+    setExporting(`${format}:${scope}`);
     setStatus(null);
     try {
       const query = scope === "filtered" ? new URLSearchParams(prospectExportFilters()).toString() : "";
       const stamp = new Date().toISOString().slice(0, 10);
-      await downloadFile(`/web-leads/prospects/export.xlsx${query ? `?${query}` : ""}`, `Innovex-Prospects-${stamp}.xlsx`);
-      setStatus({ message: `${scope === "filtered" ? "Filtered" : "Complete"} professional prospect workbook downloaded.` });
+      await downloadFile(`/web-leads/prospects/export.${format}${query ? `?${query}` : ""}`, `Innovex-Prospects-${stamp}.${format}`);
+      setStatus({ message: `${scope === "filtered" ? "Filtered" : "Complete"} professional prospect ${format === "pdf" ? "PDF" : "workbook"} downloaded.` });
     } catch (error) {
       setStatus({ type: "error", message: error.message });
     } finally {
@@ -482,11 +482,13 @@ export default function AdminWebLeads({ mode = "dashboard" }) {
       {mode === "prospects" && <section className="card webcrm-export-centre">
         <div className="webcrm-export-copy">
           <div className="webcrm-export-icon"><FileSpreadsheet size={25} /></div>
-          <div><span className="eyebrow">Professional data export</span><h2>Prospect Excel centre</h2><p>Download every accessible prospect or export the current filtered results. Email addresses and websites remain clickable inside the workbook.</p></div>
+          <div><span className="eyebrow">Professional data export</span><h2>Prospect export centre</h2><p>Download all or filtered prospects as Excel or PDF. Excel opens on a dedicated email directory, while the PDF keeps each prospect's email prominent beside the contact name.</p></div>
         </div>
         <div className="webcrm-export-actions">
-          <button type="button" className="button" disabled={exporting} onClick={() => downloadProspectExport("all")}><Download size={17} /> {exporting ? "Preparing..." : "Export all prospects"}</button>
-          <button type="button" className="button secondary" disabled={exporting || !pagination.total} onClick={() => downloadProspectExport("filtered")}><FileSpreadsheet size={17} /> Export filtered ({Number(pagination.total || 0).toLocaleString()})</button>
+          <button type="button" className="button" disabled={Boolean(exporting)} onClick={() => downloadProspectExport("all", "xlsx")}><FileSpreadsheet size={17} /> {exporting === "xlsx:all" ? "Preparing Excel..." : "Excel - all"}</button>
+          <button type="button" className="button secondary" disabled={Boolean(exporting) || !pagination.total} onClick={() => downloadProspectExport("filtered", "xlsx")}><FileSpreadsheet size={17} /> {exporting === "xlsx:filtered" ? "Preparing Excel..." : `Excel - filtered (${Number(pagination.total || 0).toLocaleString()})`}</button>
+          <button type="button" className="button" disabled={Boolean(exporting)} onClick={() => downloadProspectExport("all", "pdf")}><FileText size={17} /> {exporting === "pdf:all" ? "Preparing PDF..." : "PDF - all"}</button>
+          <button type="button" className="button secondary" disabled={Boolean(exporting) || !pagination.total} onClick={() => downloadProspectExport("filtered", "pdf")}><FileText size={17} /> {exporting === "pdf:filtered" ? "Preparing PDF..." : `PDF - filtered (${Number(pagination.total || 0).toLocaleString()})`}</button>
           <button type="button" className="button secondary webcrm-email-export-button" onClick={openExportEmail}><MailPlus size={17} /> Email Excel export</button>
         </div>
         {exportEmail.open && <form className="webcrm-export-email" onSubmit={emailProspectExport}>
