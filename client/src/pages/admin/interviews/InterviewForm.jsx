@@ -44,12 +44,12 @@ export function toInterviewForm(interview = {}) {
   };
 }
 
-export default function InterviewForm({ form, setForm, editing, saving, onSubmit, onCancel }) {
+export default function InterviewForm({ form, setForm, editing, saving, onSubmit, onCancel, panelRef }) {
   const reminderText = `${form.candidateName || "[Candidate Name]"} will receive an interview reminder for ${form.jobTitle || "[Job Title]"} with ${form.clientName || "[Client Name]"} exactly one day before the interview.`;
   const faceToFace = form.interviewType === "Face-to-face";
 
   return (
-    <form className="card form interview-form" onSubmit={onSubmit}>
+    <form ref={panelRef} className="card form interview-form interview-scroll-target" onSubmit={onSubmit}>
       <div className="admin-form-title">
         <div>
           <span className="eyebrow">Interview tracker</span>

@@ -28,6 +28,10 @@ const interviewSchema = new mongoose.Schema(
     candidateReminderEmailStatus: { type: String, enum: ["Pending", "Sent", "Failed"], default: "Pending" },
     candidateReminderEmailSentAt: Date,
     candidateReminderEmailError: { type: String, trim: true },
+    candidateFollowUpEmailStatus: { type: String, enum: ["Pending", "Sent", "Failed"], default: "Pending" },
+    candidateFollowUpEmailSentAt: Date,
+    candidateFollowUpEmailError: { type: String, trim: true },
+    candidateFollowUpEmailCount: { type: Number, min: 0, default: 0 },
     confirmationEmailStatus: { type: String, enum: ["Pending", "Sent", "Failed"], default: "Pending" },
     confirmationEmailSentAt: Date,
     confirmationEmailError: { type: String, trim: true },
@@ -51,6 +55,10 @@ interviewSchema.index({ interviewDate: 1, interviewStatus: 1 });
 interviewSchema.index({ candidateSelected: 1 });
 
 interviewSchema.pre("validate", function calculateRevenue(next) {
+  if (this.interviewStatus !== "Cancelled" && ["Yes", "No"].includes(this.candidateSelected)) {
+    this.interviewStatus = "Completed";
+  }
+
   if (this.candidateSelected !== "Yes") {
     this.annualSalary = 0;
     this.revenue = 0;

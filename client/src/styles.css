@@ -3240,7 +3240,22 @@ tbody tr:hover td {
   background: #f2fbfa;
 }
 .interview-table table {
-  min-width: 1120px;
+  min-width: 1260px;
+}
+.interview-table .action-cell {
+  min-width: 370px;
+}
+.interview-follow-up-button {
+  background: linear-gradient(135deg, #0b6f7b, #0b5f75);
+  color: #fff;
+  border-color: transparent;
+}
+.interview-follow-up-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(11,95,117,.2);
+}
+.interview-scroll-target {
+  scroll-margin-top: 24px;
 }
 .meeting-table table {
   min-width: 1080px;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client.js";
 import { canViewFinance } from "../../auth/permissions.js";
 import StatusMessage from "../../components/StatusMessage.jsx";
@@ -6,6 +6,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import InterviewDetails from "./interviews/InterviewDetails.jsx";
 import InterviewForm, { emptyInterview, toInterviewForm } from "./interviews/InterviewForm.jsx";
 import InterviewList from "./interviews/InterviewList.jsx";
+import { effectiveInterviewStatus } from "./interviews/interviewStatus.js";
 
 export default function AdminInterviews() {
   const { user } = useAuth();
@@ -18,10 +19,13 @@ export default function AdminInterviews() {
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
   const [outcomeSaving, setOutcomeSaving] = useState(false);
+  const [followUpSendingId, setFollowUpSendingId] = useState(null);
+  const formRef = useRef(null);
+  const detailRef = useRef(null);
   const summary = {
     total: interviews.length,
-    pending: interviews.filter((item) => item.interviewStatus === "Pending").length,
-    completed: interviews.filter((item) => item.interviewStatus === "Completed").length,
+    pending: interviews.filter((item) => effectiveInterviewStatus(item) === "Pending").length,
+    completed: interviews.filter((item) => effectiveInterviewStatus(item) === "Completed").length,
     awaiting: interviews.filter((item) => item.candidateSelected === "Pending").length,
     revenue: interviews.reduce((sum, item) => sum + Number(item.revenue || 0), 0)
   };
@@ -34,6 +38,12 @@ export default function AdminInterviews() {
   useEffect(() => {
     load();
   }, []);
+
+  function scrollToPanel(ref) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
+  }
 
   async function save(event) {
     event.preventDefault();
@@ -55,6 +65,7 @@ export default function AdminInterviews() {
       setEditing(null);
       setSelected(saved);
       load();
+      scrollToPanel(detailRef);
     } catch (error) {
       setStatus({ type: "error", message: error.message });
     } finally {
@@ -89,10 +100,31 @@ export default function AdminInterviews() {
     }
   }
 
+  async function sendFollowUp(interview) {
+    if (!confirm(`Send an interview follow-up email to ${interview.candidateName} at ${interview.candidateEmail}?`)) return;
+    setFollowUpSendingId(interview._id);
+    try {
+      const result = await api(`/interviews/${interview._id}/follow-up`, { method: "POST" });
+      setSelected(result.interview);
+      setStatus({ message: result.message });
+      load();
+      scrollToPanel(detailRef);
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+    } finally {
+      setFollowUpSendingId(null);
+    }
+  }
+
+  function view(interview) {
+    setSelected(interview);
+    scrollToPanel(detailRef);
+  }
+
   function edit(interview) {
     setEditing(interview._id);
     setForm(toInterviewForm(interview));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToPanel(formRef);
   }
 
   return (
@@ -106,8 +138,8 @@ export default function AdminInterviews() {
         <div className="interview-summary-card highlight"><span>{showFinance ? "Revenue" : "Awaiting outcome"}</span><strong>{showFinance ? `\u00a3${summary.revenue.toLocaleString()}` : summary.awaiting}</strong></div>
       </div>
       <div className="interview-admin-grid">
-        <InterviewForm form={form} setForm={setForm} editing={editing} saving={saving} onSubmit={save} onCancel={() => { setEditing(null); setForm(emptyInterview); }} />
-        <InterviewDetails interview={selected} outcomeSaving={outcomeSaving} onOutcomeSave={saveOutcome} showFinance={showFinance} />
+        <InterviewForm panelRef={formRef} form={form} setForm={setForm} editing={editing} saving={saving} onSubmit={save} onCancel={() => { setEditing(null); setForm(emptyInterview); }} />
+        <InterviewDetails panelRef={detailRef} interview={selected} outcomeSaving={outcomeSaving} onOutcomeSave={saveOutcome} showFinance={showFinance} />
       </div>
       <div className="card filters interview-filters" style={{ marginTop: 24 }}>
         <div className="filter-heading">
@@ -126,7 +158,7 @@ export default function AdminInterviews() {
         </div>
       </div>
       <div style={{ marginTop: 24 }}>
-        <InterviewList interviews={interviews} onEdit={edit} onDelete={remove} onSelect={setSelected} selectedId={selected?._id} showFinance={showFinance} />
+        <InterviewList interviews={interviews} onEdit={edit} onDelete={remove} onSelect={view} onFollowUp={sendFollowUp} followUpSendingId={followUpSendingId} selectedId={selected?._id} showFinance={showFinance} />
       </div>
     </>
   );

@@ -1,4 +1,5 @@
 import InterviewOutcomePanel from "./InterviewOutcomePanel.jsx";
+import { effectiveInterviewStatus } from "./interviewStatus.js";
 
 function dateOnly(value) {
   return value ? new Date(value).toLocaleDateString() : "-";
@@ -10,10 +11,10 @@ function outcomeLabel(value) {
   return "Awaiting outcome";
 }
 
-export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSave, showFinance = false }) {
+export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSave, showFinance = false, panelRef }) {
   if (!interview) {
     return (
-      <div className="card interview-detail-empty">
+      <div ref={panelRef} className="card interview-detail-empty interview-scroll-target">
         <span className="profile-avatar empty">IR</span>
         <h3>Select an interview</h3>
         <p className="muted">Choose a booking from the table. Outcome tracking will appear here after you select a candidate.</p>
@@ -24,7 +25,7 @@ export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSa
   const initials = interview.candidateName?.slice(0, 2).toUpperCase() || "IR";
 
   return (
-    <aside className="card interview-detail">
+    <aside ref={panelRef} className="card interview-detail interview-scroll-target">
       <div className="interview-profile">
         <span className="profile-avatar">{initials}</span>
         <div>
@@ -35,10 +36,11 @@ export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSa
       </div>
 
       <div className="interview-chip-row">
-        <span className="status-chip">{interview.interviewStatus}</span>
+        <span className="status-chip">{effectiveInterviewStatus(interview)}</span>
         <span className="status-chip gold">{outcomeLabel(interview.candidateSelected)}</span>
         {interview.reminderEmailEnabled && <span className="status-chip soft">1-day reminder on</span>}
         {interview.candidateReminderEmailStatus === "Sent" && <span className="status-chip soft">Reminder sent</span>}
+        {interview.candidateFollowUpEmailStatus === "Sent" && <span className="status-chip soft">Follow-up sent</span>}
       </div>
 
       <div className="interview-mini-grid">

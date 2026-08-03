@@ -313,6 +313,28 @@ export function buildCandidateInterviewReminderEmail(interview) {
   };
 }
 
+export function buildCandidateInterviewFollowUpEmail(interview) {
+  const formattedDate = interviewDate(interview.interviewDate);
+  const email = buildCandidateInterviewReminderEmail(interview);
+  const reminderSentence = `This is a reminder that your confirmed interview for the ${interview.jobTitle} position with ${interview.clientName} is scheduled for tomorrow.`;
+  const followUpSentence = `This is a follow-up regarding your confirmed interview for the ${interview.jobTitle} position with ${interview.clientName}, scheduled for ${formattedDate}.`;
+  const reminderHtml = `This is a reminder that your confirmed interview for the <strong>${escapeHtml(interview.jobTitle)}</strong> position with <strong>${escapeHtml(interview.clientName)}</strong> is scheduled for tomorrow.`;
+  const followUpHtml = `This is a professional follow-up regarding your confirmed interview for the <strong>${escapeHtml(interview.jobTitle)}</strong> position with <strong>${escapeHtml(interview.clientName)}</strong>, scheduled for <strong>${escapeHtml(formattedDate)}</strong>.`;
+
+  return {
+    ...email,
+    subject: `Interview follow-up - ${interview.jobTitle} with ${interview.clientName}`,
+    text: email.text
+      .replace("REMINDER: YOUR INTERVIEW IS TOMORROW", "INTERVIEW FOLLOW-UP")
+      .replace(reminderSentence, followUpSentence),
+    html: email.html
+      .replace("INTERVIEW REMINDER", "INTERVIEW FOLLOW-UP")
+      .replace("Your interview is tomorrow", "Your interview follow-up")
+      .replace(reminderHtml, followUpHtml)
+      .replace("This is an automatic one-day interview reminder", "This is an interview follow-up")
+  };
+}
+
 async function deliverMail(transporter, account, mailOptions) {
   if (account?.imapHost && account?.imapPort && account?.user && account?.pass) {
     return sendAndArchive(transporter, account, mailOptions);
@@ -341,6 +363,16 @@ export async function sendCandidateInterviewReminderEmail(interview) {
   }
 
   const mailOptions = buildCandidateInterviewReminderEmail(interview);
+  const delivery = await deliverMail(makeTransporter(), null, mailOptions);
+  return { sent: true, subject: mailOptions.subject, ...delivery };
+}
+
+export async function sendCandidateInterviewFollowUpEmail(interview) {
+  if (!hasSmtpConfig()) {
+    return { sent: false, reason: "SMTP is not configured" };
+  }
+
+  const mailOptions = buildCandidateInterviewFollowUpEmail(interview);
   const delivery = await deliverMail(makeTransporter(), null, mailOptions);
   return { sent: true, subject: mailOptions.subject, ...delivery };
 }

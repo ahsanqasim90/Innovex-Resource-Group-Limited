@@ -5,7 +5,7 @@ import { canViewFinance } from "../config/permissions.js";
 import { logActivity } from "../services/activityLogService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 import { runInterviewReminders } from "../services/interviewReminderService.js";
-import { sendInterviewConfirmationEmail } from "../services/emailService.js";
+import { sendCandidateInterviewFollowUpEmail, sendInterviewConfirmationEmail } from "../services/emailService.js";
 
 const router = express.Router();
 const fields = [
@@ -58,10 +58,22 @@ function toPayload(body, user) {
 }
 
 function sanitizeInterview(interview, user) {
-  if (canViewFinance(user)) return interview;
   const item = interview?.toObject ? interview.toObject() : { ...interview };
+  if (item.interviewStatus !== "Cancelled" && ["Yes", "No"].includes(item.candidateSelected)) {
+    item.interviewStatus = "Completed";
+  }
+  if (canViewFinance(user)) return item;
   [...financeFields, "revenue"].forEach((field) => delete item[field]);
   return item;
+}
+
+function isUpcomingInterview(interview) {
+  const interviewDate = new Date(interview.interviewDate);
+  if (Number.isNaN(interviewDate.getTime())) return false;
+  interviewDate.setHours(23, 59, 59, 999);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return interviewDate >= today;
 }
 
 function makeDateFilter(date) {
@@ -76,7 +88,7 @@ function makeDateFilter(date) {
 
 async function dashboardStats() {
   const [pendingInterviews, selectedCandidates, rejectedCandidates, revenueAgg, recentInterviews] = await Promise.all([
-    Interview.countDocuments({ interviewStatus: "Pending" }),
+    Interview.countDocuments({ interviewStatus: "Pending", candidateSelected: "Pending" }),
     Interview.countDocuments({ candidateSelected: "Yes" }),
     Interview.countDocuments({ candidateSelected: "No" }),
     Interview.aggregate([{ $group: { _id: null, totalRevenue: { $sum: "$revenue" } } }]),
@@ -109,9 +121,9 @@ router.use(protect, requirePermission("interviews.view"));
 router.get("/stats/dashboard", async (req, res, next) => {
   try {
     const stats = await dashboardStats();
+    stats.recentInterviews = stats.recentInterviews.map((item) => sanitizeInterview(item, req.user));
     if (!canViewFinance(req.user)) {
       delete stats.totalRevenue;
-      stats.recentInterviews = stats.recentInterviews.map((item) => sanitizeInterview(item, req.user));
     }
     res.json(stats);
   } catch (error) {
@@ -122,20 +134,29 @@ router.get("/stats/dashboard", async (req, res, next) => {
 router.get("/", async (req, res, next) => {
   try {
     const filter = {};
+    const conditions = [];
     const { search, status, date, jobTitle, selected } = req.query;
 
-    if (status) filter.interviewStatus = status;
+    if (status === "Pending") {
+      filter.interviewStatus = "Pending";
+      filter.candidateSelected = "Pending";
+    } else if (status === "Completed") {
+      conditions.push({ $or: [{ interviewStatus: "Completed" }, { candidateSelected: { $in: ["Yes", "No"] } }] });
+    } else if (status === "Cancelled") {
+      filter.interviewStatus = "Cancelled";
+    }
     if (jobTitle) filter.jobTitle = new RegExp(jobTitle, "i");
     if (selected) filter.candidateSelected = selected;
     const dateFilter = makeDateFilter(date);
     if (dateFilter) filter.interviewDate = dateFilter;
     if (search) {
-      filter.$or = [
+      conditions.push({ $or: [
         { candidateName: new RegExp(search, "i") },
         { clientName: new RegExp(search, "i") },
         { jobTitle: new RegExp(search, "i") }
-      ];
+      ] });
     }
+    if (conditions.length) filter.$and = conditions;
 
     const interviews = await Interview.find(filter).sort({ interviewDate: -1, interviewTime: -1, createdAt: -1 });
     res.json(interviews.map((item) => sanitizeInterview(item, req.user)));
@@ -210,6 +231,52 @@ router.put("/:id", async (req, res, next) => {
       metadata: { jobTitle: interview.jobTitle, candidateSelected: interview.candidateSelected, interviewStatus: interview.interviewStatus }
     });
     res.json(sanitizeInterview(interview, req.user));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/follow-up", async (req, res, next) => {
+  try {
+    const interview = await Interview.findById(req.params.id);
+    if (!interview) return res.status(404).json({ message: "Interview not found" });
+    if (interview.interviewStatus !== "Pending" || interview.candidateSelected !== "Pending") {
+      return res.status(409).json({ message: "Follow-up emails can only be sent for pending interviews awaiting an outcome." });
+    }
+    if (!isUpcomingInterview(interview)) {
+      return res.status(409).json({ message: "This interview date has passed, so an upcoming interview follow-up cannot be sent." });
+    }
+
+    try {
+      const delivery = await sendCandidateInterviewFollowUpEmail(interview);
+      if (!delivery.sent) throw new Error(delivery.reason || "Email delivery failed");
+      interview.candidateFollowUpEmailStatus = "Sent";
+      interview.candidateFollowUpEmailSentAt = new Date();
+      interview.candidateFollowUpEmailError = "";
+      interview.candidateFollowUpEmailCount = Number(interview.candidateFollowUpEmailCount || 0) + 1;
+      await interview.save();
+    } catch (emailError) {
+      interview.candidateFollowUpEmailStatus = "Failed";
+      interview.candidateFollowUpEmailError = emailError.message || "Email delivery failed";
+      await interview.save();
+      return res.status(502).json({
+        message: `Follow-up email was not sent: ${interview.candidateFollowUpEmailError}`,
+        interview: sanitizeInterview(interview, req.user)
+      });
+    }
+
+    await logActivity(req, {
+      module: "Interviews",
+      action: "Follow-up email sent",
+      entityType: "Interview",
+      entityId: interview._id,
+      summary: `Sent interview follow-up to ${interview.candidateName}`,
+      metadata: { candidateEmail: interview.candidateEmail, interviewDate: interview.interviewDate, count: interview.candidateFollowUpEmailCount }
+    });
+    res.json({
+      message: `Professional interview follow-up sent to ${interview.candidateEmail}.`,
+      interview: sanitizeInterview(interview, req.user)
+    });
   } catch (error) {
     next(error);
   }
