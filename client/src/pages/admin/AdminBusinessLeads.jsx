@@ -14,6 +14,7 @@ import {
   PhoneCall,
   Search,
   Send,
+  ShieldCheck,
   UploadCloud
 } from "lucide-react";
 import { api } from "../../api/client.js";
@@ -195,6 +196,7 @@ export default function AdminBusinessLeads() {
 
   const selectedCount = selectedIds.length;
   const selectedService = useMemo(() => filters.service || importCategory || "Recruitment", [filters.service, importCategory]);
+  const selectedSender = useMemo(() => senderAccounts.find((sender) => sender.address === selectedSenderEmail), [senderAccounts, selectedSenderEmail]);
 
   function queryString(page = pagination.page, nextFilters = filters) {
     const query = new URLSearchParams({
@@ -323,7 +325,7 @@ export default function AdminBusinessLeads() {
           fromEmail: selectedSenderEmail
         }
       });
-      setStatus({ message: `${result.message}${result.failed?.length ? ` Failed: ${result.failed.length}.` : ""}` });
+      setStatus({ type: result.archiveFailed?.length ? "error" : undefined, message: `${result.message}${result.failed?.length ? ` Failed: ${result.failed.length}.` : ""}` });
       setSelectedIds([]);
       await load(pagination.page);
       loadStats();
@@ -593,33 +595,35 @@ export default function AdminBusinessLeads() {
             )}
           </form>
 
-          <form className="card talent-outreach-card" onSubmit={sendOutreach}>
-            <div className="talent-panel-heading">
-              <span><Mail size={22} /></span>
-              <div>
-                <h2>Business outreach</h2>
-                <p>{selectedCount} compan{selectedCount === 1 ? "y" : "ies"} selected.</p>
+          <form className="card talent-outreach-card outreach-compose-card" onSubmit={sendOutreach}>
+            <div className="outreach-compose-header">
+              <div className="talent-panel-heading">
+                <span><Mail size={22} /></span>
+                <div><span className="eyebrow">Business campaign</span><h2>Business outreach</h2><p>Professional, personalised company emails.</p></div>
               </div>
+              <strong className="outreach-selection-count">{selectedCount} selected</strong>
             </div>
-            <p>Personalise with <strong>{"{{companyName}}"}</strong>, <strong>{"{{contactName}}"}</strong>, <strong>{"{{category}}"}</strong>, <strong>{"{{city}}"}</strong> and <strong>{"{{postcode}}"}</strong>.</p>
-            <label className="outreach-sender-field">
-              <span>Send from</span>
-              <select value={selectedSenderEmail} onChange={(e) => setSelectedSenderEmail(e.target.value)} required>
-                {senderAccounts.map((sender) => (
-                  <option key={sender.address} value={sender.address}>{sender.label} - {sender.address}</option>
-                ))}
-              </select>
-            </label>
-            {!senderAccounts.length && <p className="muted">No sender mailbox is assigned to this account yet.</p>}
-            <select className="crm-preset-select" value={campaignPreset} onChange={(e) => applyCampaignPreset(e.target.value)}>
-              {businessTemplatePresets.map((preset) => <option key={preset.label}>{preset.label}</option>)}
-            </select>
-            <input placeholder="Email subject" value={outreach.subject} onChange={(e) => setOutreach({ ...outreach, subject: e.target.value })} required />
-            <textarea rows="8" value={outreach.message} onChange={(e) => setOutreach({ ...outreach, message: e.target.value })} required />
-            <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount || !selectedSenderEmail}>
-              {sending && <span className="button-spinner" aria-hidden="true" />}
-              <span>{sending ? "Sending emails..." : "Send Business Emails"}</span>
-            </button>
+            <div className="outreach-token-strip">Personalise with <strong>{"{{companyName}}"}</strong>, <strong>{"{{contactName}}"}</strong>, <strong>{"{{category}}"}</strong>, <strong>{"{{city}}"}</strong> and <strong>{"{{postcode}}"}</strong>.</div>
+            <div className="outreach-mailbox-panel">
+              <label className="outreach-sender-field">
+                <span><ShieldCheck size={15} /> Sender mailbox</span>
+                <select value={selectedSenderEmail} onChange={(e) => setSelectedSenderEmail(e.target.value)} required>
+                  {senderAccounts.map((sender) => <option key={sender.address} value={sender.address}>{sender.label} — {sender.address}</option>)}
+                </select>
+              </label>
+              {selectedSender && <small>Sending as <strong>{selectedSender.name || selectedSender.label}</strong> · Replies return to this mailbox.</small>}
+              <div className="outreach-sent-assurance"><CheckCircle2 size={17} /><span>Every successful email is automatically archived in this mailbox’s Sent folder.</span></div>
+              {!senderAccounts.length && <p className="muted">No configured sender mailbox is assigned to this account.</p>}
+            </div>
+            <div className="outreach-compose-fields">
+              <label><span>Campaign template</span><select className="crm-preset-select" value={campaignPreset} onChange={(e) => applyCampaignPreset(e.target.value)}>{businessTemplatePresets.map((preset) => <option key={preset.label}>{preset.label}</option>)}</select></label>
+              <label><span>Email subject</span><input placeholder="A clear, professional subject" value={outreach.subject} onChange={(e) => setOutreach({ ...outreach, subject: e.target.value })} required /></label>
+              <label><span>Email message</span><textarea rows="8" value={outreach.message} onChange={(e) => setOutreach({ ...outreach, message: e.target.value })} required /><small>{outreach.message.length.toLocaleString()} characters</small></label>
+            </div>
+            <div className="outreach-compose-footer">
+              <span>{selectedCount ? `Ready to email ${selectedCount} compan${selectedCount === 1 ? "y" : "ies"}.` : "Select companies from the table to enable sending."}</span>
+              <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount || !selectedSenderEmail}>{sending && <span className="button-spinner" aria-hidden="true" />}<Send size={17} /><span>{sending ? "Sending emails..." : "Send Business Emails"}</span></button>
+            </div>
           </form>
         </aside>
       </div>

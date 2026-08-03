@@ -81,6 +81,14 @@ export function configuredEmailAccounts() {
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT,
       secure: process.env.SMTP_SECURE
+    }),
+    accountFromEnv("SMTP_RECRUITMENT", {
+      address: process.env.SMTP_RECRUITMENT_ADDRESS || "recruitment@innovexresourcegroup.co.uk",
+      label: "Recruitment mailbox",
+      name: "Innovex Recruitment Team",
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE
     })
   ].filter(Boolean);
 

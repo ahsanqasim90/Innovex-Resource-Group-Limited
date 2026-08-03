@@ -832,14 +832,20 @@ router.post("/outreach", async (req, res, next) => {
     const job = req.body.jobId ? await Job.findById(req.body.jobId).lean() : null;
     const candidates = await Candidate.find({ _id: { $in: candidateIds }, email: { $ne: "" }, status: { $ne: "Do Not Contact" } });
     let sent = 0;
+    let archived = 0;
     const failed = [];
+    const archiveFailed = [];
 
     for (const candidate of candidates) {
       const subject = applyTemplate(req.body.subject, candidate, job || req.body);
       const message = applyTemplate(req.body.message, candidate, job || req.body);
       try {
         const result = await sendCandidateOutreachEmail({ candidate, subject, message, fromEmail });
-        if (result.sent) sent += 1;
+        if (result.sent) {
+          sent += 1;
+          if (result.sentFolderSaved) archived += 1;
+          else archiveFailed.push({ id: candidate._id, name: candidate.name, reason: result.sentFolderError || "Sent-folder copy was not saved" });
+        }
         else failed.push({ id: candidate._id, reason: result.reason });
         await EmailLog.create({
           fromEmail: result.fromEmail || fromEmail,
@@ -850,7 +856,7 @@ router.post("/outreach", async (req, res, next) => {
           targetType: "Candidate",
           targetId: candidate._id,
           status: result.sent ? "Sent" : "Failed",
-          error: result.sent ? "" : result.reason || "Candidate outreach email was not sent",
+          error: result.sent ? result.sentFolderError || "" : result.reason || "Candidate outreach email was not sent",
           sentBy: {
             user: req.user?._id,
             name: req.user?.name || "Innovex Admin",
@@ -874,7 +880,12 @@ router.post("/outreach", async (req, res, next) => {
       }
     }
 
-    res.json({ sent, failed, message: sent ? `Sent ${sent} personalised emails.` : "No emails were sent." });
+    const archiveMessage = sent
+      ? archived === sent
+        ? ` All ${archived} ${archived === 1 ? "copy was" : "copies were"} saved in ${fromEmail} Sent.`
+        : ` ${archived} of ${sent} sent ${sent === 1 ? "copy was" : "copies were"} archived; ${archiveFailed.length} need attention.`
+      : "";
+    res.json({ sent, archived, failed, archiveFailed, fromEmail, message: sent ? `Sent ${sent} personalised email${sent === 1 ? "" : "s"}.${archiveMessage}` : "No emails were sent." });
   } catch (error) {
     next(error);
   }

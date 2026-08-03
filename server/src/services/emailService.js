@@ -57,7 +57,7 @@ async function sendAndArchive(transporter, account, mailOptions) {
     try {
       const mailboxes = await client.list();
       const sentMailbox = mailboxes.find((mailbox) => mailbox.specialUse === "\\Sent")
-        || mailboxes.find((mailbox) => /(^|\/)sent( items| mail)?$/i.test(mailbox.path));
+        || mailboxes.find((mailbox) => /(^|[./])sent( items| mail| messages)?$/i.test(mailbox.path));
       if (!sentMailbox) throw new Error("Sent mailbox was not found");
       await client.append(sentMailbox.path, raw, ["\\Seen"], new Date());
       sentFolderSaved = true;

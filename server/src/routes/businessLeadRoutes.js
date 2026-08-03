@@ -596,7 +596,9 @@ router.post("/outreach", async (req, res, next) => {
 
     const leads = await BusinessLead.find({ _id: { $in: leadIds }, status: { $ne: "Do Not Contact" } });
     let sent = 0;
+    let archived = 0;
     const failed = [];
+    const archiveFailed = [];
 
     for (const lead of leads) {
       const subject = applyTemplate(req.body.subject, lead);
@@ -612,7 +614,7 @@ router.post("/outreach", async (req, res, next) => {
         targetType: "BusinessLead",
         targetId: lead._id,
         status: result.sent ? "Sent" : "Failed",
-        error: result.sent ? "" : result.reason || "Business lead outreach email was not sent",
+        error: result.sent ? result.sentFolderError || "" : result.reason || "Business lead outreach email was not sent",
         sentBy: {
           user: req.user?._id,
           name: req.user?.name || "Innovex Admin",
@@ -621,6 +623,8 @@ router.post("/outreach", async (req, res, next) => {
         }
       });
       if (result.sent) {
+        if (result.sentFolderSaved) archived += 1;
+        else archiveFailed.push({ id: lead._id, companyName: lead.companyName, reason: result.sentFolderError || "Sent-folder copy was not saved" });
         lead.status = "Contacted";
         lead.lastContactedAt = new Date();
         lead.outreachHistory.push({ service: req.body.service || "", subject, message, sentTo });
@@ -631,7 +635,12 @@ router.post("/outreach", async (req, res, next) => {
       }
     }
 
-    res.json({ sent, failed, message: `Sent ${sent} business lead email${sent === 1 ? "" : "s"}.` });
+    const archiveMessage = sent
+      ? archived === sent
+        ? ` All ${archived} ${archived === 1 ? "copy was" : "copies were"} saved in ${fromEmail} Sent.`
+        : ` ${archived} of ${sent} sent ${sent === 1 ? "copy was" : "copies were"} archived; ${archiveFailed.length} need attention.`
+      : "";
+    res.json({ sent, archived, failed, archiveFailed, fromEmail, message: `Sent ${sent} business lead email${sent === 1 ? "" : "s"}.${archiveMessage}` });
   } catch (error) {
     next(error);
   }
