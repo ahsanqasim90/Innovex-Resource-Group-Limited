@@ -11,7 +11,7 @@ function outcomeLabel(value) {
   return "Awaiting outcome";
 }
 
-export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSave, showFinance = false, panelRef }) {
+export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSave, onSendDetails, detailsSending = false, showFinance = false, panelRef }) {
   if (!interview) {
     return (
       <div ref={panelRef} className="card interview-detail-empty interview-scroll-target">
@@ -41,6 +41,26 @@ export default function InterviewDetails({ interview, outcomeSaving, onOutcomeSa
         {interview.reminderEmailEnabled && <span className="status-chip soft">1-day reminder on</span>}
         {interview.candidateReminderEmailStatus === "Sent" && <span className="status-chip soft">Reminder sent</span>}
         {interview.candidateFollowUpEmailStatus === "Sent" && <span className="status-chip soft">Follow-up sent</span>}
+        <span className={`status-chip ${interview.confirmationEmailStatus === "Sent" ? "" : "gold"}`}>
+          {interview.confirmationEmailStatus === "Sent" ? "Interview details sent" : interview.confirmationEmailStatus === "Failed" ? "Details send failed" : "Interview details not sent"}
+        </span>
+      </div>
+
+      <div className="confirmation-preview interview-email-delivery">
+        <strong>Interview details email</strong>
+        <p>
+          {interview.confirmationEmailStatus === "Sent"
+            ? `Last sent ${interview.confirmationEmailSentAt ? new Date(interview.confirmationEmailSentAt).toLocaleString() : "successfully"}.`
+            : interview.confirmationEmailStatus === "Failed"
+              ? `Not sent: ${interview.confirmationEmailError || "Email delivery failed"}`
+              : "This interview has not been emailed yet."}
+        </p>
+        <small>To: {interview.candidateEmail}</small>
+        <small>CC: {interview.confirmationEmailCc?.length ? interview.confirmationEmailCc.join(", ") : "No CC recipients"}</small>
+        {Number(interview.confirmationEmailCount || 0) > 0 && <small>Successful sends: {interview.confirmationEmailCount}</small>}
+        <button type="button" className="button interview-details-send-button" disabled={detailsSending} onClick={() => onSendDetails(interview)}>
+          {detailsSending ? "Sending interview details..." : interview.confirmationEmailStatus === "Sent" ? "Send interview details again" : "Send interview details"}
+        </button>
       </div>
 
       <div className="interview-mini-grid">

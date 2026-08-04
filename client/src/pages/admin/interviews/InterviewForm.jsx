@@ -19,6 +19,7 @@ export const emptyInterview = {
   interviewType: "Phone",
   interviewStatus: "Pending",
   notes: "",
+  confirmationEmailCc: "",
   reminderEmailEnabled: true,
   candidateSelected: "Pending",
   feedback: "",
@@ -35,6 +36,7 @@ export function toInterviewForm(interview = {}) {
   return {
     ...emptyInterview,
     ...interview,
+    confirmationEmailCc: (interview.confirmationEmailCc || []).join(", "),
     interviewDate: interview.interviewDate ? interview.interviewDate.slice(0, 10) : "",
     placementDate: interview.placementDate ? interview.placementDate.slice(0, 10) : "",
     selectedPayRate: interview.selectedPayRate || "",
@@ -119,6 +121,15 @@ export default function InterviewForm({ form, setForm, editing, saving, onSubmit
             ? "This booking has already been created. Updating it will not send a duplicate confirmation email."
             : `A professional booking confirmation will be sent automatically to ${form.candidateEmail || "[Candidate Email]"} when you create this interview.`}
         </p>
+        <label>
+          CC email address(es)
+          <input
+            type="text"
+            placeholder="Optional, separate multiple emails with commas"
+            value={form.confirmationEmailCc}
+            onChange={(e) => setForm({ ...form, confirmationEmailCc: e.target.value })}
+          />
+        </label>
         <small>The email clearly confirms the booking and asks the candidate to reply so attendance can be added to Innovex records.</small>
       </div>
       <div className="reminder-preview">

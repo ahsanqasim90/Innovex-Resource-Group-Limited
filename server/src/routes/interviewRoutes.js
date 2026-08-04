@@ -26,6 +26,7 @@ const fields = [
   "interviewType",
   "interviewStatus",
   "notes",
+  "confirmationEmailCc",
   "reminderEmailEnabled",
   "candidateSelected",
   "feedback",
@@ -40,6 +41,11 @@ const fields = [
 
 const financeFields = ["selectedPayRate", "hoursPerWeek", "placementType", "flatFeeAmount", "percentage"];
 
+function normalizeCc(value) {
+  const items = Array.isArray(value) ? value : String(value || "").split(",");
+  return [...new Set(items.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean))];
+}
+
 function toPayload(body, user) {
   const payload = pick(body, fields);
   ["reminderEmailEnabled"].forEach((field) => {
@@ -51,6 +57,10 @@ function toPayload(body, user) {
   ["placementDate"].forEach((field) => {
     if (payload[field] === "") delete payload[field];
   });
+  if (payload.confirmationEmailCc !== undefined) {
+    payload.confirmationEmailCc = normalizeCc(payload.confirmationEmailCc);
+    payload.confirmationEmailCc.forEach(validateEmail);
+  }
   if (!canViewFinance(user)) {
     financeFields.forEach((field) => delete payload[field]);
   }
@@ -188,6 +198,7 @@ router.post("/", async (req, res, next) => {
       interview.confirmationEmailStatus = confirmation.sent ? "Sent" : "Failed";
       interview.confirmationEmailSentAt = confirmation.sent ? new Date() : undefined;
       interview.confirmationEmailError = confirmation.sent ? "" : confirmation.reason || "Email delivery failed";
+      interview.confirmationEmailCount = confirmation.sent ? 1 : 0;
     } catch (emailError) {
       interview.confirmationEmailStatus = "Failed";
       interview.confirmationEmailError = emailError.message || "Email delivery failed";
@@ -231,6 +242,50 @@ router.put("/:id", async (req, res, next) => {
       metadata: { jobTitle: interview.jobTitle, candidateSelected: interview.candidateSelected, interviewStatus: interview.interviewStatus }
     });
     res.json(sanitizeInterview(interview, req.user));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/send-details", async (req, res, next) => {
+  try {
+    const interview = await Interview.findById(req.params.id);
+    if (!interview) return res.status(404).json({ message: "Interview not found" });
+
+    const cc = req.body.cc !== undefined ? normalizeCc(req.body.cc) : normalizeCc(interview.confirmationEmailCc);
+    cc.forEach(validateEmail);
+    interview.confirmationEmailCc = cc;
+
+    try {
+      const delivery = await sendInterviewConfirmationEmail(interview, cc);
+      if (!delivery.sent) throw new Error(delivery.reason || "Email delivery failed");
+      interview.confirmationEmailStatus = "Sent";
+      interview.confirmationEmailSentAt = new Date();
+      interview.confirmationEmailError = "";
+      interview.confirmationEmailCount = Number(interview.confirmationEmailCount || 0) + 1;
+      await interview.save();
+    } catch (emailError) {
+      interview.confirmationEmailStatus = "Failed";
+      interview.confirmationEmailError = emailError.message || "Email delivery failed";
+      await interview.save();
+      return res.status(502).json({
+        message: `Interview details were not sent: ${interview.confirmationEmailError}`,
+        interview: sanitizeInterview(interview, req.user)
+      });
+    }
+
+    await logActivity(req, {
+      module: "Interviews",
+      action: "Interview details email sent",
+      entityType: "Interview",
+      entityId: interview._id,
+      summary: `Sent interview details to ${interview.candidateName}`,
+      metadata: { candidateEmail: interview.candidateEmail, cc, count: interview.confirmationEmailCount }
+    });
+    res.json({
+      message: `Interview details sent to ${interview.candidateEmail}${cc.length ? ` with CC to ${cc.join(", ")}` : ""}.`,
+      interview: sanitizeInterview(interview, req.user)
+    });
   } catch (error) {
     next(error);
   }

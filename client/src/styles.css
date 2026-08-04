@@ -2973,6 +2973,29 @@ tbody tr:hover td {
   font-weight: 800;
   line-height: 1.5;
 }
+.confirmation-preview label {
+  display: grid;
+  gap: 7px;
+  color: var(--teal);
+  font-weight: 900;
+}
+.confirmation-preview input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #b9dadd;
+  border-radius: 13px;
+  background: #fff;
+  padding: 11px 13px;
+  color: var(--ink);
+  font: inherit;
+}
+.interview-email-delivery {
+  margin: 4px 0 18px;
+}
+.interview-email-delivery .button {
+  justify-self: start;
+  margin-top: 4px;
+}
 .checkbox-line {
   display: inline-flex;
   grid-template-columns: none;
@@ -3240,10 +3263,15 @@ tbody tr:hover td {
   background: #f2fbfa;
 }
 .interview-table table {
-  min-width: 1260px;
+  min-width: 1440px;
 }
 .interview-table .action-cell {
-  min-width: 370px;
+  min-width: 500px;
+}
+.interview-details-send-button {
+  background: linear-gradient(135deg, #f4b942, #f2a91f);
+  color: #173840;
+  border-color: transparent;
 }
 .interview-follow-up-button {
   background: linear-gradient(135deg, #0b6f7b, #0b5f75);

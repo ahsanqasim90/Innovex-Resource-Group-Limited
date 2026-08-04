@@ -130,7 +130,7 @@ function interviewAddress(interview) {
   return [interview.careHomeAddress, interview.careHomePostcode].filter(Boolean).join("\n");
 }
 
-export function buildInterviewConfirmationEmail(interview) {
+export function buildInterviewConfirmationEmail(interview, cc = interview.confirmationEmailCc || []) {
   const formattedDate = interviewDate(interview.interviewDate);
   const formattedTime = interviewTime(interview.interviewTime);
   const address = interviewAddress(interview);
@@ -220,6 +220,7 @@ export function buildInterviewConfirmationEmail(interview) {
   return {
     from: formatSender(),
     to: interview.candidateEmail,
+    cc,
     replyTo: recipient,
     subject,
     text,
@@ -347,12 +348,12 @@ async function deliverMail(transporter, account, mailOptions) {
   };
 }
 
-export async function sendInterviewConfirmationEmail(interview) {
+export async function sendInterviewConfirmationEmail(interview, cc = interview.confirmationEmailCc || []) {
   if (!hasSmtpConfig()) {
     return { sent: false, reason: "SMTP is not configured" };
   }
 
-  const mailOptions = buildInterviewConfirmationEmail(interview);
+  const mailOptions = buildInterviewConfirmationEmail(interview, cc);
   const delivery = await deliverMail(makeTransporter(), null, mailOptions);
   return { sent: true, subject: mailOptions.subject, ...delivery };
 }

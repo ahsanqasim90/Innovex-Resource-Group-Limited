@@ -35,6 +35,8 @@ const interviewSchema = new mongoose.Schema(
     confirmationEmailStatus: { type: String, enum: ["Pending", "Sent", "Failed"], default: "Pending" },
     confirmationEmailSentAt: Date,
     confirmationEmailError: { type: String, trim: true },
+    confirmationEmailCc: [{ type: String, trim: true, lowercase: true }],
+    confirmationEmailCount: { type: Number, min: 0, default: 0 },
     candidateSelected: { type: String, enum: selectionStatuses, default: "Pending" },
     feedback: { type: String, trim: true },
     selectedPayRate: { type: Number, min: 0, default: 0 },

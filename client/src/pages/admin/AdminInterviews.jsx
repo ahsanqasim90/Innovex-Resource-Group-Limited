@@ -20,6 +20,7 @@ export default function AdminInterviews() {
   const [saving, setSaving] = useState(false);
   const [outcomeSaving, setOutcomeSaving] = useState(false);
   const [followUpSendingId, setFollowUpSendingId] = useState(null);
+  const [detailsSendingId, setDetailsSendingId] = useState(null);
   const formRef = useRef(null);
   const detailRef = useRef(null);
   const summary = {
@@ -50,7 +51,11 @@ export default function AdminInterviews() {
     const isEditing = Boolean(editing);
     setSaving(true);
     try {
-      const saved = await api(editing ? `/interviews/${editing}` : "/interviews", { method: editing ? "PUT" : "POST", body: form });
+      const payload = {
+        ...form,
+        confirmationEmailCc: String(form.confirmationEmailCc || "").split(",").map((item) => item.trim()).filter(Boolean)
+      };
+      const saved = await api(editing ? `/interviews/${editing}` : "/interviews", { method: editing ? "PUT" : "POST", body: payload });
       if (isEditing) {
         setStatus({ message: "Interview booking updated." });
       } else if (saved.confirmationEmailStatus === "Sent") {
@@ -116,6 +121,25 @@ export default function AdminInterviews() {
     }
   }
 
+  async function sendDetails(interview) {
+    const cc = interview.confirmationEmailCc || [];
+    const ccText = cc.length ? `\nCC: ${cc.join(", ")}` : "";
+    if (!confirm(`Send interview details to ${interview.candidateName} at ${interview.candidateEmail}?${ccText}`)) return;
+    setDetailsSendingId(interview._id);
+    try {
+      const result = await api(`/interviews/${interview._id}/send-details`, { method: "POST", body: { cc } });
+      setSelected(result.interview);
+      setStatus({ message: result.message });
+      load();
+      scrollToPanel(detailRef);
+    } catch (error) {
+      setStatus({ type: "error", message: error.message });
+      load();
+    } finally {
+      setDetailsSendingId(null);
+    }
+  }
+
   function view(interview) {
     setSelected(interview);
     scrollToPanel(detailRef);
@@ -139,7 +163,7 @@ export default function AdminInterviews() {
       </div>
       <div className="interview-admin-grid">
         <InterviewForm panelRef={formRef} form={form} setForm={setForm} editing={editing} saving={saving} onSubmit={save} onCancel={() => { setEditing(null); setForm(emptyInterview); }} />
-        <InterviewDetails panelRef={detailRef} interview={selected} outcomeSaving={outcomeSaving} onOutcomeSave={saveOutcome} showFinance={showFinance} />
+        <InterviewDetails panelRef={detailRef} interview={selected} outcomeSaving={outcomeSaving} onOutcomeSave={saveOutcome} onSendDetails={sendDetails} detailsSending={detailsSendingId === selected?._id} showFinance={showFinance} />
       </div>
       <div className="card filters interview-filters" style={{ marginTop: 24 }}>
         <div className="filter-heading">
@@ -158,7 +182,7 @@ export default function AdminInterviews() {
         </div>
       </div>
       <div style={{ marginTop: 24 }}>
-        <InterviewList interviews={interviews} onEdit={edit} onDelete={remove} onSelect={view} onFollowUp={sendFollowUp} followUpSendingId={followUpSendingId} selectedId={selected?._id} showFinance={showFinance} />
+        <InterviewList interviews={interviews} onEdit={edit} onDelete={remove} onSelect={view} onFollowUp={sendFollowUp} onSendDetails={sendDetails} followUpSendingId={followUpSendingId} detailsSendingId={detailsSendingId} selectedId={selected?._id} showFinance={showFinance} />
       </div>
     </>
   );
