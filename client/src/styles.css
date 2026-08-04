@@ -8655,6 +8655,70 @@ tbody tr:hover td {
   grid-column: 1 / -1;
 }
 
+.commission-editor {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid #c9e2e5;
+  border-radius: 18px;
+  background: #f3f9f9;
+}
+
+.commission-editor-heading,
+.commission-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: end;
+}
+
+.commission-editor-heading strong,
+.commission-editor-heading span {
+  display: block;
+}
+
+.commission-editor-heading span,
+.commission-empty {
+  margin: 0.25rem 0 0;
+  color: #667d84;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.commission-editor button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+}
+
+.commission-editor button.secondary {
+  background: #dff0f2;
+  color: #064f5e;
+}
+
+.commission-row {
+  grid-template-columns: minmax(0, 1.8fr) minmax(130px, 0.7fr) auto;
+  padding: 0.8rem;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.commission-editor button.danger {
+  background: #fde2e2;
+  color: #a32121;
+}
+
+@media (max-width: 720px) {
+  .commission-editor-heading,
+  .commission-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .hr-totals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

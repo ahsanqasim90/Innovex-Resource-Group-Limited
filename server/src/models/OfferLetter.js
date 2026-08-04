@@ -10,8 +10,16 @@ const actorSchema = new mongoose.Schema(
   { _id: false }
 );
 
-const employmentTypes = ["Permanent", "Temporary", "Contract", "Part-time", "Full-time", "Other"];
-const salaryTypes = ["Annual salary", "Hourly rate", "Day rate", "Fixed fee", "Other"];
+const employmentTypes = ["Permanent", "Temporary", "Contract", "Part-time", "Full-time", "Self-employed / Commission Only", "Other"];
+const salaryTypes = ["Annual salary", "Hourly rate", "Day rate", "Fixed fee", "Commission", "Other"];
+
+const commissionItemSchema = new mongoose.Schema(
+  {
+    roles: { type: String, trim: true, required: true },
+    amount: { type: Number, min: 0, required: true }
+  },
+  { _id: false }
+);
 
 function normalizeEnum(value, allowedValues) {
   if (!value) return value;
@@ -41,13 +49,17 @@ const offerLetterSchema = new mongoose.Schema(
     department: { type: String, trim: true },
     employmentType: { type: String, enum: employmentTypes, default: "Permanent", set: (value) => normalizeEnum(value, employmentTypes) },
     startDate: { type: Date },
+    startDateText: { type: String, trim: true },
     workLocation: { type: String, trim: true },
     salaryType: { type: String, enum: salaryTypes, default: "Annual salary", set: (value) => normalizeEnum(value, salaryTypes) },
     salaryAmount: { type: Number, default: 0, min: 0 },
-    hoursPerWeek: { type: Number, default: 0, min: 0 },
+    commissionItems: { type: [commissionItemSchema], default: [] },
+    commissionPaymentTerms: { type: String, trim: true },
+    hoursPerWeek: { type: String, trim: true },
     reportingTo: { type: String, trim: true },
     probationPeriod: { type: String, trim: true, default: "6 months" },
     offerExpiryDate: { type: Date },
+    offerExpiryText: { type: String, trim: true },
     conditions: { type: String, trim: true },
     benefits: { type: String, trim: true },
     notes: { type: String, trim: true },

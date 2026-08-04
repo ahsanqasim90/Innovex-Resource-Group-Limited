@@ -9,13 +9,17 @@ const initialForm = {
   department: "",
   employmentType: "Full-time",
   startDate: "",
+  startDateText: "",
   workLocation: "",
   salaryType: "Annual salary",
   salaryAmount: "",
+  commissionItems: [],
+  commissionPaymentTerms: "",
   hoursPerWeek: "",
   reportingTo: "",
   probationPeriod: "6 months",
   offerExpiryDate: "",
+  offerExpiryText: "",
   conditions: "",
   benefits: "",
   notes: "",
@@ -67,6 +71,29 @@ export default function AdminOfferLetters() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function addCommissionItem() {
+    setForm((current) => ({
+      ...current,
+      commissionItems: [...(current.commissionItems || []), { roles: "", amount: "" }]
+    }));
+  }
+
+  function updateCommissionItem(index, field, value) {
+    setForm((current) => ({
+      ...current,
+      commissionItems: (current.commissionItems || []).map((item, itemIndex) => (
+        itemIndex === index ? { ...item, [field]: value } : item
+      ))
+    }));
+  }
+
+  function removeCommissionItem(index) {
+    setForm((current) => ({
+      ...current,
+      commissionItems: (current.commissionItems || []).filter((_, itemIndex) => itemIndex !== index)
+    }));
+  }
+
   function resetForm() {
     setEditingId("");
     setForm({ ...initialForm, senderEmail: senders[0]?.address || "" });
@@ -78,7 +105,13 @@ export default function AdminOfferLetters() {
     setError("");
     setMessage("");
     try {
-      const payload = { ...form, cc: splitCc(form.cc) };
+      const payload = {
+        ...form,
+        cc: splitCc(form.cc),
+        commissionItems: (form.commissionItems || [])
+          .filter((item) => item.roles.trim() && item.amount !== "")
+          .map((item) => ({ roles: item.roles.trim(), amount: Number(item.amount) }))
+      };
       const saved = editingId
         ? await api(`/hr/offer-letters/${editingId}`, { method: "PUT", body: payload })
         : await api("/hr/offer-letters", { method: "POST", body: payload });
@@ -101,7 +134,8 @@ export default function AdminOfferLetters() {
       ...offer,
       startDate: offer.startDate?.slice(0, 10) || "",
       offerExpiryDate: offer.offerExpiryDate?.slice(0, 10) || "",
-      cc: (offer.cc || []).join(", ")
+      cc: (offer.cc || []).join(", "),
+      commissionItems: (offer.commissionItems || []).map((item) => ({ ...item, amount: String(item.amount ?? "") }))
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -141,6 +175,10 @@ export default function AdminOfferLetters() {
     draft: offers.filter((offer) => offer.status === "Draft").length
   }), [offers]);
 
+  const showCommission = form.salaryType === "Commission"
+    || form.employmentType === "Self-employed / Commission Only"
+    || Boolean(form.commissionItems?.length);
+
   return (
     <section className="hr-page">
       <div className="hr-hero">
@@ -176,15 +214,37 @@ export default function AdminOfferLetters() {
             <label>Candidate phone<input value={form.candidatePhone} onChange={(e) => update("candidatePhone", e.target.value)} /></label>
             <label>Role title<input value={form.roleTitle} onChange={(e) => update("roleTitle", e.target.value)} required /></label>
             <label>Department<input value={form.department} onChange={(e) => update("department", e.target.value)} /></label>
-            <label>Employment type<select value={form.employmentType} onChange={(e) => update("employmentType", e.target.value)}><option value="Full-time">Full-time</option><option value="Part-time">Part-time</option><option value="Temporary">Temporary</option><option value="Contract">Contract</option><option value="Permanent">Permanent</option><option value="Other">Other</option></select></label>
+            <label>Employment type<select value={form.employmentType} onChange={(e) => update("employmentType", e.target.value)}><option value="Full-time">Full-time</option><option value="Part-time">Part-time</option><option value="Temporary">Temporary</option><option value="Contract">Contract</option><option value="Permanent">Permanent</option><option value="Self-employed / Commission Only">Self-employed / Commission Only</option><option value="Other">Other</option></select></label>
             <label>Start date<input type="date" value={form.startDate} onChange={(e) => update("startDate", e.target.value)} /></label>
+            <label>Start date wording<input value={form.startDateText} onChange={(e) => update("startDateText", e.target.value)} placeholder="e.g. Immediate or To be agreed" /></label>
             <label>Work location<input value={form.workLocation} onChange={(e) => update("workLocation", e.target.value)} /></label>
-            <label>Salary type<select value={form.salaryType} onChange={(e) => update("salaryType", e.target.value)}><option>Annual salary</option><option>Hourly rate</option><option>Day rate</option><option>Fixed fee</option><option>Other</option></select></label>
-            <label>Salary / rate<input type="number" step="0.01" value={form.salaryAmount} onChange={(e) => update("salaryAmount", e.target.value)} /></label>
-            <label>Hours per week<input type="number" step="0.01" value={form.hoursPerWeek} onChange={(e) => update("hoursPerWeek", e.target.value)} /></label>
+            <label>Salary type<select value={form.salaryType} onChange={(e) => update("salaryType", e.target.value)}><option>Annual salary</option><option>Hourly rate</option><option>Day rate</option><option>Fixed fee</option><option>Commission</option><option>Other</option></select></label>
+            <label>{showCommission ? "Default commission / rate (£)" : "Salary / rate (£)"}<input type="number" min="0" step="0.01" value={form.salaryAmount} onChange={(e) => update("salaryAmount", e.target.value)} /></label>
+            {showCommission && (
+              <div className="full commission-editor">
+                <div className="commission-editor-heading">
+                  <div>
+                    <strong>Commission structure</strong>
+                    <span>Add the commission paid for each position or group of roles.</span>
+                  </div>
+                  <button type="button" className="secondary" onClick={addCommissionItem}>Add commission</button>
+                </div>
+                {(form.commissionItems || []).map((item, index) => (
+                  <div className="commission-row" key={index}>
+                    <label>Position(s) / roles<input value={item.roles} onChange={(e) => updateCommissionItem(index, "roles", e.target.value)} placeholder="e.g. Registered Nurses, Deputy Managers" /></label>
+                    <label>Commission (£)<input type="number" min="0" step="0.01" value={item.amount} onChange={(e) => updateCommissionItem(index, "amount", e.target.value)} placeholder="100" /></label>
+                    <button type="button" className="danger commission-remove" onClick={() => removeCommissionItem(index)}>Remove</button>
+                  </div>
+                ))}
+                {!form.commissionItems?.length && <p className="commission-empty">No commission bands added yet.</p>}
+                <label>When commission becomes payable<textarea value={form.commissionPaymentTerms} onChange={(e) => update("commissionPaymentTerms", e.target.value)} placeholder="e.g. Payable after four continuous weeks of employment and once the client invoice is paid in full." /></label>
+              </div>
+            )}
+            <label>Hours per week<input value={form.hoursPerWeek} onChange={(e) => update("hoursPerWeek", e.target.value)} placeholder="e.g. 40 or Flexible" /></label>
             <label>Reporting to<input value={form.reportingTo} onChange={(e) => update("reportingTo", e.target.value)} /></label>
             <label>Probation period<input value={form.probationPeriod} onChange={(e) => update("probationPeriod", e.target.value)} /></label>
             <label>Offer expiry date<input type="date" value={form.offerExpiryDate} onChange={(e) => update("offerExpiryDate", e.target.value)} /></label>
+            <label>Offer expiry wording<input value={form.offerExpiryText} onChange={(e) => update("offerExpiryText", e.target.value)} placeholder="e.g. 14 days from issue date" /></label>
             <label>Status<select value={form.status} onChange={(e) => update("status", e.target.value)}><option>Draft</option><option>Sent</option><option>Accepted</option><option>Declined</option><option>Withdrawn</option></select></label>
             <label>Send from<select value={form.senderEmail} onChange={(e) => update("senderEmail", e.target.value)}>{senders.map((sender) => <option key={sender.address} value={sender.address}>{sender.label} ({sender.address})</option>)}</select></label>
             <label>Authorised signatory<input value={form.signatoryName} onChange={(e) => update("signatoryName", e.target.value)} /></label>
@@ -214,9 +274,9 @@ export default function AdminOfferLetters() {
               <p>{selected.roleTitle || "Candidate"} · {selected.offerNumber}</p>
               <div className="hr-detail-list">
                 <span>Email <strong>{selected.candidateEmail}</strong></span>
-                <span>Start date <strong>{dateLabel(selected.startDate)}</strong></span>
+                <span>Start date <strong>{selected.startDateText || dateLabel(selected.startDate)}</strong></span>
                 <span>Status <strong>{selected.status}</strong></span>
-                <span>Package <strong>{money(selected.salaryAmount)}</strong></span>
+                <span>{selected.commissionItems?.length ? "Commission bands" : "Package"} <strong>{selected.commissionItems?.length || money(selected.salaryAmount)}</strong></span>
               </div>
               <div className="hr-preview-actions">
                 <button type="button" className="secondary" onClick={() => downloadFile(`/hr/offer-letters/${selected._id}/pdf`, `Innovex-Offer-Letter-${selected.offerNumber}.pdf`)}>Download PDF</button>
@@ -254,7 +314,7 @@ export default function AdminOfferLetters() {
                   <td><strong>{offer.offerNumber}</strong><br /><span>{dateLabel(offer.createdAt)}</span></td>
                   <td><strong>{offer.candidateName}</strong><br /><span>{offer.candidateEmail}</span></td>
                   <td><strong>{offer.roleTitle}</strong><br /><span>{offer.employmentType}</span></td>
-                  <td>{dateLabel(offer.startDate)}</td>
+                  <td>{offer.startDateText || dateLabel(offer.startDate)}</td>
                   <td><span className={`hr-status ${offer.status.toLowerCase()}`}>{offer.status}</span></td>
                   <td className="action-row">
                     <button type="button" className="secondary" onClick={() => setSelected(offer)}>View</button>
