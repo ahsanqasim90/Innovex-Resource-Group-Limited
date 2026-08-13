@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUpRight, BarChart3, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, FileText, FilePlus2, GraduationCap, LayoutDashboard, ListFilter, LogOut, MailCheck, MailPlus, Menu, MessageSquare, PhoneCall, ReceiptPoundSterling, Settings, ShieldCheck, Store, Target, Upload, UserCog, UsersRound, X } from "lucide-react";
+import { ArrowUpRight, BarChart3, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, ClipboardCheck, FileText, FilePlus2, GraduationCap, LayoutDashboard, ListFilter, LogOut, MailCheck, MailPlus, Menu, MessageSquare, PhoneCall, ReceiptPoundSterling, Settings, ShieldCheck, Store, Target, Upload, UserCog, UsersRound, X } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { canViewFinance, hasPermission } from "../auth/permissions.js";
@@ -7,6 +7,7 @@ import { company } from "../data/content.js";
 
 const links = [
   ["/admin/dashboard", "Dashboard", LayoutDashboard, "dashboard.view"],
+  ["/admin/attendance", "Attendance", ClipboardCheck, "attendance.view"],
   ["/admin/jobs", "Jobs", Briefcase, "jobs.view"],
   ["/admin/applications", "Applications", FileText, "applications.view"],
   ["/admin/cv-uploads", "CV Uploads", Upload, "cvs.view"],

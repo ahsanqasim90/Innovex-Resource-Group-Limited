@@ -27,6 +27,7 @@ const AdminCourses = React.lazy(() => import("./pages/admin/AdminCourses.jsx"));
 const AdminEmailCentre = React.lazy(() => import("./pages/admin/AdminEmailCentre.jsx"));
 const AdminJobs = React.lazy(() => import("./pages/admin/AdminJobs.jsx"));
 const AdminApplications = React.lazy(() => import("./pages/admin/AdminApplications.jsx"));
+const AdminAttendance = React.lazy(() => import("./pages/admin/AdminAttendance.jsx"));
 const AdminCvs = React.lazy(() => import("./pages/admin/AdminCvs.jsx"));
 const AdminTalentPool = React.lazy(() => import("./pages/admin/AdminTalentPool.jsx"));
 const AdminBusinessLeads = React.lazy(() => import("./pages/admin/AdminBusinessLeads.jsx"));
@@ -73,7 +74,7 @@ function RequireFinance({ children }) {
 function AdminIndexRedirect() {
   const { user, loadingUser } = useAuth();
   if (loadingUser) return <div className="admin-loading-screen">Loading secure workspace...</div>;
-  return <Navigate to={hasPermission(user, "dashboard.view") ? "/admin/dashboard" : hasPermission(user, "webLeads.view") ? "/admin/web-leads" : "/admin/login"} replace />;
+  return <Navigate to={hasPermission(user, "dashboard.view") ? "/admin/dashboard" : hasPermission(user, "attendance.view") ? "/admin/attendance" : hasPermission(user, "webLeads.view") ? "/admin/web-leads" : "/admin/login"} replace />;
 }
 
 function WebLeadPage({ mode }) {
@@ -113,6 +114,7 @@ createRoot(document.getElementById("root")).render(
           >
             <Route index element={<AdminIndexRedirect />} />
             <Route path="dashboard" element={<RequirePermission permission="dashboard.view"><Dashboard /></RequirePermission>} />
+            <Route path="attendance" element={<RequirePermission permission="attendance.view"><AdminAttendance /></RequirePermission>} />
             <Route path="jobs" element={<RequirePermission permission="jobs.view"><AdminJobs /></RequirePermission>} />
             <Route path="applications" element={<RequirePermission permission="applications.view"><AdminApplications /></RequirePermission>} />
             <Route path="cv-uploads" element={<RequirePermission permission="cvs.view"><AdminCvs /></RequirePermission>} />

@@ -3,6 +3,7 @@ export const permissionGroups = [
     label: "Core workspace",
     permissions: [
       ["dashboard.view", "Dashboard"],
+      ["attendance.view", "My Attendance"],
       ["jobs.view", "Jobs"],
       ["applications.view", "Applications"],
       ["cvs.view", "CV Uploads"]
@@ -46,7 +47,10 @@ export const permissionGroups = [
   },
   {
     label: "Administration",
-    permissions: [["team.manage", "Team Members"]]
+    permissions: [
+      ["team.manage", "Team Members"],
+      ["attendance.manage", "Attendance Reports"]
+    ]
   },
   {
     label: "Web Leads CRM",
@@ -59,13 +63,13 @@ export const permissionGroups = [
 ];
 
 export const rolePresets = {
-  recruitment: ["dashboard.view", "jobs.view", "applications.view", "cvs.view", "talentPool.view", "calls.view", "interviews.view", "meetings.view", "terms.view", "terms.manage"],
-  sales: ["dashboard.view", "businessLeads.view", "emails.view", "calls.view", "meetings.view", "terms.view", "terms.manage", "courses.view", "trainingBookings.view"],
-  training: ["dashboard.view", "courses.view", "trainingBookings.view", "meetings.view", "terms.view", "terms.manage", "businessLeads.view"],
-  marketing: ["dashboard.view", "businessLeads.view", "emails.view", "blogs.view", "testimonials.view", "partners.view", "contacts.view"],
-  sales_manager: ["webLeads.view", "webLeads.manage"],
-  external_agent: ["webLeads.view"],
-  viewer: ["dashboard.view"]
+  recruitment: ["dashboard.view", "attendance.view", "jobs.view", "applications.view", "cvs.view", "talentPool.view", "calls.view", "interviews.view", "meetings.view", "terms.view", "terms.manage"],
+  sales: ["dashboard.view", "attendance.view", "businessLeads.view", "emails.view", "calls.view", "meetings.view", "terms.view", "terms.manage", "courses.view", "trainingBookings.view"],
+  training: ["dashboard.view", "attendance.view", "courses.view", "trainingBookings.view", "meetings.view", "terms.view", "terms.manage", "businessLeads.view"],
+  marketing: ["dashboard.view", "attendance.view", "businessLeads.view", "emails.view", "blogs.view", "testimonials.view", "partners.view", "contacts.view"],
+  sales_manager: ["attendance.view", "webLeads.view", "webLeads.manage"],
+  external_agent: ["attendance.view", "webLeads.view"],
+  viewer: ["dashboard.view", "attendance.view"]
 };
 
 export function hasPermission(user, permission) {

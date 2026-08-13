@@ -17,7 +17,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       const result = await login(data.email, data.password);
-      navigate(result.user?.role === "external_agent" || result.user?.role === "sales_manager" ? "/admin/web-leads" : "/admin/dashboard");
+      navigate(result.user?.role === "external_agent" || result.user?.role === "sales_manager" ? "/admin/web-leads" : result.user?.permissions?.includes("dashboard.view") ? "/admin/dashboard" : "/admin/attendance");
     } catch (error) {
       setStatus({ type: "error", message: error.message });
     } finally {

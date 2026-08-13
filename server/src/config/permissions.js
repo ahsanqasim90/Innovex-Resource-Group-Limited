@@ -5,6 +5,7 @@ export const permissionGroups = [
     label: "Core workspace",
     permissions: [
       ["dashboard.view", "Dashboard"],
+      ["attendance.view", "My Attendance"],
       ["jobs.view", "Jobs"],
       ["applications.view", "Applications"],
       ["cvs.view", "CV Uploads"]
@@ -48,7 +49,10 @@ export const permissionGroups = [
   },
   {
     label: "Administration",
-    permissions: [["team.manage", "Team Members"]]
+    permissions: [
+      ["team.manage", "Team Members"],
+      ["attendance.manage", "Attendance Reports"]
+    ]
   },
   {
     label: "Web Leads CRM",
@@ -67,6 +71,7 @@ export const rolePresets = {
   admin: allPermissions,
   recruitment: [
     "dashboard.view",
+    "attendance.view",
     "jobs.view",
     "applications.view",
     "cvs.view",
@@ -79,6 +84,7 @@ export const rolePresets = {
   ],
   sales: [
     "dashboard.view",
+    "attendance.view",
     "businessLeads.view",
     "emails.view",
     "calls.view",
@@ -90,6 +96,7 @@ export const rolePresets = {
   ],
   training: [
     "dashboard.view",
+    "attendance.view",
     "courses.view",
     "trainingBookings.view",
     "meetings.view",
@@ -99,6 +106,7 @@ export const rolePresets = {
   ],
   marketing: [
     "dashboard.view",
+    "attendance.view",
     "businessLeads.view",
     "emails.view",
     "blogs.view",
@@ -106,9 +114,9 @@ export const rolePresets = {
     "partners.view",
     "contacts.view"
   ],
-  sales_manager: ["webLeads.view", "webLeads.manage"],
-  external_agent: ["webLeads.view"],
-  viewer: ["dashboard.view"]
+  sales_manager: ["attendance.view", "webLeads.view", "webLeads.manage"],
+  external_agent: ["attendance.view", "webLeads.view"],
+  viewer: ["dashboard.view", "attendance.view"]
 };
 
 export function effectivePermissions(user) {
@@ -116,7 +124,9 @@ export function effectivePermissions(user) {
   if (["admin", "super_admin"].includes(user.role)) return allPermissions;
   // Role presets are only defaults when creating/editing an account. Once saved,
   // the explicit checkbox selection is the source of truth for employee access.
-  return Array.from(new Set(Array.isArray(user.permissions) ? user.permissions : []));
+  // Attendance is part of every active employee account, including accounts
+  // created before this module was introduced.
+  return Array.from(new Set(["attendance.view", ...(Array.isArray(user.permissions) ? user.permissions : [])]));
 }
 
 export function hasPermission(user, permission) {

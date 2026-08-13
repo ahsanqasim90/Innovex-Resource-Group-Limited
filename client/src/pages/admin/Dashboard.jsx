@@ -115,6 +115,7 @@ export default function Dashboard() {
   const adminSections = useMemo(() => {
     const sections = [
       ["Dashboard", "/admin/dashboard", "overview stats operations", "dashboard.view"],
+      ["Attendance", "/admin/attendance", "employee attendance check in daily cv report productivity", "attendance.view"],
       ["Jobs", "/admin/jobs", "vacancies roles job adverts", "jobs.view"],
       ["Applications", "/admin/applications", "job applications applicants", "applications.view"],
       ["CV Uploads", "/admin/cv-uploads", "candidate cvs documents", "cvs.view"],
