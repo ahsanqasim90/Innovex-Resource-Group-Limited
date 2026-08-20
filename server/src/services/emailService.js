@@ -727,6 +727,28 @@ export async function sendClientTermsEmail({ terms, pdfBuffer, fromEmail, custom
   return { sent: true, fromEmail: account.address, subject, message, cc, ...archive };
 }
 
+export async function sendTrainingQuotationEmail({ quotation, pdfBuffer, fromEmail, customMessage = "", cc = [] }) {
+  const account = senderAccountOrDefault(fromEmail || quotation.senderEmail);
+  if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
+  const transporter = makeTransporter(account);
+  const contact = quotation.contactName || "there";
+  const subject = `Training Quotation ${quotation.quotationNumber} | ${quotation.clientName}`;
+  const message = customMessage || `Please find attached our training proposal and commercial quotation for ${quotation.clientName}. The quotation is valid for ${quotation.validDays} days from the date of issue.`;
+  const source = "Innovex Course Quotations Centre";
+  const mailOptions = {
+    from: formatSender(account),
+    to: quotation.clientEmail,
+    cc,
+    replyTo: account.address,
+    subject,
+    text: `Dear ${contact},\n\n${message}\n\nQuotation reference: ${quotation.quotationNumber}\nQuotation total: ${money(quotation.total)}\nValid for: ${quotation.validDays} days from issue\n\nThe professional PDF quotation is attached. Please reply to this email if you would like to proceed or require any amendment.\n\nKind regards,\n${quotation.signatoryName}\n${quotation.signatoryTitle} | Innovex Resource Group Limited\n\n${crmComplianceFooterText(source, true)}`,
+    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:linear-gradient(90deg,#08a5d5,#e91370)"></div><div style="background:#17385f;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Training Quotation</div></div><div style="padding:26px 28px"><p style="margin-top:0">Dear ${escapeHtml(contact)},</p><p style="line-height:1.65">${messageHtml(message)}</p><div style="margin:22px 0;padding:16px 18px;background:#eef7f7;border-left:4px solid #e91370;border-radius:10px"><div style="color:#60777e;font-size:12px;letter-spacing:.08em">QUOTATION</div><strong style="display:block;color:#173840;font-size:18px;margin-top:5px">${escapeHtml(quotation.quotationNumber)}</strong><span style="display:block;color:#60777e;margin-top:6px">${escapeHtml(quotation.clientName)}</span><span style="display:block;color:#173840;font-size:18px;font-weight:700;margin-top:9px">${money(quotation.total)}</span></div><p style="line-height:1.6">The professional PDF quotation is attached. Please reply to this email if you would like to proceed or require any amendment.</p><p style="margin:24px 0 0">Kind regards,<br><strong>${escapeHtml(quotation.signatoryName)}</strong><br><span style="color:#60777e">${escapeHtml(quotation.signatoryTitle)} | Innovex Resource Group Limited</span><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; ${escapeHtml(account.address)}</span></p>${crmComplianceFooterHtml(source, true)}</div></div></div>`,
+    attachments: [{ filename: `Innovex-Training-Quotation-${quotation.quotationNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
+  };
+  const archive = await sendAndArchive(transporter, account, mailOptions);
+  return { sent: true, fromEmail: account.address, subject, message, cc, ...archive };
+}
+
 export function buildClientTermsUnsignedReminderEmail(terms) {
   const contact = terms.contactName || terms.clientName || "there";
   const source = "Innovex Client Terms Centre";

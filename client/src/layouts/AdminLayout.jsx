@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUpRight, BarChart3, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, ClipboardCheck, FileText, FilePlus2, GraduationCap, LayoutDashboard, ListFilter, LogOut, MailCheck, MailPlus, Menu, MessageSquare, PhoneCall, ReceiptPoundSterling, Settings, ShieldCheck, Store, Target, Upload, UserCog, UsersRound, X } from "lucide-react";
+import { ArrowUpRight, BarChart3, BookOpenCheck, BookOpenText, Briefcase, Building2, CalendarCheck, CalendarClock, ClipboardCheck, FileText, FilePlus2, GraduationCap, LayoutDashboard, ListFilter, LogOut, MailCheck, MailPlus, Menu, MessageSquare, NotebookPen, PhoneCall, ReceiptPoundSterling, Settings, ShieldCheck, Store, Target, Upload, UserCog, UsersRound, X } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { canViewFinance, hasPermission } from "../auth/permissions.js";
@@ -19,6 +19,7 @@ const links = [
   ["/admin/meetings", "Meetings", CalendarClock, "meetings.view"],
   ["/admin/courses", "Courses", BookOpenCheck, "courses.view"],
   ["/admin/training-bookings", "Training Bookings", GraduationCap, "trainingBookings.view"],
+  ["/admin/training-quotations", "Course Quotations", NotebookPen, "trainingQuotations.view"],
   ["/admin/client-terms", "Client Terms", FileText, "terms.view"],
   ["/admin/finance", "Finance Centre", ReceiptPoundSterling, null, true],
   ["/admin/salary-slips", "Salary Slips", ReceiptPoundSterling, "salarySlips.view"],

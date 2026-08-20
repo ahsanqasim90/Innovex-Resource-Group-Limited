@@ -128,6 +128,7 @@ export default function Dashboard() {
       ["Meetings", "/admin/meetings", "appointments meetings reminders", "meetings.view"],
       ["Courses", "/admin/courses", "training courses library", "courses.view"],
       ["Training Bookings", "/admin/training-bookings", "training bookings quotes sessions", "trainingBookings.view"],
+      ["Course Quotations", "/admin/training-quotations", "training quotation proposal pdf email price", "trainingQuotations.view"],
       ["Finance Centre", "/admin/finance", "invoices expenses ledger payments", null],
       ["Blogs", "/admin/blogs", "website content seo articles", "blogs.view"],
       ["Testimonials", "/admin/testimonials", "reviews feedback approvals", "testimonials.view"],

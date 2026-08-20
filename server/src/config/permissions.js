@@ -28,7 +28,9 @@ export const permissionGroups = [
       ["terms.view", "Client Terms"],
       ["terms.manage", "Manage Client Terms"],
       ["courses.view", "Courses"],
-      ["trainingBookings.view", "Training Bookings"]
+      ["trainingBookings.view", "Training Bookings"],
+      ["trainingQuotations.view", "Course Quotations"],
+      ["trainingQuotations.manage", "Manage Course Quotations"]
     ]
   },
   {
@@ -92,13 +94,17 @@ export const rolePresets = {
     "terms.view",
     "terms.manage",
     "courses.view",
-    "trainingBookings.view"
+    "trainingBookings.view",
+    "trainingQuotations.view",
+    "trainingQuotations.manage"
   ],
   training: [
     "dashboard.view",
     "attendance.view",
     "courses.view",
     "trainingBookings.view",
+    "trainingQuotations.view",
+    "trainingQuotations.manage",
     "meetings.view",
     "terms.view",
     "terms.manage",

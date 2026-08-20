@@ -26,7 +26,9 @@ export const permissionGroups = [
       ["terms.view", "Client Terms"],
       ["terms.manage", "Manage Client Terms"],
       ["courses.view", "Courses"],
-      ["trainingBookings.view", "Training Bookings"]
+      ["trainingBookings.view", "Training Bookings"],
+      ["trainingQuotations.view", "Course Quotations"],
+      ["trainingQuotations.manage", "Manage Course Quotations"]
     ]
   },
   {
@@ -64,8 +66,8 @@ export const permissionGroups = [
 
 export const rolePresets = {
   recruitment: ["dashboard.view", "attendance.view", "jobs.view", "applications.view", "cvs.view", "talentPool.view", "calls.view", "interviews.view", "meetings.view", "terms.view", "terms.manage"],
-  sales: ["dashboard.view", "attendance.view", "businessLeads.view", "emails.view", "calls.view", "meetings.view", "terms.view", "terms.manage", "courses.view", "trainingBookings.view"],
-  training: ["dashboard.view", "attendance.view", "courses.view", "trainingBookings.view", "meetings.view", "terms.view", "terms.manage", "businessLeads.view"],
+  sales: ["dashboard.view", "attendance.view", "businessLeads.view", "emails.view", "calls.view", "meetings.view", "terms.view", "terms.manage", "courses.view", "trainingBookings.view", "trainingQuotations.view", "trainingQuotations.manage"],
+  training: ["dashboard.view", "attendance.view", "courses.view", "trainingBookings.view", "trainingQuotations.view", "trainingQuotations.manage", "meetings.view", "terms.view", "terms.manage", "businessLeads.view"],
   marketing: ["dashboard.view", "attendance.view", "businessLeads.view", "emails.view", "blogs.view", "testimonials.view", "partners.view", "contacts.view"],
   sales_manager: ["attendance.view", "webLeads.view", "webLeads.manage"],
   external_agent: ["attendance.view", "webLeads.view"],
