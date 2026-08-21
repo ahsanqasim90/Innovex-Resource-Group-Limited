@@ -16,6 +16,7 @@ const salaryTypes = ["Annual salary", "Hourly rate", "Day rate", "Fixed fee", "C
 const commissionItemSchema = new mongoose.Schema(
   {
     roles: { type: String, trim: true, required: true },
+    calculationType: { type: String, enum: ["Percentage", "Fixed value"], default: "Fixed value" },
     amount: { type: Number, min: 0, required: true }
   },
   { _id: false }
@@ -52,6 +53,7 @@ const offerLetterSchema = new mongoose.Schema(
     startDateText: { type: String, trim: true },
     workLocation: { type: String, trim: true },
     salaryType: { type: String, enum: salaryTypes, default: "Annual salary", set: (value) => normalizeEnum(value, salaryTypes) },
+    defaultCommissionType: { type: String, enum: ["Percentage", "Fixed value"], default: "Fixed value" },
     salaryAmount: { type: Number, default: 0, min: 0 },
     commissionItems: { type: [commissionItemSchema], default: [] },
     commissionPaymentTerms: { type: String, trim: true },

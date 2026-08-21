@@ -205,6 +205,10 @@ export function generateOfferLetterPdf(offer) {
     const signatoryName = pdfText(offer.signatoryName, "Muhammad Ahsan Qasim");
     const signatoryTitle = pdfText(offer.signatoryTitle, "Co-founder & Director");
     const commissionItems = Array.isArray(offer.commissionItems) ? offer.commissionItems.filter((item) => item?.roles) : [];
+    const commissionType = (value) => safe(value, "Fixed value") === "Percentage" ? "Percentage" : "Fixed value";
+    const commissionValue = (value, type) => commissionType(type) === "Percentage"
+      ? `${Number(value || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 })}%`
+      : money(value);
     const isCommission = commissionItems.length > 0
       || safe(offer.salaryType, "").toLowerCase() === "commission"
       || safe(offer.employmentType, "").toLowerCase().includes("commission");
@@ -283,7 +287,9 @@ export function generateOfferLetterPdf(offer) {
       { width: 220, align: "right", lineBreak: false, ellipsis: true }
     );
     doc.fillColor(ink).font("Helvetica-Bold").fontSize(15.5).text(`Dear ${pdfText(offer.candidateName, "Candidate")},`, 58, 176, { width: 335, lineBreak: false, ellipsis: true });
-    doc.fillColor(teal).font("Helvetica-Bold").fontSize(19).text(`Offer of ${pdfText(offer.roleTitle, "Role")}`, 58, 205, { width: 355, lineBreak: false, ellipsis: true });
+    const offerTitle = `Offer of ${pdfText(offer.roleTitle, "Role")}`;
+    const offerTitleSize = offerTitle.length > 34 ? 15.5 : 19;
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(offerTitleSize).text(offerTitle, 58, 205, { width: 355, lineBreak: false, ellipsis: true });
     doc.fillColor(ink).font("Helvetica").fontSize(8.8).text(
       "We are pleased to confirm your offer with Innovex Resource Group Limited. The complete role details, payment terms and conditions are set out below.",
       58,
@@ -306,7 +312,7 @@ export function generateOfferLetterPdf(offer) {
       { label: "INFORMATION", x: 250, width: 290 }
     ]);
     const salaryDisplay = isCommission
-      ? (commissionItems.length ? "Role-based commission - see commission structure" : `${pdfText(offer.salaryType)}: ${money(offer.salaryAmount)}`)
+      ? (commissionItems.length ? "Project / role-based commission - see commission structure" : `${commissionType(offer.defaultCommissionType)} commission: ${commissionValue(offer.salaryAmount, offer.defaultCommissionType)}`)
       : `${pdfText(offer.salaryType)}: ${money(offer.salaryAmount)}`;
     const details = [
       ["Department", offer.department || "To be confirmed"],
@@ -333,17 +339,20 @@ export function generateOfferLetterPdf(offer) {
       doc.fillColor(teal).font("Helvetica-Bold").fontSize(9).text("COMMISSION STRUCTURE", LEFT, y + 18, { lineBreak: false });
       y += 38;
       y = tableHeader(doc, y, [
-        { label: "POSITION(S) / ROLES", x: 56, width: 365 },
-        { label: "COMMISSION", x: 438, width: 95, align: "right" }
+        { label: "PROJECT / POSITION / TRIGGER", x: 56, width: 245 },
+        { label: "TYPE", x: 315, width: 95 },
+        { label: "RATE / VALUE", x: 425, width: 108, align: "right" }
       ]);
       commissionItems.forEach((item, index) => {
         const roles = pdfText(item.roles);
+        const type = commissionType(item.calculationType);
         doc.font("Helvetica").fontSize(8.3);
-        const rowHeight = Math.max(34, doc.heightOfString(roles, { width: 350, lineGap: 1 }) + 16);
+        const rowHeight = Math.max(34, doc.heightOfString(roles, { width: 245, lineGap: 1 }) + 16);
         ensureSpace(rowHeight, "COMMISSION STRUCTURE (CONTINUED)");
         if (index % 2 === 0) doc.rect(LEFT, y, CONTENT_WIDTH, rowHeight).fill(soft);
-        doc.fillColor(ink).font("Helvetica").fontSize(8.3).text(roles, 56, y + 9, { width: 350, lineGap: 1 });
-        doc.fillColor(teal).font("Helvetica-Bold").fontSize(9).text(money(item.amount), 438, y + 10, { width: 95, align: "right", lineBreak: false });
+        doc.fillColor(ink).font("Helvetica").fontSize(8.3).text(roles, 56, y + 9, { width: 245, lineGap: 1 });
+        doc.fillColor(muted).font("Helvetica-Bold").fontSize(7.8).text(type, 315, y + 10, { width: 95, lineBreak: false });
+        doc.fillColor(teal).font("Helvetica-Bold").fontSize(9).text(commissionValue(item.amount, type), 425, y + 10, { width: 108, align: "right", lineBreak: false });
         doc.moveTo(LEFT, y + rowHeight).lineTo(LEFT + CONTENT_WIDTH, y + rowHeight).strokeColor(line).stroke();
         y += rowHeight;
       });

@@ -13,6 +13,7 @@ const initialForm = {
   workLocation: "",
   salaryType: "Annual salary",
   salaryAmount: "",
+  defaultCommissionType: "Percentage",
   commissionItems: [],
   commissionPaymentTerms: "",
   hoursPerWeek: "",
@@ -32,6 +33,9 @@ const initialForm = {
 };
 
 const money = (value) => `£${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const commissionValue = (value, calculationType) => calculationType === "Percentage"
+  ? `${Number(value || 0).toLocaleString("en-GB", { maximumFractionDigits: 2 })}%`
+  : money(value);
 const dateLabel = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "-");
 
 function splitCc(value) {
@@ -74,7 +78,7 @@ export default function AdminOfferLetters() {
   function addCommissionItem() {
     setForm((current) => ({
       ...current,
-      commissionItems: [...(current.commissionItems || []), { roles: "", amount: "" }]
+      commissionItems: [...(current.commissionItems || []), { roles: "", calculationType: "Percentage", amount: "" }]
     }));
   }
 
@@ -110,7 +114,11 @@ export default function AdminOfferLetters() {
         cc: splitCc(form.cc),
         commissionItems: (form.commissionItems || [])
           .filter((item) => item.roles.trim() && item.amount !== "")
-          .map((item) => ({ roles: item.roles.trim(), amount: Number(item.amount) }))
+          .map((item) => ({
+            roles: item.roles.trim(),
+            calculationType: item.calculationType || "Fixed value",
+            amount: Number(item.amount)
+          }))
       };
       const saved = editingId
         ? await api(`/hr/offer-letters/${editingId}`, { method: "PUT", body: payload })
@@ -135,7 +143,12 @@ export default function AdminOfferLetters() {
       startDate: offer.startDate?.slice(0, 10) || "",
       offerExpiryDate: offer.offerExpiryDate?.slice(0, 10) || "",
       cc: (offer.cc || []).join(", "),
-      commissionItems: (offer.commissionItems || []).map((item) => ({ ...item, amount: String(item.amount ?? "") }))
+      defaultCommissionType: offer.defaultCommissionType || "Fixed value",
+      commissionItems: (offer.commissionItems || []).map((item) => ({
+        ...item,
+        calculationType: item.calculationType || "Fixed value",
+        amount: String(item.amount ?? "")
+      }))
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -219,20 +232,28 @@ export default function AdminOfferLetters() {
             <label>Start date wording<input value={form.startDateText} onChange={(e) => update("startDateText", e.target.value)} placeholder="e.g. Immediate or To be agreed" /></label>
             <label>Work location<input value={form.workLocation} onChange={(e) => update("workLocation", e.target.value)} /></label>
             <label>Salary type<select value={form.salaryType} onChange={(e) => update("salaryType", e.target.value)}><option>Annual salary</option><option>Hourly rate</option><option>Day rate</option><option>Fixed fee</option><option>Commission</option><option>Other</option></select></label>
-            <label>{showCommission ? "Default commission / rate (£)" : "Salary / rate (£)"}<input type="number" min="0" step="0.01" value={form.salaryAmount} onChange={(e) => update("salaryAmount", e.target.value)} /></label>
+            {showCommission ? (
+              <>
+                <label>Default commission type<select value={form.defaultCommissionType} onChange={(e) => update("defaultCommissionType", e.target.value)}><option value="Percentage">Percentage (%)</option><option value="Fixed value">Fixed value (£)</option></select></label>
+                <label>{form.defaultCommissionType === "Percentage" ? "Default commission (%)" : "Default commission value (£)"}<input type="number" min="0" max={form.defaultCommissionType === "Percentage" ? "100" : undefined} step="0.01" value={form.salaryAmount} onChange={(e) => update("salaryAmount", e.target.value)} placeholder={form.defaultCommissionType === "Percentage" ? "10" : "100"} /></label>
+              </>
+            ) : (
+              <label>Salary / rate (£)<input type="number" min="0" step="0.01" value={form.salaryAmount} onChange={(e) => update("salaryAmount", e.target.value)} /></label>
+            )}
             {showCommission && (
               <div className="full commission-editor">
                 <div className="commission-editor-heading">
                   <div>
                     <strong>Commission structure</strong>
-                    <span>Add the commission paid for each position or group of roles.</span>
+                    <span>Choose percentage or fixed value for each successful project, position, or role.</span>
                   </div>
                   <button type="button" className="secondary" onClick={addCommissionItem}>Add commission</button>
                 </div>
                 {(form.commissionItems || []).map((item, index) => (
                   <div className="commission-row" key={index}>
-                    <label>Position(s) / roles<input value={item.roles} onChange={(e) => updateCommissionItem(index, "roles", e.target.value)} placeholder="e.g. Registered Nurses, Deputy Managers" /></label>
-                    <label>Commission (£)<input type="number" min="0" step="0.01" value={item.amount} onChange={(e) => updateCommissionItem(index, "amount", e.target.value)} placeholder="100" /></label>
+                    <label>Project / position / trigger<input value={item.roles} onChange={(e) => updateCommissionItem(index, "roles", e.target.value)} placeholder="e.g. Every successful project" /></label>
+                    <label>Commission type<select value={item.calculationType || "Fixed value"} onChange={(e) => updateCommissionItem(index, "calculationType", e.target.value)}><option value="Percentage">Percentage (%)</option><option value="Fixed value">Fixed value (£)</option></select></label>
+                    <label>{item.calculationType === "Percentage" ? "Percentage (%)" : "Value (£)"}<input type="number" min="0" max={item.calculationType === "Percentage" ? "100" : undefined} step="0.01" value={item.amount} onChange={(e) => updateCommissionItem(index, "amount", e.target.value)} placeholder={item.calculationType === "Percentage" ? "10" : "100"} /></label>
                     <button type="button" className="danger commission-remove" onClick={() => removeCommissionItem(index)}>Remove</button>
                   </div>
                 ))}
@@ -256,7 +277,7 @@ export default function AdminOfferLetters() {
             <label className="full">Internal notes<textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} /></label>
           </div>
           <div className="hr-totals">
-            <span>Package <strong>{money(form.salaryAmount)}</strong></span>
+            <span>{showCommission ? "Default commission" : "Package"} <strong>{showCommission ? commissionValue(form.salaryAmount, form.defaultCommissionType) : money(form.salaryAmount)}</strong></span>
             <span>Hours <strong>{form.hoursPerWeek || "-"}</strong></span>
             <span className="net">Expiry <strong>{dateLabel(form.offerExpiryDate)}</strong></span>
           </div>
@@ -276,7 +297,7 @@ export default function AdminOfferLetters() {
                 <span>Email <strong>{selected.candidateEmail}</strong></span>
                 <span>Start date <strong>{selected.startDateText || dateLabel(selected.startDate)}</strong></span>
                 <span>Status <strong>{selected.status}</strong></span>
-                <span>{selected.commissionItems?.length ? "Commission bands" : "Package"} <strong>{selected.commissionItems?.length || money(selected.salaryAmount)}</strong></span>
+                <span>{selected.commissionItems?.length ? "Commission rules" : (selected.salaryType === "Commission" ? "Commission" : "Package")} <strong>{selected.commissionItems?.length === 1 ? commissionValue(selected.commissionItems[0].amount, selected.commissionItems[0].calculationType || "Fixed value") : (selected.commissionItems?.length || (selected.salaryType === "Commission" ? commissionValue(selected.salaryAmount, selected.defaultCommissionType || "Fixed value") : money(selected.salaryAmount)))}</strong></span>
               </div>
               <div className="hr-preview-actions">
                 <button type="button" className="secondary" onClick={() => downloadFile(`/hr/offer-letters/${selected._id}/pdf`, `Innovex-Offer-Letter-${selected.offerNumber}.pdf`)}>Download PDF</button>

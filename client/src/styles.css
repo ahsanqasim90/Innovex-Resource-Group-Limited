@@ -8842,7 +8842,7 @@ tbody tr:hover td {
 }
 
 .commission-row {
-  grid-template-columns: minmax(0, 1.8fr) minmax(130px, 0.7fr) auto;
+  grid-template-columns: minmax(0, 1.5fr) minmax(150px, 0.75fr) minmax(120px, 0.55fr) auto;
   padding: 0.8rem;
   border-radius: 14px;
   background: #ffffff;

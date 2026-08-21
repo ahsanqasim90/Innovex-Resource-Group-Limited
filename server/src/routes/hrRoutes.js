@@ -56,6 +56,7 @@ const offerFields = [
   "startDateText",
   "workLocation",
   "salaryType",
+  "defaultCommissionType",
   "salaryAmount",
   "commissionItems",
   "commissionPaymentTerms",
