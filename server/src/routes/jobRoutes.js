@@ -28,7 +28,10 @@ function locationSearchRegex(value = "") {
 router.get("/", protectAdminQuery, async (req, res, next) => {
   try {
     const filter = {};
-    if (!req.query.admin) filter.isActive = true;
+    if (!req.query.admin) {
+      filter.isActive = true;
+      filter.$and = [{ $or: [{ closingDate: null }, { closingDate: { $exists: false } }, { closingDate: { $gte: new Date() } }] }];
+    }
     if (req.query.search) {
       const search = new RegExp(escapeRegex(req.query.search), "i");
       filter.$or = [
@@ -54,9 +57,16 @@ router.get("/", protectAdminQuery, async (req, res, next) => {
   }
 });
 
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", protectAdminQuery, async (req, res, next) => {
   try {
-    const job = await Job.findById(req.params.id);
+    const filter = req.query.admin
+      ? { _id: req.params.id }
+      : {
+          _id: req.params.id,
+          isActive: true,
+          $or: [{ closingDate: null }, { closingDate: { $exists: false } }, { closingDate: { $gte: new Date() } }]
+        };
+    const job = await Job.findOne(filter);
     if (!job) return res.status(404).json({ message: "Job not found" });
     res.json(job);
   } catch (error) {
@@ -100,7 +110,8 @@ router.post("/:id/apply", uploadCv.single("cv"), async (req, res, next) => {
     requireFields(req.body, ["name", "email", "phone"]);
     validateEmail(req.body.email);
     const job = await Job.findById(req.params.id);
-    if (!job || !job.isActive) return res.status(404).json({ message: "Active job not found" });
+    const isExpired = job?.closingDate && new Date(job.closingDate) < new Date();
+    if (!job || !job.isActive || isExpired) return res.status(404).json({ message: "Active job not found" });
 
     const application = await Application.create({
       job: job._id,

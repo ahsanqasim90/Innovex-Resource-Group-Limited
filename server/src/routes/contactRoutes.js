@@ -1,12 +1,14 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import ContactMessage from "../models/ContactMessage.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { sendContactEmail } from "../services/emailService.js";
 import { requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
+const contactLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false });
 
-router.post("/", async (req, res, next) => {
+router.post("/", contactLimiter, async (req, res, next) => {
   try {
     requireFields(req.body, ["name", "email", "subject", "message"]);
     validateEmail(req.body.email);

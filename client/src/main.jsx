@@ -20,6 +20,8 @@ const Services = React.lazy(() => import("./pages/Services.jsx"));
 const ServiceLanding = React.lazy(() => import("./pages/ServiceLanding.jsx"));
 const Testimonials = React.lazy(() => import("./pages/Testimonials.jsx"));
 const UploadCv = React.lazy(() => import("./pages/UploadCv.jsx"));
+const HireStaff = React.lazy(() => import("./pages/HireStaff.jsx"));
+const NotFound = React.lazy(() => import("./pages/NotFound.jsx"));
 const Login = React.lazy(() => import("./pages/admin/Login.jsx"));
 const Dashboard = React.lazy(() => import("./pages/admin/Dashboard.jsx"));
 const AdminBlogs = React.lazy(() => import("./pages/admin/AdminBlogs.jsx"));
@@ -93,16 +95,19 @@ createRoot(document.getElementById("root")).render(
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
             <Route path="/healthcare-recruitment" element={<ServiceLanding service="recruitment" />} />
+            <Route path="/hire-staff" element={<HireStaff />} />
             <Route path="/website-development" element={<ServiceLanding service="websites" />} />
             <Route path="/seo-services" element={<ServiceLanding service="seo" />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/jobs" element={<Jobs />} />
+            <Route path="/jobs/:jobId" element={<Jobs />} />
             <Route path="/blogs" element={<Blogs />} />
             <Route path="/blogs/:slug" element={<BlogDetail />} />
             <Route path="/testimonials" element={<Testimonials />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/upload-cv" element={<UploadCv />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
           <Route path="/admin/login" element={<Login />} />
           <Route

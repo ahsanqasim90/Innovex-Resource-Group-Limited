@@ -5,6 +5,7 @@ import SectionHeading from "../components/SectionHeading.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import FileUpload from "../components/FileUpload.jsx";
 import SubmitButton from "../components/SubmitButton.jsx";
+import { trackEvent } from "../utils/analytics.js";
 
 export default function UploadCv() {
   const [status, setStatus] = useState(null);
@@ -16,6 +17,7 @@ export default function UploadCv() {
     setSubmitting(true);
     try {
       await api("/cv-uploads", { method: "POST", body: new FormData(form) });
+      trackEvent("cv_submission", { funnel: "candidate", source_page: "/upload-cv" });
       setStatus({ message: "CV uploaded successfully. Our recruitment team will review it." });
       form.reset();
       setUploadKey((key) => key + 1);
@@ -43,13 +45,13 @@ export default function UploadCv() {
       <div className="card">
         <StatusMessage status={status} />
         <form className="form" onSubmit={submit}>
-          <div className="form-grid">
-            <input name="name" placeholder="Full name" required />
-            <input name="email" type="email" placeholder="Email" required />
-            <input name="phone" placeholder="Phone" required />
-            <input name="desiredRole" placeholder="Desired role" required />
-            <input name="location" placeholder="Preferred location" required />
-            <input name="experience" placeholder="Experience" required />
+          <div className="form-grid labelled-form-grid">
+            <label><span>Full name *</span><input name="name" autoComplete="name" required /></label>
+            <label><span>Email *</span><input name="email" type="email" autoComplete="email" required /></label>
+            <label><span>Phone *</span><input name="phone" type="tel" autoComplete="tel" required /></label>
+            <label><span>Desired role *</span><input name="desiredRole" required /></label>
+            <label><span>Preferred location *</span><input name="location" autoComplete="address-level2" required /></label>
+            <label><span>Relevant experience *</span><input name="experience" required /></label>
           </div>
           <FileUpload key={uploadKey} required />
           <SubmitButton loading={submitting} loadingText="Uploading CV...">Upload CV</SubmitButton>

@@ -6,12 +6,12 @@ import { company } from "../data/content.js";
 const links = [
   ["/", "Home"],
   ["/about", "About"],
-  ["/services", "Services"],
-  ["/courses", "Courses"],
+  ["/healthcare-recruitment", "Recruitment"],
+  ["/website-development", "Digital"],
+  ["/seo-services", "SEO"],
+  ["/courses", "Training"],
   ["/jobs", "Jobs"],
-  ["/blogs", "Blogs"],
-  ["/testimonials", "Testimonials"],
-  ["/partners", "Partners"],
+  ["/blogs", "Insights"],
   ["/contact", "Contact"]
 ];
 
@@ -46,6 +46,9 @@ export default function Header() {
           </NavLink>
         ))}
         <div className="nav-actions">
+          <Link className="button small header-hire-button" to="/hire-staff" onClick={() => setOpen(false)}>
+            Hire Staff
+          </Link>
           <Link className="admin-login-link" to="/admin/login" onClick={() => setOpen(false)}>
             <LockKeyhole size={15} /> Admin Login
           </Link>

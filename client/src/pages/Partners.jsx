@@ -21,8 +21,8 @@ export default function Partners() {
           We work with care providers and growing organisations that value reliable communication, ethical recruitment, and long-term support.
         </SectionHeading>
         <div className="partners-stat-card">
-          <strong>{partners.length}+</strong>
-          <span>active partner relationships</span>
+          <strong>{partners.length}</strong>
+          <span>published partner profiles</span>
         </div>
       </div>
       {loading ? (

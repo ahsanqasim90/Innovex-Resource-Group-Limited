@@ -93,12 +93,7 @@ export default function SEO({ title, description, path, noIndex = false, jsonLd 
       "@type": "WebSite",
       "@id": `${company.siteUrl}/#website`,
       name: company.name,
-      url: company.siteUrl,
-      potentialAction: {
-        "@type": "SearchAction",
-        target: `${company.siteUrl}/jobs?search={search_term_string}`,
-        "query-input": "required name=search_term_string"
-      }
+      url: company.siteUrl
     });
 
     const articleElement = document.getElementById("innovex-page-schema");

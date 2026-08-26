@@ -10,12 +10,12 @@ const servicePages = {
     title: "Healthcare recruitment support for care providers across the UK",
     description: "Innovex helps care homes, children's residential services and healthcare organisations recruit nurses, care professionals and operational leaders across the UK.",
     intro: "From urgent staffing pressure to permanent leadership appointments, our team helps employers reach relevant candidates, coordinate interviews and keep recruitment moving.",
-    primaryCta: "Discuss a vacancy",
+    primaryCta: "Request candidates",
     serviceParam: "recruitment",
     audiences: ["Care homes and nursing homes", "Children's residential services", "Supported living providers", "Healthcare organisations"],
     deliverables: [
       ["Candidate sourcing", "Targeted outreach through our growing healthcare talent pool."],
-      ["Screening support", "Practical pre-screening around role fit, availability and core requirements."],
+      ["Screening support", "Practical pre-screening around role fit, availability, experience and vacancy-specific evidence."],
       ["Interview coordination", "Clear candidate communication, scheduling and outcome tracking."],
       ["Permanent and temporary hiring", "Flexible support for operational cover and long-term appointments."]
     ],
@@ -30,14 +30,14 @@ const servicePages = {
   websites: {
     path: "/website-development",
     eyebrow: "Professional website development",
-    title: "Websites built to earn trust and generate enquiries",
-    description: "Innovex designs responsive, professional websites for care providers, recruiters, local businesses and growing UK organisations that need a stronger online presence.",
-    intro: "Your website should explain what you do, make your business credible and give visitors a clear next step. We combine clean design, useful content and conversion-focused journeys around your goals.",
+    title: "Web development that earns trust and generates enquiries",
+    description: "Innovex builds responsive business websites and custom React/MERN web experiences for organisations seeking professional digital delivery worldwide.",
+    intro: "Your website or web application should explain what you do, make your business credible and give visitors a clear next step. We combine React-based interfaces, MERN capability, useful content and conversion-focused journeys around your goals.",
     primaryCta: "Start a website project",
     serviceParam: "website",
-    audiences: ["Care and healthcare providers", "Recruitment businesses", "Local service companies", "Growing UK organisations"],
+    audiences: ["Care and healthcare providers", "Recruitment businesses", "Service-led companies", "Growing organisations worldwide"],
     deliverables: [
-      ["Responsive design", "A polished experience across desktop, tablet and mobile."],
+      ["React and MERN development", "Responsive interfaces and database-backed web applications using technologies demonstrated in our own platform."],
       ["Service-led content", "Clear pages that help customers understand your offer quickly."],
       ["Enquiry journeys", "Strong calls-to-action and forms built around lead generation."],
       ["SEO foundations", "Search-friendly structure, metadata and technical essentials from launch."]
@@ -54,7 +54,7 @@ const servicePages = {
     path: "/seo-services",
     eyebrow: "SEO and digital growth",
     title: "SEO services that turn search visibility into business enquiries",
-    description: "Innovex provides practical SEO, local search and content support for care providers and UK businesses that want to attract more relevant customers online.",
+    description: "Innovex provides technical, on-page, local and content SEO support for care providers and service businesses seeking qualified organic leads.",
     intro: "Good SEO is not a collection of keywords. It connects technical quality, useful service pages, local relevance and consistent content so the right people can discover and trust your business.",
     primaryCta: "Discuss SEO growth",
     serviceParam: "seo",
@@ -86,7 +86,7 @@ function schemaFor(page) {
         name: page.title,
         description: page.description,
         url: pageUrl,
-        areaServed: { "@type": "Country", name: "United Kingdom" },
+        areaServed: page.path === "/healthcare-recruitment" ? { "@type": "Country", name: "United Kingdom" } : "Worldwide",
         provider: { "@id": `${company.siteUrl}/#organization` }
       },
       {
@@ -111,7 +111,7 @@ function schemaFor(page) {
 
 export default function ServiceLanding({ service }) {
   const page = servicePages[service];
-  const contactUrl = `/contact?service=${page.serviceParam}#contact-form`;
+  const contactUrl = service === "recruitment" ? "/hire-staff#vacancy-brief" : `/contact?service=${page.serviceParam}#contact-form`;
 
   return (
     <>
@@ -125,7 +125,7 @@ export default function ServiceLanding({ service }) {
             <Link className="button" to={contactUrl}>{page.primaryCta} <ArrowRight size={18} /></Link>
             <Link className="button secondary" to="/services">Explore all services</Link>
           </div>
-          <p className="service-landing-location"><MapPin size={17} /> Cardiff-based team supporting organisations across the UK</p>
+          <p className="service-landing-location"><MapPin size={17} /> {service === "recruitment" ? "Cardiff-based recruitment team supporting employers across the UK" : "Cardiff-based team accepting digital project enquiries worldwide"}</p>
         </div>
         <aside className="service-landing-proof" aria-label={`${page.eyebrow} highlights`}>
           <ShieldCheck size={30} />

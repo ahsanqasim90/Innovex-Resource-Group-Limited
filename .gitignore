@@ -7,3 +7,5 @@ uploads/
 server/uploads/*
 !server/uploads/.gitkeep
 npm-debug.log*
+
+.vercel

@@ -6,6 +6,7 @@ import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import StatusMessage from "../components/StatusMessage.jsx";
 import SubmitButton from "../components/SubmitButton.jsx";
+import { trackEvent } from "../utils/analytics.js";
 
 const initialForm = {
   clientName: "",
@@ -74,6 +75,7 @@ export default function Courses() {
     });
   }, [activeCategory, courses, searchTerm]);
   const visibleCourses = filteredCourses.slice(0, visibleCount);
+  const certificateCount = courses.filter((course) => course.certificateIncluded).length;
 
   useEffect(() => {
     setVisibleCount(9);
@@ -99,6 +101,7 @@ export default function Courses() {
         notes: current.notes?.includes(quoteLine) ? current.notes : [quoteLine, current.notes].filter(Boolean).join("\n")
       };
     });
+    trackEvent("course_enquiry_started", { funnel: "training", selection_count: selectedCourses.includes(course._id) ? selectedCourses.length : selectedCourses.length + 1 });
     window.setTimeout(() => {
       document.getElementById("course-enquiry")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 80);
@@ -123,6 +126,7 @@ export default function Courses() {
         ].filter(Boolean).join("\n\n")
       };
       const response = await api("/training-bookings/enquiry", { method: "POST", body: payload });
+      trackEvent("course_enquiry_submitted", { funnel: "training", selection_count: selectedCourses.length, audience_type: "organisation" });
       setStatus({ type: "success", message: response.message || "Training enquiry submitted. Our team will contact you soon." });
       setForm(initialForm);
       setSelectedCourses([]);
@@ -168,7 +172,7 @@ export default function Courses() {
 
       <section className="section compact-section" id="course-library">
         <SectionHeading eyebrow="Course Library" title="Healthcare courses available through Innovex">
-          Browse active training courses from our admin panel. Pricing shown is indicative where available; final quotations depend on location, delegates and delivery requirements.
+          Browse active training courses from our admin panel. Course details and final quotations are confirmed according to delegate numbers, location, availability and delivery requirements.
         </SectionHeading>
 
         {loading ? (
@@ -178,15 +182,16 @@ export default function Courses() {
         ) : courses.length ? (
           <>
             <div className="course-stats-row">
-              <div><strong>50+</strong><span>Courses available</span></div>
-              <div><strong>{categories.length || 6}</strong><span>Categories</span></div>
-              <div><strong>All</strong><span>Include certificate</span></div>
-              <div><strong>UK</strong><span>Nationwide delivery</span></div>
+              <div><strong>{courses.length}</strong><span>Active courses</span></div>
+              <div><strong>{categories.length}</strong><span>Categories</span></div>
+              <div><strong>{certificateCount}</strong><span>Marked certificate included</span></div>
+              <div><strong>Quote</strong><span>Based on your requirements</span></div>
             </div>
 
             <div className="course-library-controls">
               <label className="course-search-box">
                 <Search size={19} />
+                <span className="sr-only">Search courses</span>
                 <input
                   type="search"
                   placeholder="Search courses by title or description..."
@@ -289,17 +294,17 @@ export default function Courses() {
                 <span>{selectedTitles.length ? selectedTitles.join(", ") : "Select courses above or tell us in the notes."}</span>
               </div>
             </div>
-            <div className="form-grid">
-              <input required placeholder="Client / company name" value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} />
-              <input required placeholder="Contact person name" value={form.contactPersonName} onChange={(e) => setForm({ ...form, contactPersonName: e.target.value })} />
-              <input required type="email" placeholder="Email address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              <input required placeholder="Phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-              <input required placeholder="Training location / address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-              <input required type="number" min="1" placeholder="Number of attendees" value={form.numberOfDelegates} onChange={(e) => setForm({ ...form, numberOfDelegates: e.target.value })} />
-              <input type="date" value={form.trainingDate} onChange={(e) => setForm({ ...form, trainingDate: e.target.value })} />
-              <input type="time" value={form.trainingStartTime} onChange={(e) => setForm({ ...form, trainingStartTime: e.target.value })} />
+            <div className="form-grid labelled-form-grid">
+              <label><span>Organisation name *</span><input name="clientName" autoComplete="organization" required value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} /></label>
+              <label><span>Contact person *</span><input name="contactPersonName" autoComplete="name" required value={form.contactPersonName} onChange={(e) => setForm({ ...form, contactPersonName: e.target.value })} /></label>
+              <label><span>Email address *</span><input name="email" autoComplete="email" required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+              <label><span>Phone number *</span><input name="phone" autoComplete="tel" required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+              <label><span>Training location *</span><input name="address" autoComplete="street-address" required placeholder="Site address or area" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
+              <label><span>Number of learners *</span><input name="numberOfDelegates" required type="number" min="1" inputMode="numeric" value={form.numberOfDelegates} onChange={(e) => setForm({ ...form, numberOfDelegates: e.target.value })} /></label>
+              <label><span>Preferred date</span><input name="trainingDate" type="date" value={form.trainingDate} onChange={(e) => setForm({ ...form, trainingDate: e.target.value })} /></label>
+              <label><span>Preferred start time</span><input name="trainingStartTime" type="time" value={form.trainingStartTime} onChange={(e) => setForm({ ...form, trainingStartTime: e.target.value })} /></label>
             </div>
-            <textarea rows="5" placeholder="Any details we should know? Preferred course dates, onsite/online preference, multiple locations, urgent deadlines, or compliance needs." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <label><span>Additional training details</span><textarea name="notes" rows="5" placeholder="Preferred delivery, multiple locations, deadlines or other requirements." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
             <SubmitButton loading={saving} loadingText="Sending training enquiry...">Send Training Enquiry</SubmitButton>
           </form>
 

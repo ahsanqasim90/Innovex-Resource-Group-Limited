@@ -14,18 +14,19 @@ export default function Footer() {
             <img src="/Logo.png" alt="Innovex Resource Group Limited logo" className="brand-logo" width="58" height="58" loading="lazy" />
             <h2>{company.name}</h2>
           </div>
-          <p>Innovex Resource Group provides recruitment, website development and SEO services for UK businesses, with specialist recruitment support across healthcare, social care, nursing and children's residential services.</p>
+          <p>Innovex Resource Group supports UK employers with healthcare recruitment, businesses worldwide with website development and SEO, and care organisations with professional training enquiries.</p>
           <ComplianceBadges compact />
         </div>
         <div className="footer-links">
           <h3>Quick links</h3>
           <Link to="/jobs">Current opportunities</Link>
-          <Link to="/services">Services</Link>
           <Link to="/healthcare-recruitment">Healthcare recruitment</Link>
+          <Link to="/hire-staff">Hire staff / request candidates</Link>
           <Link to="/website-development">Website development</Link>
           <Link to="/seo-services">SEO services</Link>
-          <Link to="/courses">Healthcare courses</Link>
+          <Link to="/courses">Courses & training</Link>
           <Link to="/blogs">Insights & blog</Link>
+          <Link to="/testimonials">Testimonials</Link>
           <Link to="/partners">Partners</Link>
           <Link to="/admin/login">Admin login</Link>
         </div>

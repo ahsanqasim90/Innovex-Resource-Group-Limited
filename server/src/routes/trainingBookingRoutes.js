@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import Course from "../models/Course.js";
 import TrainingBooking from "../models/TrainingBooking.js";
 import { protect, requirePermission } from "../middleware/auth.js";
@@ -8,6 +9,7 @@ import { pick, requireFields, validateEmail } from "../utils.js";
 import { sendTrainingEnquiryEmail } from "../services/emailService.js";
 
 const router = express.Router();
+const publicEnquiryLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false });
 const fields = [
   "clientName",
   "contactPersonName",
@@ -148,7 +150,7 @@ async function dashboardStats() {
   };
 }
 
-router.post("/enquiry", async (req, res, next) => {
+router.post("/enquiry", publicEnquiryLimiter, async (req, res, next) => {
   try {
     requireFields(req.body, ["clientName", "contactPersonName", "email", "phone", "address", "numberOfDelegates"]);
     validateEmail(req.body.email);

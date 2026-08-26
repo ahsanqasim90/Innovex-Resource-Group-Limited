@@ -8,6 +8,7 @@ import SubmitButton from "../components/SubmitButton.jsx";
 import { company, contact } from "../data/content.js";
 import { BriefcaseBusiness, CheckCircle2, Clock3, HeartHandshake, Mail, MapPinned, MessageCircle, MonitorSmartphone, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { trackEvent } from "../utils/analytics.js";
 
 const serviceDefaults = {
   recruitment: { inquiryType: "Recruitment Support", subject: "Healthcare recruitment enquiry" },
@@ -34,7 +35,7 @@ const actionCards = [
     icon: HeartHandshake,
     points: ["Temporary staffing", "Permanent recruitment", "Screened candidates"],
     actions: [
-      { label: "Request Staffing Support", href: "#contact-form", secondary: true }
+      { label: "Request Candidates", to: "/hire-staff" }
     ]
   },
   {
@@ -44,7 +45,7 @@ const actionCards = [
     icon: MonitorSmartphone,
     points: ["Website development", "Local SEO", "Online enquiries"],
     actions: [
-      { label: "Digital Services", to: "/services", secondary: true },
+      { label: "Digital Services", to: "/website-development", secondary: true },
       { label: "Start Project", href: "#contact-form" }
     ]
   }
@@ -76,6 +77,7 @@ export default function Contact() {
     setSubmitting(true);
     try {
       const response = await api("/contact", { method: "POST", body: data });
+      trackEvent("contact_form_submitted", { funnel: defaults.inquiryType === "SEO Services" ? "seo" : defaults.inquiryType === "Website Development" ? "digital" : "general", inquiry_type: data.inquiryType });
       setStatus({
         message: response.email?.sent
           ? "Message sent. The Innovex team will respond shortly."
@@ -113,10 +115,10 @@ export default function Contact() {
         <h2>Send a message</h2>
         <StatusMessage status={status} />
         <form className="form" onSubmit={submit}>
-          <div className="form-grid">
-            <input name="name" placeholder="Name" required />
-            <input name="email" type="email" placeholder="Email" required />
-            <input name="phone" placeholder="Phone" />
+          <div className="form-grid labelled-form-grid">
+            <label><span>Name *</span><input name="name" autoComplete="name" required /></label>
+            <label><span>Email *</span><input name="email" type="email" autoComplete="email" required /></label>
+            <label><span>Phone</span><input name="phone" type="tel" autoComplete="tel" /></label>
             <label>
               <span>What do you need help with?</span>
               <select name="inquiryType" required defaultValue={defaults.inquiryType} key={defaults.inquiryType}>
@@ -129,9 +131,9 @@ export default function Contact() {
                 <option>General Enquiry</option>
               </select>
             </label>
-            <input name="subject" placeholder="Subject" required defaultValue={defaults.subject} key={defaults.subject} />
+            <label><span>Subject *</span><input name="subject" required defaultValue={defaults.subject} key={defaults.subject} /></label>
           </div>
-          <textarea name="message" placeholder="How can we help?" required />
+          <label><span>How can we help? *</span><textarea name="message" required /></label>
           <SubmitButton loading={submitting} loadingText="Sending message...">Send Message</SubmitButton>
           <p className="cta-microcopy">No obligation. Tell us what you need and our team will respond.</p>
         </form>

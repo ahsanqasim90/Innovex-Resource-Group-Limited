@@ -16,31 +16,23 @@ const helpCards = [
     title: "Recruitment",
     text: "Healthcare, social care, nursing, care home and children's residential recruitment support across the UK.",
     points: ["Candidate sourcing", "Screening support", "Interview coordination"],
-    cta: "Request Recruitment Support",
-    to: "/healthcare-recruitment"
+    cta: "Request Candidates",
+    to: "/hire-staff"
   },
   {
     icon: MonitorSmartphone,
-    title: "Website Development",
-    text: "Modern, responsive websites built to help businesses look professional and generate enquiries.",
-    points: ["Mobile-friendly pages", "Clear service content", "Enquiry forms"],
-    cta: "Start Website Project",
+    title: "Digital Services",
+    text: "Web development and SEO for organisations that need a credible, conversion-focused online presence.",
+    points: ["Websites and web applications", "Technical and on-page SEO", "International project enquiries"],
+    cta: "Discuss a Digital Project",
     to: "/website-development"
-  },
-  {
-    icon: Search,
-    title: "SEO & Digital Growth",
-    text: "SEO, content and digital visibility support to help businesses attract more leads online.",
-    points: ["SEO foundations", "Content structure", "Local visibility"],
-    cta: "Improve My SEO",
-    to: "/seo-services"
   },
   {
     icon: GraduationCap,
     title: "Healthcare Courses",
     text: "Training enquiry support for care homes, children's homes, nursing homes and healthcare teams.",
     points: ["Course selection", "Delegate planning", "Quotation support"],
-    cta: "View Courses",
+    cta: "Explore Courses",
     to: "/courses"
   }
 ];
@@ -90,34 +82,33 @@ export default function Home() {
 
   return (
     <>
-      <SEO title="UK Recruitment, Web Development & SEO" path="/" description="Innovex Resource Group Limited provides UK recruitment services, healthcare staffing, web development, SEO services, and digital growth support from Cardiff." />
+      <SEO title="UK Recruitment, Digital Services & Training" path="/" description="Innovex Resource Group supports UK healthcare employers, businesses worldwide with web development and SEO, and organisations seeking professional care training." />
       <section className="hero">
         <div>
-          <span className="eyebrow">Recruitment, websites & SEO</span>
-          <h1>Staffing, websites and SEO that help you grow.</h1>
-          <p>Innovex Resource Group Limited supports healthcare recruitment and helps businesses across all sectors with modern websites, SEO, and online visibility.</p>
+          <span className="eyebrow">Recruitment · Digital Services · Training</span>
+          <h1>People, digital growth and professional training.</h1>
+          <p>Innovex helps UK care providers recruit staff, supports businesses worldwide with web development and SEO, and connects care organisations with professional training.</p>
           <div className="actions">
-            <Link className="button" to="/jobs">Browse Jobs <ArrowRight size={18} /></Link>
-            <Link className="button light" to="/healthcare-recruitment">Request Staffing Support</Link>
-            <Link className="button hero-digital" to="/website-development">Build Website</Link>
-            <Link className="button hero-digital secondary-hero" to="/seo-services">Boost SEO</Link>
+            <Link className="button" to="/hire-staff">Hire Staff <ArrowRight size={18} /></Link>
+            <Link className="button light" to="/website-development">Discuss a Digital Project</Link>
+            <Link className="button hero-digital" to="/courses">Explore Courses</Link>
           </div>
-          <p className="cta-microcopy hero-helper">For care providers, candidates, and businesses looking for recruitment, websites and digital growth.</p>
+          <p className="cta-microcopy hero-helper">Looking for a role? <Link to="/jobs">Browse current healthcare jobs</Link> or <Link to="/upload-cv">upload your CV</Link>.</p>
         </div>
         <aside className="hero-card" aria-label="Innovex highlights">
           <img
             className="hero-visual-image"
             src="/innovex-hero-visual.svg"
-            alt="Innovex healthcare recruitment, website and SEO support visual"
+            alt="Innovex healthcare recruitment, digital services and professional training visual"
             width="1100"
             height="680"
             loading="eager"
             fetchPriority="high"
           />
           <div className="stats-grid">
-            <div className="stat"><strong>24/7</strong><span>Staffing response</span></div>
-            <div className="stat"><strong>128+</strong><span>Placements</span></div>
-            <div className="stat"><strong>Web</strong><span>Design & SEO</span></div>
+            <div className="stat"><strong>UK</strong><span>Employer recruitment</span></div>
+            <div className="stat"><strong>Global</strong><span>Digital enquiries</span></div>
+            <div className="stat"><strong>B2B</strong><span>Training enquiries</span></div>
           </div>
           <div className="hero-service-strip">
             <span><MonitorSmartphone size={18} /> Websites</span>
@@ -128,15 +119,15 @@ export default function Home() {
       </section>
 
       <section className="section compact-section">
-        <SectionHeading eyebrow="Three Core Services" title="How Innovex Can Help">
-          Choose the support you need - recruitment, website development, or SEO growth.
+        <SectionHeading eyebrow="Three Business Divisions" title="Choose the right Innovex team.">
+          Each journey stays focused on a different commercial need: hiring, digital delivery, or professional training.
         </SectionHeading>
         <div className="card-grid service-choice-grid">
           {helpCards.map(({ icon: Icon, title, text, points, cta, to }) => (
             <article className="card service-choice-card" key={title}>
               <div className="service-choice-top">
                 <span className="digital-icon"><Icon size={24} /></span>
-                <span className="service-choice-label">Core service</span>
+                <span className="service-choice-label">Business division</span>
               </div>
               <div>
                 <h3>{title}</h3>
@@ -210,7 +201,7 @@ export default function Home() {
             {digitalProof.map((item) => (
               <article className="card digital-card" key={item.title}>
                 <h3>{item.title}</h3>
-                <p>{item.text}</p>
+                <p className="testimonial-review-copy">{item.text}</p>
               </article>
             ))}
           </div>

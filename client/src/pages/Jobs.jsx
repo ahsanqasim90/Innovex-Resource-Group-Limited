@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api/client.js";
 import JobDescription from "../components/JobDescription.jsx";
 import JobCard from "../components/JobCard.jsx";
@@ -9,10 +9,46 @@ import StatusMessage from "../components/StatusMessage.jsx";
 import FileUpload from "../components/FileUpload.jsx";
 import SubmitButton from "../components/SubmitButton.jsx";
 import { BriefcaseBusiness, Filter, MapPin, RotateCcw, Search } from "lucide-react";
+import { company } from "../data/content.js";
+import { trackEvent } from "../utils/analytics.js";
+
+function plainText(value = "") {
+  return String(value).replace(/[#*_>`~-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function jobSchema(job) {
+  const jobUrl = `${company.siteUrl}/jobs/${job._id}`;
+  const employmentType = String(job.type || "").toUpperCase().replace(/[^A-Z]+/g, "_");
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "JobPosting",
+      title: job.title,
+      description: plainText(job.description),
+      identifier: { "@type": "PropertyValue", name: company.name, value: String(job._id) },
+      datePosted: job.createdAt,
+      ...(job.closingDate ? { validThrough: job.closingDate } : {}),
+      employmentType,
+      hiringOrganization: { "@type": "Organization", "@id": `${company.siteUrl}/#organization`, name: company.name, sameAs: company.siteUrl },
+      jobLocation: { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: job.location, addressCountry: "GB" } },
+      url: jobUrl
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${company.siteUrl}/` },
+        { "@type": "ListItem", position: 2, name: "Healthcare jobs", item: `${company.siteUrl}/jobs` },
+        { "@type": "ListItem", position: 3, name: job.title, item: jobUrl }
+      ]
+    }
+  ];
+}
 
 export default function Jobs() {
+  const { jobId } = useParams();
   const [searchParams] = useSearchParams();
-  const selectedJobId = searchParams.get("job");
+  const selectedJobId = jobId || searchParams.get("job");
   const shouldAutoApply = searchParams.get("apply") === "1";
   const [jobs, setJobs] = useState([]);
   const [detailJob, setDetailJob] = useState(null);
@@ -91,6 +127,7 @@ export default function Jobs() {
     setApplying(true);
     try {
       await api(`/jobs/${selected._id}/apply`, { method: "POST", body: form });
+      trackEvent("job_application_submitted", { funnel: "jobs", job_type: selected.type || "unspecified" });
       setStatus({ message: "Application submitted successfully." });
       setSelected(null);
     } catch (error) {
@@ -103,6 +140,60 @@ export default function Jobs() {
   function startApplication(job) {
     setSelected(job);
     setStatus(null);
+  }
+
+  if (jobId) {
+    const description = detailJob ? `${plainText(detailJob.description).slice(0, 130)}${plainText(detailJob.description).length > 130 ? "…" : ""}` : "View this Innovex healthcare vacancy and apply online.";
+    return (
+      <section className="section">
+        <SEO
+          title={detailJob ? `${detailJob.title} — ${detailJob.location}` : "Healthcare vacancy"}
+          path={`/jobs/${jobId}`}
+          description={description}
+          noIndex={!detailJob}
+          jsonLd={detailJob ? jobSchema(detailJob) : undefined}
+        />
+        {status?.type === "error" ? (
+          <article className="card empty-state-card">
+            <h1>This vacancy is no longer available.</h1>
+            <StatusMessage status={status} />
+            <p>It may have closed or been removed. Browse current opportunities instead.</p>
+            <Link className="button" to="/jobs">View current jobs</Link>
+          </article>
+        ) : !detailJob ? (
+          <article className="card"><p className="muted" role="status">Loading vacancy…</p></article>
+        ) : (
+          <>
+            <Link className="text-link back-link" to="/jobs">Back to current jobs</Link>
+            <article className="card job-detail-card" style={{ marginTop: 24 }}>
+              <div>
+                <div className="pill-row"><span>{detailJob.type}</span><span>{detailJob.shift}</span><span>{detailJob.location}</span></div>
+                <h1>{detailJob.title}</h1>
+                <p className="muted">{detailJob.salary}</p>
+                <JobDescription text={detailJob.description} />
+                {detailJob.requirements?.length > 0 && <><h2>Requirements</h2><ul className="clean-list">{detailJob.requirements.map((item) => <li key={item}>{item}</li>)}</ul></>}
+              </div>
+              <aside className="job-detail-aside"><h2>Interested in this role?</h2><p>Send your details and optional CV to the Innovex recruitment team.</p><button className="button" onClick={() => startApplication(detailJob)}>Apply Now</button><Link className="button secondary" to="/upload-cv">Register your CV</Link></aside>
+            </article>
+            {selected && (
+              <div className="card" id="job-application-form" ref={applicationRef} style={{ marginTop: 24, scrollMarginTop: 110 }}>
+                <h2>Apply for {selected.title}</h2>
+                <form className="form" onSubmit={apply}>
+                  <div className="form-grid labelled-form-grid">
+                    <label><span>Full name *</span><input name="name" autoComplete="name" required /></label>
+                    <label><span>Email *</span><input name="email" type="email" autoComplete="email" required /></label>
+                    <label><span>Phone *</span><input name="phone" type="tel" autoComplete="tel" required /></label>
+                  </div>
+                  <FileUpload label="Attach CV" helper="Optional: PDF, DOC, or DOCX up to 5MB" />
+                  <label><span>Cover message</span><textarea name="coverMessage" /></label>
+                  <SubmitButton loading={applying} loadingText="Submitting application...">Submit Application</SubmitButton>
+                </form>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    );
   }
 
   return (
