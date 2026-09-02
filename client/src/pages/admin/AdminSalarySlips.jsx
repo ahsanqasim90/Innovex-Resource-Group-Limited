@@ -151,7 +151,7 @@ export default function AdminSalarySlips() {
   }), [slips]);
 
   return (
-    <section className="hr-page">
+    <section className="hr-page workspace-pro-suite hr-documents-pro salary-center-pro">
       <div className="hr-hero">
         <div>
           <span className="section-kicker">HR documents</span>

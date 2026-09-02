@@ -9,7 +9,9 @@ export function getMeasurementId() {
 }
 
 export function trackEvent(name, parameters = {}) {
-  if (!analyticsEnabled() || typeof window.gtag !== "function") return;
+  let consent = null;
+  try { consent = JSON.parse(localStorage.getItem("innovexCookieConsentV1")); } catch {}
+  if (!analyticsEnabled() || !consent?.analytics || typeof window.gtag !== "function") return;
 
   const safeParameters = Object.fromEntries(
     Object.entries(parameters)

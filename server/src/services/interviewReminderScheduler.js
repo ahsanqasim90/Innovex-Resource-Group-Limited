@@ -1,4 +1,6 @@
 import { runInterviewReminders } from "./interviewReminderService.js";
+import { forEachActiveOrganization } from "../tenancy/tenantJobs.js";
+import SystemEvent from "../models/SystemEvent.js";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -16,8 +18,12 @@ export function startInterviewReminderScheduler() {
   const runHour = Number(process.env.INTERVIEW_REMINDER_HOUR || 8);
   const run = async () => {
     try {
-      const result = await runInterviewReminders();
-      console.log(`Interview reminders checked: ${result.count} (${result.candidateReminders.count} candidate reminders for tomorrow)`);
+      const results = await forEachActiveOrganization(async (organization) => {
+        const result = await runInterviewReminders();
+        await SystemEvent.create({ type: "Queue", severity: "Info", status: "Resolved", title: "Interview reminder run completed", message: `${result.count} interviews checked for ${organization.name}`, lastSeenAt: new Date(), resolvedAt: new Date(), metadata: { count: result.count, candidateReminders: result.candidateReminders.count } });
+        return result;
+      });
+      console.log(`Interview reminders completed for ${results.length} workspaces`);
     } catch (error) {
       console.error("Interview reminder check failed", error);
     }

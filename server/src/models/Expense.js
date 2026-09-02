@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { financialYearFor } from "../utils/financialYear.js";
 
 const expenseSchema = new mongoose.Schema({
-  expenseNumber: { type: String, required: true, unique: true, trim: true, index: true },
+  expenseNumber: { type: String, required: true, trim: true, index: true },
   expenseDate: { type: Date, required: true, default: Date.now },
   financialYear: { type: String, required: true, index: true, default: () => financialYearFor() },
   supplier: { type: String, required: true, trim: true },
@@ -41,5 +41,6 @@ expenseSchema.pre("validate", function calculateExpense(next) {
 
 expenseSchema.index({ supplier: "text", description: "text", reference: "text" });
 expenseSchema.index({ expenseDate: -1, category: 1 });
+expenseSchema.index({ organization: 1, expenseNumber: 1 }, { unique: true });
 
 export default mongoose.model("Expense", expenseSchema);

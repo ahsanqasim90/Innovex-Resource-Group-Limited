@@ -1,5 +1,6 @@
 import express from "express";
 import EmailLog from "../models/EmailLog.js";
+import Candidate from "../models/Candidate.js";
 import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { sendComposedEmail } from "../services/emailService.js";
@@ -91,14 +92,23 @@ router.post("/send", async (req, res, next) => {
     };
 
     const result = await sendComposedEmail(payload);
+    const candidate = to.length === 1 ? await Candidate.findOne({ email: to[0] }) : null;
     const log = await EmailLog.create({
       ...payload,
+      ...(candidate ? { targetType: "Candidate", targetId: candidate._id } : { targetType: "Manual" }),
       status: result.sent ? "Sent" : "Failed",
       error: result.reason || "",
       sentBy: actor(req)
     });
 
     if (!result.sent) return res.status(400).json({ message: result.reason || "Email was not sent", log });
+    if (candidate) {
+      const now = new Date();
+      candidate.lastContactedAt = now;
+      candidate.lastCommunicationAt = now;
+      if (candidate.status === "Available") candidate.status = "Contacted";
+      await candidate.save();
+    }
     res.status(201).json({ message: "Email sent successfully.", log });
   } catch (error) {
     next(error);

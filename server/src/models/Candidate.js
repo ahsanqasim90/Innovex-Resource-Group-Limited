@@ -16,6 +16,45 @@ const outreachSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const cvFileSchema = new mongoose.Schema(
+  {
+    filename: { type: String, trim: true },
+    originalName: { type: String, trim: true },
+    mimetype: { type: String, trim: true },
+    size: Number,
+    data: { type: Buffer, select: false },
+    extractedText: { type: String, select: false },
+    indexedAt: Date,
+    contentHash: { type: String, trim: true },
+    verifiedType: { type: String, trim: true },
+    scanStatus: { type: String, enum: ["Clean", "Quarantined", "Validated", "Needs review", "Rejected"], default: "Quarantined" },
+    scanEngine: { type: String, trim: true },
+    scannedAt: Date,
+    quarantineReason: { type: String, trim: true },
+    uploadedAt: Date,
+    uploadedBy: {
+      user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      name: { type: String, trim: true },
+      email: { type: String, trim: true, lowercase: true }
+    }
+  },
+  { _id: false }
+);
+
+const cvDownloadRequestSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  name: { type: String, trim: true },
+  email: { type: String, trim: true, lowercase: true },
+  status: { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" },
+  requestedAt: { type: Date, default: Date.now },
+  reviewedAt: Date,
+  reviewedBy: {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    name: { type: String, trim: true },
+    email: { type: String, trim: true, lowercase: true }
+  }
+});
+
 const candidateSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -41,8 +80,24 @@ const candidateSchema = new mongoose.Schema(
     source: { type: String, trim: true, default: "Talent Pool" },
     tags: [{ type: String, trim: true }],
     notes: { type: String, trim: true },
+    lawfulBasis: { type: String, enum: ["Not recorded", "Consent", "Legitimate interests", "Contract", "Legal obligation"], default: "Not recorded" },
+    privacyNoticeSentAt: Date,
+    retentionReviewDate: Date,
     lastContactedAt: Date,
-    outreachHistory: [outreachSchema]
+    lastCommunicationAt: { type: Date, index: true },
+    nextFollowUpAt: { type: Date, index: true },
+    assignedRecruiter: {
+      user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      name: { type: String, trim: true },
+      email: { type: String, trim: true, lowercase: true }
+    },
+    outreachHistory: [outreachSchema],
+    cv: cvFileSchema,
+    cvAccess: {
+      viewUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      downloadUserIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      downloadRequests: [cvDownloadRequestSchema]
+    }
   },
   { timestamps: true }
 );

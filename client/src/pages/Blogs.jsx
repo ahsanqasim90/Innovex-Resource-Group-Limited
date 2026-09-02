@@ -20,23 +20,30 @@ export default function Blogs() {
   const [blogs, setBlogs] = useState([]);
   const [filters, setFilters] = useState({ search: "", category: "" });
   const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const categories = useMemo(() => [...new Set(blogs.map((blog) => blog.category).filter(Boolean))], [blogs]);
 
   function loadBlogs() {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
+    setLoading(true);
+    setStatus(null);
     api(`/blogs${query ? `?${query}` : ""}`)
       .then(setBlogs)
-      .catch((error) => setStatus({ type: "error", message: error.message }));
+      .catch((error) => setStatus({ type: "error", message: error.message }))
+      .finally(() => setLoading(false));
   }
 
   function applyTopic(topic) {
     const nextFilters = { search: topic, category: "" };
     setFilters(nextFilters);
     const query = new URLSearchParams({ search: topic }).toString();
+    setLoading(true);
+    setStatus(null);
     api(`/blogs?${query}`)
       .then(setBlogs)
-      .catch((error) => setStatus({ type: "error", message: error.message }));
+      .catch((error) => setStatus({ type: "error", message: error.message }))
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {
@@ -97,7 +104,11 @@ export default function Blogs() {
 
       <StatusMessage status={status} />
 
-      {blogs.length === 0 ? (
+      {loading ? (
+        <div className="blog-grid blog-loading-grid" aria-label="Loading insights" aria-busy="true">
+          {[1, 2, 3].map((item) => <article className="card blog-loading-card" key={item}><i /><span /><span /><span /></article>)}
+        </div>
+      ) : blogs.length === 0 ? (
         <div className="card empty-blog-card">
           <h2>Insights coming soon</h2>
           <p className="muted">The Innovex team is preparing useful articles for care providers, candidates, and business owners.</p>

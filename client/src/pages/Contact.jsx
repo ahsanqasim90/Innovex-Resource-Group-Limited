@@ -13,6 +13,7 @@ import { trackEvent } from "../utils/analytics.js";
 const serviceDefaults = {
   recruitment: { inquiryType: "Recruitment Support", subject: "Healthcare recruitment enquiry" },
   website: { inquiryType: "Website Development", subject: "Website development enquiry" },
+  crm: { inquiryType: "CRM Systems", subject: "CRM systems enquiry" },
   seo: { inquiryType: "SEO Services", subject: "SEO services enquiry" }
 };
 
@@ -126,6 +127,7 @@ export default function Contact() {
                 <option>Recruitment Support</option>
                 <option>Job Application / CV</option>
                 <option>Website Development</option>
+                <option>CRM Systems</option>
                 <option>SEO Services</option>
                 <option>Partnership</option>
                 <option>General Enquiry</option>
@@ -135,7 +137,7 @@ export default function Contact() {
           </div>
           <label><span>How can we help? *</span><textarea name="message" required /></label>
           <SubmitButton loading={submitting} loadingText="Sending message...">Send Message</SubmitButton>
-          <p className="cta-microcopy">No obligation. Tell us what you need and our team will respond.</p>
+          <p className="cta-microcopy">No obligation. We use your details only to respond and manage this enquiry. Read our <Link to="/privacy">privacy notice</Link>.</p>
         </form>
       </div>
       <div className="card-grid contact-action-grid" style={{ marginTop: 24 }}>

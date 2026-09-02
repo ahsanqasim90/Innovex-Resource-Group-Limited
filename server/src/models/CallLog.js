@@ -54,6 +54,8 @@ const callLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+callLogSchema.add({ clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "ClientAccount", index: true } });
+
 callLogSchema.index({ createdAt: -1 });
 callLogSchema.index({ "initiatedBy.user": 1, createdAt: -1 });
 callLogSchema.index({ targetType: 1, targetId: 1, createdAt: -1 });

@@ -568,6 +568,61 @@ export async function sendCandidateOutreachEmail({ candidate, subject, message, 
   return { sent: true, ...archive };
 }
 
+export async function sendSystemEmail({ to, subject, text, html }) {
+  if (!hasSmtpConfig()) return { skipped: true, reason: "SMTP is not configured" };
+  const transporter = makeTransporter();
+  const info = await transporter.sendMail({ from: formatSender(), to, subject, text, html: html || messageHtml(text) });
+  return { skipped: false, messageId: info.messageId };
+}
+
+export async function sendCandidateVacancyEmail({ candidate, job, fromEmail, subject, introduction = "" }) {
+  const account = senderAccountOrDefault(fromEmail);
+  if (!account && !hasSmtpConfig()) return { sent: false, reason: "SMTP is not configured" };
+  if (!candidate?.email) return { sent: false, reason: "Candidate email is missing" };
+
+  const transporter = makeTransporter(account);
+  const criteria = job.criteriaReview || {};
+  const mustHaves = [...(criteria.mandatorySkills || []), ...(criteria.qualifications || []), ...(criteria.registrationRequired ? criteria.registrationTerms || ["Professional registration"] : [])].slice(0, 8);
+  const opening = introduction || `Based on your profile, we thought you may be interested in this ${job.title} opportunity.`;
+  const detailLines = [
+    `Role: ${job.title}`,
+    `Location: ${[job.location, job.postcode].filter(Boolean).join(" · ")}`,
+    `Salary: ${job.salary || "Competitive"}`,
+    `Contract: ${job.type || "To be confirmed"}`,
+    `Shift: ${job.shift || "To be confirmed"}`
+  ];
+  if (mustHaves.length) detailLines.push(`Key requirements: ${mustHaves.join(", ")}`);
+  const message = [
+    `Dear ${candidate.name},`,
+    "",
+    opening,
+    "",
+    ...detailLines,
+    "",
+    job.intelligence?.summary || String(job.description || "").slice(0, 900),
+    "",
+    "If you are interested, please reply to this email with your current availability and any questions. A recruiter will review your response before any submission is made.",
+    "",
+    "Kind regards,",
+    "Recruitment Team",
+    "Innovex Resource Group Limited",
+    "0330 0435 830",
+    account?.address || "info@innovexresourcegroup.co.uk"
+  ].join("\n");
+  const rows = [
+    ["ROLE", job.title],
+    ["LOCATION", [job.location, job.postcode].filter(Boolean).join(" · ")],
+    ["SALARY", job.salary || "Competitive"],
+    ["CONTRACT", job.type || "To be confirmed"],
+    ["SHIFT", job.shift || "To be confirmed"]
+  ].map(([label, value], index, values) => `<tr><td style="width:30%;padding:12px 15px;${index < values.length - 1 ? "border-bottom:1px solid #d7e9ed;" : ""}background:#f7fbfc;color:#60777e;font-size:11px;font-weight:700;letter-spacing:.05em">${label}</td><td style="padding:12px 15px;${index < values.length - 1 ? "border-bottom:1px solid #d7e9ed;" : ""}color:#173840;font-weight:700">${escapeHtml(value)}</td></tr>`).join("");
+  const requirementHtml = mustHaves.length ? `<div style="margin:22px 0;padding:18px;border:1px solid #d7e9ed;border-radius:12px;background:#f7fbfc"><div style="margin-bottom:10px;color:#0b5f75;font-size:11px;font-weight:800;letter-spacing:.1em">KEY REQUIREMENTS</div>${mustHaves.map((item) => `<span style="display:inline-block;margin:3px;padding:7px 10px;border-radius:999px;background:#e2f3f5;color:#075668;font-size:12px;font-weight:700">${escapeHtml(item)}</span>`).join("")}</div>` : "";
+  const html = `<div style="margin:0;padding:30px 12px;background:#eef5f6;font-family:Arial,sans-serif;color:#173840"><div style="max-width:660px;margin:auto;overflow:hidden;border:1px solid #d3e3e6;border-radius:16px;background:#fff;box-shadow:0 18px 45px rgba(6,63,79,.1)"><div style="height:7px;background:#f4b942"></div><div style="padding:26px 30px;background:linear-gradient(135deg,#063f4f,#0b5f75);color:#fff"><div style="color:#bde0e4;font-size:11px;font-weight:700;letter-spacing:.14em">INNOVEX RESOURCE GROUP LIMITED</div><div style="display:inline-block;margin-top:14px;padding:7px 11px;border-radius:999px;background:#f4b942;color:#173840;font-size:11px;font-weight:800">VACANCY OPPORTUNITY</div><h1 style="margin:14px 0 0;color:#fff;font-size:27px;line-height:1.25">${escapeHtml(job.title)}</h1></div><div style="padding:28px 30px"><p style="margin-top:0;font-size:16px">Dear ${escapeHtml(candidate.name)},</p><p style="line-height:1.7">${messageHtml(opening)}</p><table role="presentation" style="width:100%;margin:22px 0;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid #d7e9ed;border-radius:12px">${rows}</table>${requirementHtml}<div style="margin:22px 0;color:#304b54;line-height:1.7">${messageHtml(job.intelligence?.summary || String(job.description || "").slice(0, 900))}</div><div style="margin:24px 0;padding:20px;border:2px solid #f4b942;border-radius:12px;background:#fff8e8"><strong style="display:block;color:#8a5b00;font-size:12px;letter-spacing:.08em">INTERESTED IN THIS OPPORTUNITY?</strong><p style="margin:9px 0 0;color:#3f3217;line-height:1.65">Reply with your current availability and any questions. A recruiter will review your response before any submission is made.</p></div><p style="margin:26px 0 0;line-height:1.6">Kind regards,<br><strong>Recruitment Team</strong><br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; ${escapeHtml(account?.address || "info@innovexresourcegroup.co.uk")}</span></p>${crmComplianceFooterHtml("Innovex Vacancy Intelligence")}</div></div></div>`;
+  const finalSubject = subject || `${job.title} opportunity in ${job.location} – Innovex Resource Group`;
+  const archive = await deliverMail(transporter, account, { from: formatSender(account), to: candidate.email, replyTo: account?.address || recipient, subject: finalSubject, text: `${message}\n\n${crmComplianceFooterText("Innovex Vacancy Intelligence")}`, html });
+  return { sent: true, subject: finalSubject, message, fromEmail: account?.address || fromEmail, ...archive };
+}
+
 export async function sendBusinessLeadOutreachEmail({ lead, subject, message, replyTo, fromEmail }) {
   const account = senderAccountOrDefault(fromEmail);
   if (!account && !hasSmtpConfig()) {
@@ -845,7 +900,8 @@ export async function sendOfferLetterEmail({ offerLetter, pdfBuffer, fromEmail, 
   const transporter = makeTransporter(account);
   const source = "Innovex HR Centre";
   const subject = `Offer letter | ${offerLetter.roleTitle} | Innovex Resource Group Limited`;
-  const message = customMessage || `Please find attached your offer letter for the ${offerLetter.roleTitle} role. Kindly review the document and reply to confirm acceptance or request any clarification.`;
+  const portalUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/portal`;
+  const message = customMessage || `Please find attached your offer letter for the ${offerLetter.roleTitle} role. Review and respond securely through your Innovex Candidate Portal: ${portalUrl}`;
   const mailOptions = {
     from: formatSender(account),
     to: offerLetter.candidateEmail,
@@ -853,10 +909,71 @@ export async function sendOfferLetterEmail({ offerLetter, pdfBuffer, fromEmail, 
     replyTo: account.address,
     subject,
     text: `${message}\n\nOffer reference: ${offerLetter.offerNumber}\nRole: ${offerLetter.roleTitle}\nStart date: ${hrDate(offerLetter.startDate)}\n\nKind regards,\nInnovex Resource Group Limited\n\nThis is a system-generated email from the ${source}. This email and any attachments are confidential and intended solely for the named recipient.`,
-    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Offer Letter</div></div><div style="padding:26px 28px"><p style="margin-top:0">Hello ${escapeHtml(offerLetter.candidateName)},</p><p style="line-height:1.65">${messageHtml(message)}</p><div style="margin:22px 0;padding:16px 18px;background:#eef7f7;border-left:4px solid #f4b942;border-radius:10px"><div style="color:#60777e;font-size:12px;letter-spacing:.08em">ROLE OFFERED</div><strong style="display:block;color:#173840;font-size:20px;margin-top:5px">${escapeHtml(offerLetter.roleTitle)}</strong><span style="display:block;color:#60777e;margin-top:6px">Start date: ${hrDate(offerLetter.startDate)}</span></div><p style="line-height:1.6">The PDF offer letter is attached. Please reply to this email with your acceptance or any questions.</p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">${escapeHtml(account.address)}</span></p>${hrDocumentFooter(source)}</div></div></div>`,
+    html: `<div style="margin:0;background:#f3f8f8;padding:28px 12px;font-family:Arial,sans-serif;color:#173840"><div style="max-width:650px;margin:auto;background:#ffffff;border:1px solid #d8e5e7;border-radius:14px;overflow:hidden"><div style="height:7px;background:#f4b942"></div><div style="background:#064f5e;padding:22px 28px;color:#ffffff"><div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#b9d8dc">INNOVEX RESOURCE GROUP LIMITED</div><div style="font-size:22px;font-weight:700;margin-top:6px">Offer Letter</div></div><div style="padding:26px 28px"><p style="margin-top:0">Hello ${escapeHtml(offerLetter.candidateName)},</p><p style="line-height:1.65">${messageHtml(message)}</p><div style="margin:22px 0;padding:16px 18px;background:#eef7f7;border-left:4px solid #f4b942;border-radius:10px"><div style="color:#60777e;font-size:12px;letter-spacing:.08em">ROLE OFFERED</div><strong style="display:block;color:#173840;font-size:20px;margin-top:5px">${escapeHtml(offerLetter.roleTitle)}</strong><span style="display:block;color:#60777e;margin-top:6px">Start date: ${hrDate(offerLetter.startDate)}</span></div><p style="line-height:1.6">The PDF offer letter is attached. Accept or decline through your secure Candidate Portal so the decision and document fingerprint are recorded.</p><p><a href="${escapeHtml(portalUrl)}" style="display:inline-block;padding:12px 18px;border-radius:8px;background:#087d7b;color:#fff;text-decoration:none;font-weight:700">Review and respond securely</a></p><p style="margin:24px 0 0">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">${escapeHtml(account.address)}</span></p>${hrDocumentFooter(source)}</div></div></div>`,
     attachments: [{ filename: `Innovex-Offer-Letter-${offerLetter.offerNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" }]
   };
 
   const archive = await sendAndArchive(transporter, account, mailOptions);
   return { sent: true, fromEmail: account.address, subject, message, cc, ...archive };
+}
+
+const newsletterServiceLinks = {
+  Recruitment: ["Healthcare recruitment", "/healthcare-recruitment"],
+  Training: ["Courses and training", "/courses"],
+  "Website Development": ["Website design and development", "/website-development"],
+  SEO: ["SEO and Google visibility", "/seo-services"],
+  "Reg 44": ["Regulation 44 visitor support", "/healthcare-recruitment"],
+  "Business Growth": ["Business growth support", "/services"]
+};
+
+function newsletterUrl(path = "/") {
+  const origin = String(process.env.CLIENT_URL || "https://www.innovexresourcegroup.co.uk").replace(/\/$/, "");
+  return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function safeNewsletterUrl(value = "") {
+  try {
+    const parsed = new URL(value, newsletterUrl("/"));
+    return parsed.protocol === "https:" ? parsed.toString() : newsletterUrl("/");
+  } catch {
+    return newsletterUrl("/");
+  }
+}
+
+export function buildNewsletterEmail({ campaign, subscriber = {}, unsubscribeUrl = "", preview = false }) {
+  const greeting = subscriber.firstName ? `Hello ${subscriber.firstName},` : "Hello,";
+  const ctaUrl = safeNewsletterUrl(campaign.ctaUrl || newsletterUrl("/contact"));
+  const services = (campaign.serviceFocus || []).slice(0, 4).map((key) => newsletterServiceLinks[key]).filter(Boolean);
+  const serviceHtml = services.length
+    ? `<table role="presentation" style="width:100%;border-collapse:collapse;margin:22px 0">${services.map(([label, path]) => `<tr><td style="padding:12px 0;border-bottom:1px solid #d8e5e7"><a href="${safeNewsletterUrl(newsletterUrl(path))}" style="color:#075b6d;font-weight:700;text-decoration:none">${escapeHtml(label)} &rarr;</a></td></tr>`).join("")}</table>`
+    : "";
+  const preheader = escapeHtml(campaign.preheader || campaign.headline || "News and practical updates from Innovex Resource Group Limited");
+  const footerOptOut = preview
+    ? "This is a test preview. Live campaigns include a personal unsubscribe link."
+    : `You are receiving this because you subscribed, asked for similar service updates, or we identified a documented business-to-business legitimate interest. <a href="${safeNewsletterUrl(unsubscribeUrl)}" style="color:#075b6d;font-weight:700">Unsubscribe from marketing emails</a> at any time.`;
+  const html = `<!doctype html><html><body style="margin:0;background:#edf5f6;font-family:Arial,Helvetica,sans-serif;color:#173840"><div style="display:none;max-height:0;overflow:hidden;opacity:0">${preheader}</div><table role="presentation" style="width:100%;border-collapse:collapse;background:#edf5f6"><tr><td style="padding:30px 12px"><table role="presentation" style="width:100%;max-width:660px;margin:auto;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #d5e4e7;border-radius:18px;overflow:hidden"><tr><td style="height:7px;background:#f4b942"></td></tr><tr><td style="padding:30px;background:#075365;color:#ffffff"><div style="font-size:11px;font-weight:800;letter-spacing:.14em;color:#bfe0e5">INNOVEX RESOURCE GROUP LIMITED</div>${preview ? `<div style="display:inline-block;margin-top:14px;padding:6px 10px;border-radius:999px;background:#fff3ce;color:#684700;font-size:11px;font-weight:800">TEST EMAIL</div>` : ""}<h1 style="margin:16px 0 0;font-size:30px;line-height:1.2;color:#ffffff">${escapeHtml(campaign.headline)}</h1></td></tr><tr><td style="padding:30px"><p style="margin-top:0;font-size:16px">${escapeHtml(greeting)}</p><p style="font-size:16px;line-height:1.72;color:#304b54">${messageHtml(campaign.introduction)}</p>${campaign.insightTitle ? `<div style="margin:24px 0;padding:20px;border-left:4px solid #f4b942;border-radius:10px;background:#fff8e7"><h2 style="margin:0 0 9px;font-size:20px;color:#173840">${escapeHtml(campaign.insightTitle)}</h2><div style="line-height:1.7;color:#465e65">${messageHtml(campaign.insightBody || "")}</div></div>` : ""}${serviceHtml}<div style="margin:26px 0"><a href="${ctaUrl}" style="display:inline-block;padding:14px 22px;border-radius:999px;background:#f4b942;color:#173840;font-weight:800;text-decoration:none">${escapeHtml(campaign.ctaLabel || "Speak to the Innovex team")}</a></div><p style="margin:28px 0 0;line-height:1.65">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; info@innovexresourcegroup.co.uk</span></p></td></tr><tr><td style="padding:22px 30px;background:#f4f8f9;border-top:1px solid #d8e5e7;color:#657a81;font-size:11px;line-height:1.6"><strong style="display:block;color:#173840">Innovex Resource Group Limited</strong>Registered in England and Wales · Company no. 15975820<br>Registered office: 33 Forsythia Drive, Cardiff, United Kingdom, CF23 7HP<br><a href="${newsletterUrl("/privacy")}" style="color:#075b6d">Privacy notice</a> &nbsp;·&nbsp; <a href="https://www.linkedin.com/company/innovex-resource-group/" style="color:#075b6d">LinkedIn</a> &nbsp;·&nbsp; <a href="https://www.instagram.com/irg__ltd/" style="color:#075b6d">Instagram</a><div style="margin-top:10px">${footerOptOut}</div></td></tr></table></td></tr></table></body></html>`;
+  const text = `${greeting}\n\n${campaign.headline}\n\n${campaign.introduction}${campaign.insightTitle ? `\n\n${campaign.insightTitle}\n${campaign.insightBody || ""}` : ""}\n\n${campaign.ctaLabel || "Speak to the Innovex team"}: ${ctaUrl}\n\nKind regards,\nInnovex Resource Group Limited\n0330 0435 830\ninfo@innovexresourcegroup.co.uk\nRegistered in England and Wales · Company no. 15975820\nRegistered office: 33 Forsythia Drive, Cardiff, United Kingdom, CF23 7HP\nPrivacy: ${newsletterUrl("/privacy")}${preview ? "\n\nTEST EMAIL – no live audience was contacted." : `\n\nUnsubscribe: ${unsubscribeUrl}`}`;
+  return { html, text };
+}
+
+export async function sendNewsletterEmail({ campaign, subscriber, unsubscribeUrl, to, preview = false }) {
+  const account = senderAccountOrDefault(campaign.senderEmail);
+  if (!account) return { sent: false, reason: "Selected sender mailbox is not configured" };
+  const recipientEmail = String(to || subscriber?.email || "").trim().toLowerCase();
+  const built = buildNewsletterEmail({ campaign, subscriber, unsubscribeUrl, preview });
+  const oneClickUrl = unsubscribeUrl.replace("/newsletter/unsubscribe/", "/api/newsletters/unsubscribe/");
+  const headers = preview || !unsubscribeUrl ? {} : {
+    "List-Unsubscribe": `<${oneClickUrl}>, <mailto:${account.address}?subject=Unsubscribe>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"
+  };
+  const info = await makeTransporter(account).sendMail({
+    from: formatSender(account),
+    to: recipientEmail,
+    replyTo: account.address,
+    subject: preview ? `[TEST] ${campaign.subject}` : campaign.subject,
+    text: built.text,
+    html: built.html,
+    headers
+  });
+  return { sent: true, fromEmail: account.address, messageId: info.messageId, ...built };
 }

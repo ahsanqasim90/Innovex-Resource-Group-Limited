@@ -46,12 +46,12 @@ export default function SEO({ title, description, path, noIndex = false, jsonLd 
     upsertMeta('meta[property="og:description"]', { property: "og:description", content: description });
     upsertMeta('meta[property="og:url"]', { property: "og:url", content: canonical });
     upsertMeta('meta[property="og:type"]', { property: "og:type", content: "website" });
-    upsertMeta('meta[property="og:image"]', { property: "og:image", content: `${company.siteUrl}/icon-512.png` });
+    upsertMeta('meta[property="og:image"]', { property: "og:image", content: `${company.siteUrl}/og.png` });
     upsertMeta('meta[property="og:site_name"]', { property: "og:site_name", content: company.name });
     upsertMeta('meta[name="twitter:card"]', { name: "twitter:card", content: "summary_large_image" });
     upsertMeta('meta[name="twitter:title"]', { name: "twitter:title", content: pageTitle });
     upsertMeta('meta[name="twitter:description"]', { name: "twitter:description", content: description });
-    upsertMeta('meta[name="twitter:image"]', { name: "twitter:image", content: `${company.siteUrl}/icon-512.png` });
+    upsertMeta('meta[name="twitter:image"]', { name: "twitter:image", content: `${company.siteUrl}/og.png` });
 
     upsertJsonLd("innovex-organization-schema", {
       "@context": "https://schema.org",

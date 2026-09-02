@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   CalendarCheck,
@@ -6,6 +6,7 @@ import {
   Clock3,
   Download,
   FileCheck2,
+  FileSpreadsheet,
   LogIn,
   LogOut,
   MapPin,
@@ -13,7 +14,7 @@ import {
   UserRoundCheck,
   UsersRound
 } from "lucide-react";
-import { api } from "../../api/client.js";
+import { api, downloadFile } from "../../api/client.js";
 import { hasPermission } from "../../auth/permissions.js";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
@@ -45,7 +46,31 @@ function totalHours(minutes) {
   return `${Math.floor(value / 60)}h ${value % 60}m`;
 }
 
+function reportPeriodRange(period, today) {
+  const anchor = new Date(`${today}T12:00:00`);
+  const from = new Date(anchor);
+  const to = new Date(anchor);
+
+  if (period === "weekly") {
+    const mondayOffset = anchor.getDay() === 0 ? -6 : 1 - anchor.getDay();
+    from.setDate(anchor.getDate() + mondayOffset);
+    to.setDate(from.getDate() + 6);
+  } else if (period === "monthly") {
+    from.setDate(1);
+    to.setMonth(anchor.getMonth() + 1, 0);
+  }
+
+  return { from: localDate(from), to: localDate(to) };
+}
+
+function csvCell(value) {
+  let text = String(value ?? "");
+  if (/^[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
 const emptyReport = { cvsDownloaded: 0, cvsSubmitted: 0, notes: "", workLocation: "Office" };
+const REPORT_REFRESH_MS = 5000;
 
 export default function AdminAttendance() {
   const { user } = useAuth();
@@ -65,6 +90,11 @@ export default function AdminAttendance() {
   });
   const [report, setReport] = useState({ records: [], summaries: [], employees: [], overview: {} });
   const [loadingReport, setLoadingReport] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState("custom");
+  const reportRequestInFlight = useRef(false);
+  const pendingReportFilters = useRef(null);
+  const activeReportFilters = useRef(filters);
 
   function applyAttendance(record) {
     setAttendance(record || null);
@@ -86,23 +116,116 @@ export default function AdminAttendance() {
     }
   }
 
-  async function loadReport(nextFilters = filters) {
+  async function loadReport(nextFilters = filters, { background = false } = {}) {
     if (!canManage) return;
-    setLoadingReport(true);
+    if (!background) {
+      activeReportFilters.current = nextFilters;
+      setLoadingReport(true);
+    }
+    if (reportRequestInFlight.current) {
+      if (!background) pendingReportFilters.current = nextFilters;
+      return;
+    }
+    reportRequestInFlight.current = true;
     try {
       const query = new URLSearchParams(nextFilters);
       const data = await api(`/attendance/report?${query.toString()}`);
       setReport(data);
     } catch (error) {
+      if (!background) setStatus({ type: "error", message: error.message });
+    } finally {
+      reportRequestInFlight.current = false;
+      const pendingFilters = pendingReportFilters.current;
+      if (pendingFilters) {
+        pendingReportFilters.current = null;
+        loadReport(pendingFilters);
+      } else if (!background) {
+        setLoadingReport(false);
+      }
+    }
+  }
+
+  function applyReportPeriod(period) {
+    const range = reportPeriodRange(period, today);
+    const nextFilters = { ...filters, ...range };
+    setReportPeriod(period);
+    setFilters(nextFilters);
+    loadReport(nextFilters);
+  }
+
+  function downloadAttendanceReport() {
+    const appliedFilters = report.filters || activeReportFilters.current;
+    const selectedEmployee = report.employees.find((employee) => String(employee.id) === String(appliedFilters.userId));
+    const generatedAt = new Date();
+    const rows = [
+      ["Innovex Resource Group - Attendance Report"],
+      ["Generated", generatedAt.toLocaleString("en-GB")],
+      ["Period", `${appliedFilters.from} to ${appliedFilters.to}`],
+      ["Employee / candidate", selectedEmployee?.name || "All employees"],
+      [],
+      ["Summary"],
+      ["Employee", "Email", "Days present", "Total hours", "CVs downloaded", "CVs submitted"],
+      ...report.summaries.map((summary) => [summary.employeeName, summary.employeeEmail, summary.daysPresent, totalHours(summary.totalMinutes), summary.cvsDownloaded, summary.cvsSubmitted]),
+      [],
+      ["Daily details"],
+      ["Date", "Employee", "Email", "Status", "Location", "Check in", "Check out", "Hours", "CVs downloaded", "CVs submitted", "Notes"],
+      ...report.records.map((record) => [record.attendanceDate, record.employeeName, record.employeeEmail, record.status || "Present", record.workLocation, timeLabel(record.checkInAt), timeLabel(record.checkOutAt), durationLabel(record), record.cvsDownloaded, record.cvsSubmitted, record.notes || ""])
+    ];
+    const content = `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const employeePart = (selectedEmployee?.name || "All-Employees").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
+    link.href = url;
+    link.download = `Innovex-Attendance-${employeePart}-${appliedFilters.from}-to-${appliedFilters.to}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setStatus({ message: `${selectedEmployee?.name || "Attendance"} report downloaded successfully.` });
+  }
+
+  async function downloadAttendancePdf() {
+    const appliedFilters = report.filters || activeReportFilters.current;
+    const selectedEmployee = report.employees.find((employee) => String(employee.id) === String(appliedFilters.userId));
+    const employeePart = (selectedEmployee?.name || "All-Employees").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "All-Employees";
+    const query = new URLSearchParams(appliedFilters);
+    setDownloadingPdf(true);
+    try {
+      await downloadFile(
+        `/attendance/report.pdf?${query.toString()}`,
+        `Innovex-Attendance-${employeePart}-${appliedFilters.from}-to-${appliedFilters.to}.pdf`
+      );
+      setStatus({ message: `${selectedEmployee?.name || "Attendance"} signed PDF report downloaded successfully.` });
+    } catch (error) {
       setStatus({ type: "error", message: error.message });
     } finally {
-      setLoadingReport(false);
+      setDownloadingPdf(false);
     }
   }
 
   useEffect(() => {
     loadToday();
     if (canManage) loadReport();
+  }, [canManage]);
+
+  useEffect(() => {
+    if (!canManage) return undefined;
+
+    const refreshReport = () => {
+      if (document.visibilityState === "visible") {
+        loadReport(activeReportFilters.current, { background: true });
+      }
+    };
+    const intervalId = window.setInterval(refreshReport, REPORT_REFRESH_MS);
+    window.addEventListener("focus", refreshReport);
+    document.addEventListener("visibilitychange", refreshReport);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshReport);
+      document.removeEventListener("visibilitychange", refreshReport);
+    };
   }, [canManage]);
 
   async function checkIn() {
@@ -249,15 +372,29 @@ export default function AdminAttendance() {
             <div>
               <span className="eyebrow">Admin reporting</span>
               <h2><UsersRound size={25} /> Employee Attendance Reports</h2>
-              <p>Review every employee's attendance and CV productivity for the selected period.</p>
+              <p>Generate daily, weekly or monthly attendance and CV productivity reports for each employee.</p>
+            </div>
+            <div className="attendance-download-actions">
+              <button className="button secondary" type="button" disabled={!report.records.length} onClick={downloadAttendanceReport}><FileSpreadsheet size={17} /> Download CSV</button>
+              <button className="button" type="button" disabled={!report.records.length || downloadingPdf} onClick={downloadAttendancePdf}><Download size={17} /> {downloadingPdf ? "Preparing PDF..." : "Download Signed PDF"}</button>
+            </div>
+          </div>
+
+          <div className="attendance-period-bar" aria-label="Attendance report period">
+            <span>Quick report:</span>
+            <div>
+              <button className={reportPeriod === "daily" ? "active" : ""} type="button" onClick={() => applyReportPeriod("daily")}>Daily</button>
+              <button className={reportPeriod === "weekly" ? "active" : ""} type="button" onClick={() => applyReportPeriod("weekly")}>Weekly</button>
+              <button className={reportPeriod === "monthly" ? "active" : ""} type="button" onClick={() => applyReportPeriod("monthly")}>Monthly</button>
+              <button className={reportPeriod === "custom" ? "active" : ""} type="button" onClick={() => setReportPeriod("custom")}>Custom dates</button>
             </div>
           </div>
 
           <form className="card attendance-filters" onSubmit={(event) => { event.preventDefault(); loadReport(); }}>
-            <label><span>From</span><input type="date" value={filters.from} onChange={(event) => setFilters({ ...filters, from: event.target.value })} /></label>
-            <label><span>To</span><input type="date" value={filters.to} onChange={(event) => setFilters({ ...filters, to: event.target.value })} /></label>
-            <label><span>Employee</span><select value={filters.userId} onChange={(event) => setFilters({ ...filters, userId: event.target.value })}><option value="">All employees</option>{report.employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.name}</option>)}</select></label>
-            <button className="button" type="submit" disabled={loadingReport}>{loadingReport ? "Loading..." : "View Report"}</button>
+            <label><span>From</span><input type="date" value={filters.from} onChange={(event) => { setReportPeriod("custom"); setFilters({ ...filters, from: event.target.value }); }} /></label>
+            <label><span>To</span><input type="date" value={filters.to} onChange={(event) => { setReportPeriod("custom"); setFilters({ ...filters, to: event.target.value }); }} /></label>
+            <label><span>Employee / candidate</span><select value={filters.userId} onChange={(event) => setFilters({ ...filters, userId: event.target.value })}><option value="">All employees</option>{report.employees.map((employee) => <option value={employee.id} key={employee.id}>{employee.name}</option>)}</select></label>
+            <button className="button" type="submit" disabled={loadingReport}>{loadingReport ? "Generating..." : "Generate Report"}</button>
           </form>
 
           <div className="attendance-overview-grid">
@@ -280,10 +417,10 @@ export default function AdminAttendance() {
 
           <div className="table-wrap attendance-detail-table">
             <table>
-              <thead><tr><th>Date</th><th>Employee</th><th>Location</th><th>Check in</th><th>Check out</th><th>Hours</th><th>Downloaded</th><th>Submitted</th><th>Notes</th></tr></thead>
+              <thead><tr><th>Date</th>{!report.filters?.userId && <th>Employee</th>}<th>Location</th><th>Check in</th><th>Check out</th><th>Hours</th><th>Downloaded</th><th>Submitted</th><th>Notes</th></tr></thead>
               <tbody>
-                {report.records.map((record) => <tr key={record._id}><td>{dateLabel(record.attendanceDate)}</td><td><strong>{record.employeeName}</strong></td><td>{record.workLocation}</td><td>{timeLabel(record.checkInAt)}</td><td>{timeLabel(record.checkOutAt)}</td><td>{durationLabel(record)}</td><td>{record.cvsDownloaded}</td><td>{record.cvsSubmitted}</td><td className="attendance-notes-cell">{record.notes || "-"}</td></tr>)}
-                {!report.records.length && <tr><td colSpan="9">No detailed records found.</td></tr>}
+                {report.records.map((record) => <tr key={record._id}><td>{dateLabel(record.attendanceDate)}</td>{!report.filters?.userId && <td><strong>{record.employeeName}</strong></td>}<td>{record.workLocation}</td><td>{timeLabel(record.checkInAt)}</td><td>{timeLabel(record.checkOutAt)}</td><td>{durationLabel(record)}</td><td>{record.cvsDownloaded}</td><td>{record.cvsSubmitted}</td><td className="attendance-notes-cell">{record.notes ? <details className="attendance-note-disclosure"><summary title={record.notes}>View notes</summary><p>{record.notes}</p></details> : <span className="muted">-</span>}</td></tr>)}
+                {!report.records.length && <tr><td colSpan={report.filters?.userId ? 8 : 9}>No detailed records found.</td></tr>}
               </tbody>
             </table>
           </div>

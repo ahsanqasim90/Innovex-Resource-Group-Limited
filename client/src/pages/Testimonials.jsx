@@ -130,6 +130,7 @@ export default function Testimonials() {
               <StarRatingInput value={rating} onChange={setRating} />
             </div>
             <textarea name="message" placeholder="Your review" required />
+            <label className="privacy-confirmation"><input type="checkbox" name="publicationConsent" required /><span>I give Innovex permission to publish this review with my name, role and organisation after moderation. See the <a href="/privacy" target="_blank" rel="noreferrer">privacy notice</a>.</span></label>
             <SubmitButton loading={submitting} loadingText="Submitting review...">Submit Review</SubmitButton>
           </form>
         </div>

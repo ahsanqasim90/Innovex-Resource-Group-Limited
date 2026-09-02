@@ -1,4 +1,4 @@
-import { ArrowRight, ShieldCheck, Users, HeartHandshake, MonitorSmartphone, Search, GraduationCap, CalendarCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck, Users, HeartHandshake, MonitorSmartphone, Search, GraduationCap, CalendarCheck, BadgeCheck, BriefcaseBusiness, CheckCircle2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
@@ -8,7 +8,6 @@ import PartnerLogoSlider from "../components/PartnerLogoSlider.jsx";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import TestimonialSlider from "../components/TestimonialSlider.jsx";
-import { services } from "../data/content.js";
 
 const helpCards = [
   {
@@ -35,17 +34,6 @@ const helpCards = [
     cta: "Explore Courses",
     to: "/courses"
   }
-];
-
-const audiences = [
-  "Care Providers",
-  "Healthcare Candidates",
-  "Nursing Homes",
-  "Children's Residential Homes",
-  "Supported Living Providers",
-  "Local Businesses",
-  "Service-Based Businesses",
-  "Growing Organisations"
 ];
 
 const digitalProof = [
@@ -82,146 +70,121 @@ export default function Home() {
 
   return (
     <>
-      <SEO title="UK Recruitment, Digital Services & Training" path="/" description="Innovex Resource Group supports UK healthcare employers, businesses worldwide with web development and SEO, and organisations seeking professional care training." />
-      <section className="hero">
-        <div>
-          <span className="eyebrow">Recruitment · Digital Services · Training</span>
-          <h1>People, digital growth and professional training.</h1>
-          <p>Innovex helps UK care providers recruit staff, supports businesses worldwide with web development and SEO, and connects care organisations with professional training.</p>
-          <div className="actions">
-            <Link className="button" to="/hire-staff">Hire Staff <ArrowRight size={18} /></Link>
-            <Link className="button light" to="/website-development">Discuss a Digital Project</Link>
-            <Link className="button hero-digital" to="/courses">Explore Courses</Link>
+      <SEO title="Recruitment, Training, Websites & CRM Systems" path="/" description="Innovex Resource Group supports organisations with specialist recruitment, professional training, modern websites and tailored CRM systems." />
+      <section className="home-premium-hero">
+        <div className="home-premium-hero-copy">
+          <span className="home-premium-kicker"><BadgeCheck size={17} /> Recruitment · Training · Websites · CRM</span>
+          <h1>People, technology and training—built for your <em>growth.</em></h1>
+          <p>One accountable team for specialist recruitment, professional healthcare training, modern websites and tailored CRM systems.</p>
+          <div className="home-premium-actions">
+            <Link className="button home-premium-primary" to="/services">Explore our services <ArrowRight size={18} /></Link>
+            <Link className="button home-premium-secondary" to="/contact">Start a conversation</Link>
           </div>
-          <p className="cta-microcopy hero-helper">Looking for a role? <Link to="/jobs">Browse current healthcare jobs</Link> or <Link to="/upload-cv">upload your CV</Link>.</p>
+          <div className="home-premium-capabilities" aria-label="Innovex capabilities">
+            <span><ShieldCheck size={18} /><strong>Recruitment</strong></span>
+            <span><MonitorSmartphone size={18} /><strong>Websites</strong></span>
+            <span><BriefcaseBusiness size={18} /><strong>CRM systems</strong></span>
+            <span><GraduationCap size={18} /><strong>Training</strong></span>
+          </div>
         </div>
-        <aside className="hero-card" aria-label="Innovex highlights">
-          <img
-            className="hero-visual-image"
-            src="/innovex-hero-visual.svg"
-            alt="Innovex healthcare recruitment, digital services and professional training visual"
-            width="1100"
-            height="680"
-            loading="eager"
-            fetchPriority="high"
-          />
-          <div className="stats-grid">
-            <div className="stat"><strong>UK</strong><span>Employer recruitment</span></div>
-            <div className="stat"><strong>Global</strong><span>Digital enquiries</span></div>
-            <div className="stat"><strong>B2B</strong><span>Training enquiries</span></div>
-          </div>
-          <div className="hero-service-strip">
-            <span><MonitorSmartphone size={18} /> Websites</span>
-            <span><Search size={18} /> SEO</span>
-            <span><ShieldCheck size={18} /> Recruitment</span>
-          </div>
-        </aside>
+
+        <div className="home-premium-bento" aria-label="Explore Innovex services">
+          <Link className="home-premium-bento-card" to="/healthcare-recruitment">
+            <img src="/innovex-care-team-hero.jpg" alt="Healthcare professionals representing Innovex recruitment" width="960" height="640" loading="eager" fetchPriority="high" />
+            <span><ShieldCheck size={18} /><strong>Recruitment</strong><small>Specialist UK staffing</small></span>
+          </Link>
+          <Link className="home-premium-bento-card" to="/website-development">
+            <img src="/innovex-web-development-hero.jpg" alt="Digital team creating a modern business website" width="960" height="640" loading="eager" fetchPriority="high" />
+            <span><MonitorSmartphone size={18} /><strong>Websites</strong><small>Modern digital experiences</small></span>
+          </Link>
+          <Link className="home-premium-bento-card" to="/crm-systems">
+            <img src="/innovex-crm-systems-hero.jpg" alt="Tailored CRM dashboard and business workflow" width="960" height="640" loading="eager" fetchPriority="high" />
+            <span><BriefcaseBusiness size={18} /><strong>CRM systems</strong><small>Smarter business workflows</small></span>
+          </Link>
+          <Link className="home-premium-bento-card" to="/courses">
+            <img src="/innovex-training-hero.jpg" alt="Professional healthcare training session" width="960" height="640" loading="eager" fetchPriority="high" />
+            <span><GraduationCap size={18} /><strong>Training</strong><small>Practical team development</small></span>
+          </Link>
+        </div>
       </section>
 
-      <section className="section compact-section">
-        <SectionHeading eyebrow="Three Business Divisions" title="Choose the right Innovex team.">
-          Each journey stays focused on a different commercial need: hiring, digital delivery, or professional training.
-        </SectionHeading>
-        <div className="card-grid service-choice-grid">
-          {helpCards.map(({ icon: Icon, title, text, points, cta, to }) => (
-            <article className="card service-choice-card" key={title}>
-              <div className="service-choice-top">
-                <span className="digital-icon"><Icon size={24} /></span>
-                <span className="service-choice-label">Business division</span>
-              </div>
-              <div>
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </div>
-              <ul className="service-mini-list">
-                {points.map((point) => <li key={point}>{point}</li>)}
-              </ul>
-              <Link className="button secondary small" to={to}>{cta}</Link>
+      <div className="home-premium-ribbon" aria-label="Innovex specialist divisions">
+        <span>One accountable partner</span>
+        <strong><ShieldCheck size={19} /> Recruitment</strong>
+        <strong><GraduationCap size={19} /> Training</strong>
+        <strong><MonitorSmartphone size={19} /> Digital growth</strong>
+      </div>
+
+      <section className="home-premium-divisions">
+        <div className="home-premium-section-intro">
+          <span className="eyebrow">Three specialist divisions</span>
+          <h2>Expert support where people and organisations grow.</h2>
+          <p>Choose the team that matches your goal. Every division combines practical delivery with clear, responsive communication.</p>
+        </div>
+        <div className="home-premium-division-grid">
+          {helpCards.map(({ icon: Icon, title, text, points, cta, to }, index) => (
+            <article className="home-premium-division-card" key={title}>
+              <header><span className="home-premium-division-icon"><Icon size={25} /></span><small>0{index + 1}</small></header>
+              <div><h3>{title}</h3><p>{text}</p></div>
+              <ul>{points.map((point) => <li key={point}><CheckCircle2 size={16} /> {point}</li>)}</ul>
+              <Link to={to}>{cta} <ArrowRight size={17} /></Link>
             </article>
           ))}
         </div>
-        <div className="who-help-card">
-          <h2>Who We Help</h2>
-          <div className="chip-cloud">
-            {audiences.map((audience) => <span key={audience}>{audience}</span>)}
+      </section>
+
+      <section className="home-premium-recruitment">
+        <div className="home-premium-recruitment-copy">
+          <span className="eyebrow">Recruitment with judgement</span>
+          <h2>Built for the realities of care recruitment.</h2>
+          <p>We understand that every placement affects a service, a team and the people receiving care. Our approach keeps quality, communication and suitability at the centre.</p>
+          <div className="home-premium-recruitment-points">
+            <span><ShieldCheck size={20} /><strong>Compliance-aware screening</strong><small>Practical checks and clear candidate records.</small></span>
+            <span><Users size={20} /><strong>People-first matching</strong><small>Experience, availability and fit considered together.</small></span>
+            <span><HeartHandshake size={20} /><strong>Responsive partnership</strong><small>Clear updates from requirement to interview.</small></span>
           </div>
+          <Link className="button" to="/hire-staff">Talk to our recruitment team <ArrowRight size={18} /></Link>
+        </div>
+        <div className="home-premium-process">
+          <span className="home-premium-process-label">How we support you</span>
+          {[['01', 'Understand the requirement', 'We start with the role, service and priorities—not a generic brief.'], ['02', 'Source and screen', 'Candidates are reviewed against the information that matters to your team.'], ['03', 'Coordinate the next step', 'We keep communication moving through submission and interview.']].map(([number, title, text]) => (
+            <article key={number}><strong>{number}</strong><div><h3>{title}</h3><p>{text}</p></div></article>
+          ))}
         </div>
       </section>
 
-      <section className="section training-home-section">
-        <div className="training-home-card">
-          <div>
-            <span className="eyebrow">Healthcare training</span>
-            <h2>Need staff training for your care team?</h2>
-            <p>
-              Browse available healthcare courses, select the training your staff need, tell us delegate numbers and location, and our team will send a tailored quotation.
-            </p>
-          </div>
-          <div className="training-home-points">
-            <span><GraduationCap size={18} /> Active course library</span>
-            <span><Users size={18} /> Delegate-based enquiries</span>
-            <span><CalendarCheck size={18} /> Preferred date planning</span>
-          </div>
-          <Link className="button" to="/courses">Explore Healthcare Courses</Link>
-        </div>
-      </section>
-
-      <section className="section">
-        <SectionHeading eyebrow="Services" title="Specialist support for care providers">From temporary shifts to permanent leadership roles, Innovex keeps recruitment practical, fast, and compliant.</SectionHeading>
-        <div className="card-grid">
-          {services.slice(0, 6).map((service) => <article className="card" key={service.title}><h3>{service.title}</h3><p>{service.description}</p><Link to="/healthcare-recruitment" className="button secondary small">Learn More</Link></article>)}
-        </div>
-        <article className="card recruitment-quality-card">
-          <div>
-            <span className="eyebrow">Recruitment Quality</span>
-            <h2>Recruitment Support Built Around Quality</h2>
-            <p>We support employers with candidate sourcing, screening and communication throughout the recruitment process.</p>
-          </div>
-          <ul className="clean-list quality-list">
-            <li>Candidate screening</li>
-            <li>Right to work awareness</li>
-            <li>DBS and compliance awareness</li>
-            <li>Interview coordination</li>
-            <li>Ongoing communication</li>
-          </ul>
-        </article>
-      </section>
-
-      <section className="section alt">
-        <SectionHeading eyebrow="Digital Services" title="Websites and SEO for growing organisations">
-          We also design modern websites and provide SEO support for businesses across healthcare and every other sector.
-        </SectionHeading>
-        <div className="card-grid">
-          <article className="card digital-card"><span className="digital-icon"><MonitorSmartphone size={24} /></span><h3>Website Design</h3><p>Responsive, professional websites built around your services, brand, and customer journey.</p><Link to="/website-development" className="button secondary small">Explore Website Development</Link></article>
-          <article className="card digital-card"><span className="digital-icon"><Search size={24} /></span><h3>SEO Services</h3><p>Search-friendly pages, local SEO, content structure, and visibility improvements.</p><Link to="/seo-services" className="button small">Explore SEO Services</Link></article>
-        </div>
-        <div className="digital-proof-block">
-          <SectionHeading eyebrow="Digital Delivery" title="What You Get With Our Digital Services" />
-          <div className="card-grid">
-            {digitalProof.map((item) => (
-              <article className="card digital-card" key={item.title}>
-                <h3>{item.title}</h3>
-                <p className="testimonial-review-copy">{item.text}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section alt">
+      <section className="section alt home-premium-jobs">
         <div className="section-heading-row">
-          <SectionHeading eyebrow="Opportunities" title="Current healthcare roles">Live vacancies from the Innovex admin panel, updated for candidates across the UK.</SectionHeading>
-          <Link className="button secondary" to="/jobs">View All Jobs</Link>
+          <SectionHeading eyebrow="Live opportunities" title="Find work where you can make a difference.">Explore current healthcare and care-sector vacancies across the UK.</SectionHeading>
+          <Link className="button secondary" to="/jobs">View all jobs <ArrowRight size={17} /></Link>
         </div>
         <HomeJobsSlider jobs={jobs} loading={jobsLoading} />
       </section>
 
-      <section className="section">
-        <SectionHeading eyebrow="Why choose Innovex" title="Recruitment with care-sector judgement" />
-        <div className="card-grid">
-          {[["Compliance-led", ShieldCheck], ["People-first", Users], ["Partnership focused", HeartHandshake]].map(([title, Icon]) => (
-            <article className="card" key={title}><Icon color="#0b5f75" /><h3>{title}</h3><p>Clear communication, careful screening, and a practical understanding of care home staffing pressure.</p></article>
+      <section className="home-premium-values">
+        <div className="home-premium-section-intro">
+          <span className="eyebrow">Why Innovex</span>
+          <h2>Professional delivery. Human service.</h2>
+        </div>
+        <div className="home-premium-value-grid">
+          {[["Care-sector understanding", "We recognise the operational pressure behind every vacancy.", ShieldCheck], ["Clear communication", "Straightforward updates for employers and candidates at every stage.", Users], ["Partnership mindset", "Support designed around lasting working relationships, not quick transactions.", HeartHandshake]].map(([title, text, Icon]) => (
+            <article key={title}><span><Icon size={23} /></span><h3>{title}</h3><p>{text}</p></article>
           ))}
+        </div>
+      </section>
+
+      <section className="section training-home-section home-premium-training">
+        <div className="training-home-card">
+          <div><span className="eyebrow">Healthcare training</span><h2>Build capability across your care team.</h2><p>Choose the training your staff need, share delegate numbers and location, and receive a tailored quotation from our team.</p></div>
+          <div className="training-home-points"><span><GraduationCap size={18} /> Active course library</span><span><Users size={18} /> Delegate-based enquiries</span><span><CalendarCheck size={18} /> Preferred date planning</span></div>
+          <Link className="button" to="/courses">Explore courses <ArrowRight size={17} /></Link>
+        </div>
+      </section>
+
+      <section className="home-premium-digital">
+        <div className="home-premium-digital-heading"><span><Sparkles size={18} /> Digital services</span><h2>A stronger digital presence for organisations ready to grow.</h2><p>Modern websites and practical SEO support built around credibility, clarity and measurable business goals.</p><div><Link className="button" to="/website-development">Website projects</Link><Link className="button secondary" to="/seo-services">SEO support</Link></div></div>
+        <div className="home-premium-digital-grid">
+          {digitalProof.map((item, index) => <article key={item.title}><small>0{index + 1}</small><h3>{item.title}</h3><p>{item.text}</p></article>)}
         </div>
       </section>
 

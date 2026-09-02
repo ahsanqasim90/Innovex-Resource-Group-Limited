@@ -1,6 +1,7 @@
 import express from "express";
 import Blog from "../models/Blog.js";
 import Job from "../models/Job.js";
+import NewsletterCampaign from "../models/NewsletterCampaign.js";
 
 const router = express.Router();
 const SITE_URL = process.env.SITE_URL || "https://www.innovexresourcegroup.co.uk";
@@ -35,27 +36,40 @@ router.get("/sitemap.xml", async (req, res, next) => {
       { path: "/hire-staff", changefreq: "monthly", priority: "0.95" },
       { path: "/website-development", changefreq: "monthly", priority: "0.9" },
       { path: "/seo-services", changefreq: "monthly", priority: "0.9" },
+      { path: "/crm-systems", changefreq: "monthly", priority: "0.9" },
+      { path: "/pricing", changefreq: "monthly", priority: "0.75" },
+      { path: "/security", changefreq: "monthly", priority: "0.7" },
+      { path: "/terms", changefreq: "yearly", priority: "0.5" },
+      { path: "/dpa", changefreq: "yearly", priority: "0.5" },
+      { path: "/subprocessors", changefreq: "monthly", priority: "0.5" },
+      { path: "/status", changefreq: "daily", priority: "0.6" },
+      { path: "/support", changefreq: "monthly", priority: "0.7" },
       { path: "/courses", changefreq: "weekly", priority: "0.85" },
       { path: "/jobs", changefreq: "daily", priority: "0.9" },
       { path: "/blogs", changefreq: "weekly", priority: "0.8" },
+      { path: "/newsletters", changefreq: "monthly", priority: "0.75" },
+      { path: "/privacy", changefreq: "yearly", priority: "0.5" },
       { path: "/testimonials", changefreq: "monthly", priority: "0.6" },
       { path: "/partners", changefreq: "monthly", priority: "0.7" },
       { path: "/contact", changefreq: "monthly", priority: "0.8" },
       { path: "/upload-cv", changefreq: "monthly", priority: "0.7" }
     ];
 
-    const [blogs, jobs] = await Promise.all([
+    const [blogs, jobs, newsletters] = await Promise.all([
       Blog.find({ isPublished: true }).select("slug updatedAt publishedAt").sort({ publishedAt: -1 }).limit(500),
       Job.find({
         isActive: true,
         $or: [{ closingDate: null }, { closingDate: { $exists: false } }, { closingDate: { $gte: new Date() } }]
-      }).select("updatedAt createdAt").sort({ createdAt: -1 }).limit(500)
+      }).select("updatedAt createdAt").sort({ createdAt: -1 }).limit(500),
+      NewsletterCampaign.find({ archivePublished: true, status: { $in: ["Sent", "Partially sent"] } })
+        .select("slug updatedAt publishedAt sentAt").sort({ publishedAt: -1 }).limit(250)
     ]);
 
     const urls = [
       ...staticPages.map((page) => urlEntry({ loc: `${SITE_URL}${page.path}`, changefreq: page.changefreq, priority: page.priority })),
       ...blogs.map((blog) => urlEntry({ loc: `${SITE_URL}/blogs/${blog.slug}`, lastmod: blog.updatedAt || blog.publishedAt, changefreq: "weekly", priority: "0.75" })),
-      ...jobs.map((job) => urlEntry({ loc: `${SITE_URL}/jobs/${job._id}`, lastmod: job.updatedAt || job.createdAt, changefreq: "weekly", priority: "0.8" }))
+      ...jobs.map((job) => urlEntry({ loc: `${SITE_URL}/jobs/${job._id}`, lastmod: job.updatedAt || job.createdAt, changefreq: "weekly", priority: "0.8" })),
+      ...newsletters.map((item) => urlEntry({ loc: `${SITE_URL}/newsletters/${item.slug}`, lastmod: item.updatedAt || item.publishedAt || item.sentAt, changefreq: "monthly", priority: "0.7" }))
     ];
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>`;

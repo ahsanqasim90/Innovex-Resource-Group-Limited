@@ -8,6 +8,8 @@ const testimonialSchema = new mongoose.Schema(
     company: { type: String, trim: true },
     rating: { type: Number, min: 1, max: 5, default: 5 },
     message: { type: String, required: true, trim: true },
+    publicationConsent: { type: Boolean, default: false },
+    publicationConsentAt: Date,
     status: { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" }
   },
   { timestamps: true }

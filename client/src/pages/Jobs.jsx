@@ -57,38 +57,47 @@ export default function Jobs() {
   const [status, setStatus] = useState(null);
   const [applying, setApplying] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const applicationRef = useRef(null);
   const autoAppliedRef = useRef(null);
   const hasFilters = Boolean(filters.search || filters.location || filters.type);
 
-  function loadJobs(nextFilters = filters) {
+  function loadJobs(nextFilters = filters, page = 1, append = false) {
     const cleanedFilters = Object.fromEntries(
       Object.entries(nextFilters)
         .map(([key, value]) => [key, String(value || "").trim()])
         .filter(([, value]) => value)
     );
-    const query = new URLSearchParams(cleanedFilters).toString();
+    const params = new URLSearchParams(cleanedFilters);
+    params.set("paginated", "1");
+    params.set("page", String(page));
+    params.set("limit", "12");
+    const query = params.toString();
     setStatus(null);
     setLoading(true);
-    api(`/jobs${query ? `?${query}` : ""}`)
-      .then(setJobs)
+    api(`/jobs?${query}`)
+      .then((data) => {
+        const items = Array.isArray(data) ? data : data.items || [];
+        setJobs((current) => append ? [...current, ...items.filter((item) => !current.some((existing) => existing._id === item._id))] : items);
+        setPagination(Array.isArray(data) ? { page: 1, pages: 1, total: data.length } : { page: data.page, pages: data.pages, total: data.total });
+      })
       .catch((error) => setStatus({ type: "error", message: error.message }))
       .finally(() => setLoading(false));
   }
 
   function searchJobs(event) {
     event.preventDefault();
-    loadJobs(filters);
+    loadJobs(filters, 1);
   }
 
   function resetSearch() {
     const cleared = { search: "", location: "", type: "" };
     setFilters(cleared);
-    loadJobs(cleared);
+    loadJobs(cleared, 1);
   }
 
   useEffect(() => {
-    loadJobs();
+    loadJobs(filters, 1);
   }, []);
 
   useEffect(() => {
@@ -124,6 +133,11 @@ export default function Jobs() {
   async function apply(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const attribution = new URLSearchParams(window.location.search);
+    form.set("source", attribution.get("utm_source") || (document.referrer ? new URL(document.referrer).hostname : "Direct"));
+    form.set("medium", attribution.get("utm_medium") || "");
+    form.set("campaign", attribution.get("utm_campaign") || "");
+    form.set("referrer", document.referrer || "");
     setApplying(true);
     try {
       await api(`/jobs/${selected._id}/apply`, { method: "POST", body: form });
@@ -184,8 +198,9 @@ export default function Jobs() {
                     <label><span>Email *</span><input name="email" type="email" autoComplete="email" required /></label>
                     <label><span>Phone *</span><input name="phone" type="tel" autoComplete="tel" required /></label>
                   </div>
-                  <FileUpload label="Attach CV" helper="Optional: PDF, DOC, or DOCX up to 5MB" />
+                  <FileUpload label="Attach CV" helper="Optional: secure PDF or DOCX up to 5MB" />
                   <label><span>Cover message</span><textarea name="coverMessage" /></label>
+                  <label className="privacy-confirmation"><input type="checkbox" name="privacyConfirmed" required /><span>I have read the <Link to="/privacy" target="_blank">privacy notice</Link> and understand how my application data will be used.</span></label>
                   <SubmitButton loading={applying} loadingText="Submitting application...">Submit Application</SubmitButton>
                 </form>
               </div>
@@ -290,7 +305,11 @@ export default function Jobs() {
           ))}
         </div>
       ) : jobs.length > 0 ? (
-        <div className="card-grid" style={{ marginTop: 24 }}>{jobs.map((job) => <JobCard key={job._id} job={job} onApply={startApplication} />)}</div>
+        <>
+          <div className="jobs-results-summary"><span><strong>{pagination.total}</strong> opportunities found</span><small>Showing {jobs.length} roles</small></div>
+          <div className="card-grid" style={{ marginTop: 14 }}>{jobs.map((job) => <JobCard key={job._id} job={job} onApply={startApplication} />)}</div>
+          {pagination.page < pagination.pages && <div className="jobs-load-more"><button className="button secondary" type="button" disabled={loading} onClick={() => loadJobs(filters, pagination.page + 1, true)}>{loading ? "Loading more roles..." : `Load more opportunities (${pagination.total - jobs.length} remaining)`}</button></div>}
+        </>
       ) : (
         <article className="card empty-state-card" style={{ marginTop: 24 }}>
           <BriefcaseBusiness size={34} />
@@ -307,8 +326,9 @@ export default function Jobs() {
           <h2>Apply for {selected.title}</h2>
           <form className="form" onSubmit={apply}>
             <div className="form-grid"><input name="name" placeholder="Full name" required /><input name="email" type="email" placeholder="Email" required /><input name="phone" placeholder="Phone" required /></div>
-            <FileUpload label="Attach CV" helper="Optional: PDF, DOC, or DOCX up to 5MB" />
+            <FileUpload label="Attach CV" helper="Optional: secure PDF or DOCX up to 5MB" />
             <textarea name="coverMessage" placeholder="Cover message" />
+            <label className="privacy-confirmation"><input type="checkbox" name="privacyConfirmed" required /><span>I have read the <Link to="/privacy" target="_blank">privacy notice</Link> and understand how my application data will be used.</span></label>
             <SubmitButton loading={applying} loadingText="Submitting application...">Submit Application</SubmitButton>
           </form>
         </div>

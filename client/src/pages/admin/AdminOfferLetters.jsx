@@ -181,6 +181,12 @@ export default function AdminOfferLetters() {
     }
   }
 
+  async function withdrawOffer(offer) {
+    if (!window.confirm(`Withdraw offer letter ${offer.offerNumber}? The candidate will no longer be able to accept it.`)) return;
+    try { const updated = await api(`/hr/offer-letters/${offer._id}/withdraw`, { method: "PATCH" }); setSelected(updated); setMessage("Offer withdrawn."); await loadOffers(); }
+    catch (err) { setError(err.message); }
+  }
+
   const stats = useMemo(() => ({
     total: offers.length,
     sent: offers.filter((offer) => offer.status === "Sent").length,
@@ -193,7 +199,7 @@ export default function AdminOfferLetters() {
     || Boolean(form.commissionItems?.length);
 
   return (
-    <section className="hr-page">
+    <section className="hr-page workspace-pro-suite hr-documents-pro offer-center-pro">
       <div className="hr-hero">
         <div>
           <span className="section-kicker">HR documents</span>
@@ -266,7 +272,7 @@ export default function AdminOfferLetters() {
             <label>Probation period<input value={form.probationPeriod} onChange={(e) => update("probationPeriod", e.target.value)} /></label>
             <label>Offer expiry date<input type="date" value={form.offerExpiryDate} onChange={(e) => update("offerExpiryDate", e.target.value)} /></label>
             <label>Offer expiry wording<input value={form.offerExpiryText} onChange={(e) => update("offerExpiryText", e.target.value)} placeholder="e.g. 14 days from issue date" /></label>
-            <label>Status<select value={form.status} onChange={(e) => update("status", e.target.value)}><option>Draft</option><option>Sent</option><option>Accepted</option><option>Declined</option><option>Withdrawn</option></select></label>
+            <label>Status<input value={editingId ? form.status : "Draft"} disabled /></label>
             <label>Send from<select value={form.senderEmail} onChange={(e) => update("senderEmail", e.target.value)}>{senders.map((sender) => <option key={sender.address} value={sender.address}>{sender.label} ({sender.address})</option>)}</select></label>
             <label>Authorised signatory<input value={form.signatoryName} onChange={(e) => update("signatoryName", e.target.value)} /></label>
             <label>Signatory title<input value={form.signatoryTitle} onChange={(e) => update("signatoryTitle", e.target.value)} /></label>
@@ -297,11 +303,14 @@ export default function AdminOfferLetters() {
                 <span>Email <strong>{selected.candidateEmail}</strong></span>
                 <span>Start date <strong>{selected.startDateText || dateLabel(selected.startDate)}</strong></span>
                 <span>Status <strong>{selected.status}</strong></span>
+                {selected.acceptance?.signedAt && <span>Electronic signature <strong>{selected.acceptance.signerName} · {dateLabel(selected.acceptance.signedAt)}</strong></span>}
+                {selected.documentHash && <span>Document fingerprint <strong title={selected.documentHash}>{selected.documentHash.slice(0, 12)}…</strong></span>}
                 <span>{selected.commissionItems?.length ? "Commission rules" : (selected.salaryType === "Commission" ? "Commission" : "Package")} <strong>{selected.commissionItems?.length === 1 ? commissionValue(selected.commissionItems[0].amount, selected.commissionItems[0].calculationType || "Fixed value") : (selected.commissionItems?.length || (selected.salaryType === "Commission" ? commissionValue(selected.salaryAmount, selected.defaultCommissionType || "Fixed value") : money(selected.salaryAmount)))}</strong></span>
               </div>
               <div className="hr-preview-actions">
                 <button type="button" className="secondary" onClick={() => downloadFile(`/hr/offer-letters/${selected._id}/pdf`, `Innovex-Offer-Letter-${selected.offerNumber}.pdf`)}>Download PDF</button>
-                <button type="button" onClick={() => sendOffer(selected)} disabled={loading}>Send email</button>
+                {selected.status === "Draft" && <button type="button" onClick={() => sendOffer(selected)} disabled={loading}>Send offer</button>}
+                {selected.status === "Sent" && <button type="button" className="danger" onClick={() => withdrawOffer(selected)}>Withdraw</button>}
               </div>
             </>
           ) : (
@@ -339,8 +348,9 @@ export default function AdminOfferLetters() {
                   <td><span className={`hr-status ${offer.status.toLowerCase()}`}>{offer.status}</span></td>
                   <td className="action-row">
                     <button type="button" className="secondary" onClick={() => setSelected(offer)}>View</button>
-                    <button type="button" className="secondary" onClick={() => editOffer(offer)}>Edit</button>
-                    <button type="button" onClick={() => sendOffer(offer)}>Send</button>
+                    {offer.status === "Draft" && <button type="button" className="secondary" onClick={() => editOffer(offer)}>Edit</button>}
+                    {offer.status === "Draft" && <button type="button" onClick={() => sendOffer(offer)}>Send</button>}
+                    {offer.status === "Sent" && <button type="button" className="danger" onClick={() => withdrawOffer(offer)}>Withdraw</button>}
                     <button type="button" className="danger" onClick={() => deleteOffer(offer)}>Delete</button>
                   </td>
                 </tr>

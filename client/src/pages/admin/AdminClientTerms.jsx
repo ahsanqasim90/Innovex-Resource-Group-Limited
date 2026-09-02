@@ -299,7 +299,7 @@ export default function AdminClientTerms() {
   const reminderStatus = selected?.unsignedReminderStatus || "Not started";
 
   return (
-    <section className="admin-page admin-client-terms-page terms-simple-page">
+    <section className="admin-page admin-client-terms-page terms-simple-page workspace-pro-suite terms-pro-suite">
       <div className="terms-simple-hero">
         <div className="terms-hero-copy">
           <span className="section-kicker">Client terms centre</span>

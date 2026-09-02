@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "install:all": "npm install --prefix server && npm install --prefix client",
-    "vercel-build": "npm run build --prefix client",
+    "vercel-build": "npm run build --prefix client -- --configLoader runner",
     "build": "npm run build --prefix client",
-    "start": "npm start --prefix server"
+    "test": "npm test --prefix server",
+    "start": "npm start --prefix server",
+    "migrate:tenant-indexes": "npm run migrate:tenant-indexes --prefix server",
+    "migrate:tenant-indexes:apply": "npm run migrate:tenant-indexes:apply --prefix server"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -20,14 +23,21 @@
     "helmet": "^8.0.0",
     "imapflow": "^1.4.3",
     "jsonwebtoken": "^9.0.2",
+    "mailparser": "^3.9.17",
+    "mammoth": "^1.11.0",
     "mongoose": "^8.9.2",
     "morgan": "^1.10.0",
     "multer": "^2.2.0",
     "nodemailer": "^9.0.3",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
     "pdfkit": "^0.17.2",
     "validator": "^13.12.0"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

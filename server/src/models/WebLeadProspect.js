@@ -118,6 +118,8 @@ const webLeadProspectSchema = new mongoose.Schema({
   timeline: [timelineSchema]
 }, { timestamps: true });
 
+webLeadProspectSchema.add({ clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "ClientAccount", index: true } });
+
 webLeadProspectSchema.index({ createdBy: 1, status: 1, updatedAt: -1 });
 webLeadProspectSchema.index({ businessCategory: 1, status: 1, createdAt: -1 });
 webLeadProspectSchema.index({ businessName: "text", contactPerson: "text", email: "text", telephone: "text", websiteUrl: "text", postcode: "text" });

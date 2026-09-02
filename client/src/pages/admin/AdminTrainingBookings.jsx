@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, CircleDollarSign, GraduationCap, Mail, Phone, Search, TrendingUp, Users } from "lucide-react";
 import { api } from "../../api/client.js";
 import { canViewFinance } from "../../auth/permissions.js";
+import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -200,7 +201,7 @@ export default function AdminTrainingBookings() {
 
   return (
     <>
-      <div className="admin-top"><h1>Training Bookings</h1></div>
+      <AdminSectionHero icon={GraduationCap} eyebrow="Training delivery" title="Training Bookings" description="Coordinate delegates, course schedules, confirmations and delivery details in one operational view." aside={<div className="workspace-hero-count"><Users size={18} /><span><small>BOOKINGS</small><strong>{summary.total}</strong></span></div>} />
       <StatusMessage status={status} />
 
       <div className="training-summary-grid">

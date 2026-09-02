@@ -414,8 +414,8 @@ router.post("/prospects/:id/merge", requirePermission("webLeads.manage"), async 
     target.lastUpdatedByName = req.user.name;
     await target.save();
     await EmailLog.updateMany({ targetType: "WebLeadProspect", targetId: duplicate._id }, { $set: { targetId: target._id } });
-    await WebLeadProspect.deleteOne({ _id: duplicate._id });
-    await WebLeadNotification.deleteMany({ prospect: duplicate._id });
+    await duplicate.archive(req.user._id, `Merged into ${target.businessName}`);
+    await WebLeadNotification.updateMany({ prospect: duplicate._id }, { archivedAt: new Date(), archivedBy: req.user._id, archiveReason: `Prospect merged into ${target._id}` });
     await logActivity(req, { module: "Web Leads CRM", action: "Merged", entityType: "WebLeadProspect", entityId: target._id, summary: `Merged duplicate ${duplicate.businessName} into ${target.businessName}` });
     res.json(safeProspect(target, req.user));
   } catch (error) { next(error); }

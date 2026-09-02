@@ -113,9 +113,10 @@ router.put("/:id", protect, requirePermission("blogs.view"), uploadBlogImage.sin
 
 router.delete("/:id", protect, requirePermission("blogs.view"), async (req, res, next) => {
   try {
-    const blog = await Blog.findByIdAndDelete(req.params.id);
+    const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ message: "Blog not found" });
-    res.json({ message: "Blog deleted" });
+    await blog.archive(req.user._id, "Blog archived");
+    res.json({ message: "Blog archived" });
   } catch (error) {
     next(error);
   }

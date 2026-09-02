@@ -373,9 +373,9 @@ router.delete("/invoices/:id", async (req, res, next) => {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ message: "Invoice not found" });
     if (invoice.status !== "Draft") return res.status(400).json({ message: "Only draft invoices can be deleted. Cancel a sent invoice to preserve the audit trail." });
-    await invoice.deleteOne();
-    await logActivity(req, { module: "Finance", action: "Deleted", entityType: "Invoice", entityId: invoice._id, summary: `Deleted draft invoice ${invoice.invoiceNumber}` });
-    res.json({ message: "Draft invoice deleted" });
+    await invoice.archive(req.user._id, "Draft invoice archived");
+    await logActivity(req, { module: "Finance", action: "Archived", entityType: "Invoice", entityId: invoice._id, summary: `Archived draft invoice ${invoice.invoiceNumber}` });
+    res.json({ message: "Draft invoice archived" });
   } catch (error) { next(error); }
 });
 
@@ -520,10 +520,11 @@ router.put("/expenses/:id", uploadExpenseReceipt.single("receipt"), async (req, 
 
 router.delete("/expenses/:id", async (req, res, next) => {
   try {
-    const expense = await Expense.findByIdAndDelete(req.params.id);
+    const expense = await Expense.findById(req.params.id);
     if (!expense) return res.status(404).json({ message: "Expense not found" });
-    await logActivity(req, { module: "Finance", action: "Deleted", entityType: "Expense", entityId: expense._id, summary: `Deleted expense ${expense.expenseNumber}`, metadata: { totalAmount: expense.totalAmount } });
-    res.json({ message: "Expense deleted" });
+    await expense.archive(req.user._id, "Expense archived");
+    await logActivity(req, { module: "Finance", action: "Archived", entityType: "Expense", entityId: expense._id, summary: `Archived expense ${expense.expenseNumber}`, metadata: { totalAmount: expense.totalAmount } });
+    res.json({ message: "Expense archived" });
   } catch (error) { next(error); }
 });
 

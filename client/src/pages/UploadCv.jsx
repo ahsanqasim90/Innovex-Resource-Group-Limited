@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client.js";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
@@ -54,6 +55,7 @@ export default function UploadCv() {
             <label><span>Relevant experience *</span><input name="experience" required /></label>
           </div>
           <FileUpload key={uploadKey} required />
+          <label className="privacy-confirmation"><input type="checkbox" name="privacyConfirmed" required /><span>I have read the <Link to="/privacy" target="_blank">privacy notice</Link> and understand that Innovex will use my details and CV to provide recruitment services.</span></label>
           <SubmitButton loading={submitting} loadingText="Uploading CV...">Upload CV</SubmitButton>
         </form>
       </div>

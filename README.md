@@ -1,88 +1,99 @@
-# Innovex Resource Group Limited MERN Website
+# Innovex Resource Group Platform
 
-Complete MERN stack website for Innovex Resource Group Limited, based on the supplied PDF/Figma screen list and requested healthcare recruitment/admin functionality.
+A multi-tenant MERN platform combining the public Innovex website with a recruitment, sales, training, HR and finance CRM. The product is designed for UK recruitment operations, including care-sector compliance workflows.
 
-## Structure
+## Product modules
 
-- `client/` React + Vite frontend
-- `server/` Node.js + Express API
-- `server/src/models/` MongoDB models
-- `server/src/routes/` REST API routes
-- `server/uploads/` safely stored CV uploads
+- Public website: services, live vacancies, applications, CV registration, blogs, newsletters, testimonials, contact and legal/trust pages.
+- Recruitment: ATS, talent pool, candidate communications, vacancy intelligence, maker/approver publishing and advanced funnel analytics.
+- Healthcare compliance: role-aware compliance passports, DBS/right-to-work/references, nurse-specific NMC checks, expiry monitoring and quarantined evidence review.
+- CRM: Organisation 360, business/web leads, calls, mailbox activity, meetings and client terms.
+- Workflow automation: event/condition/action rules, task queues, in-app notifications, SLA reminders and run history.
+- Portals: separately authenticated candidate and client workspaces with candidate progress, interviews, compliance status, vacancy review and client decisions.
+- Platform administration: tenant branding/locale, granular permissions, MFA, session revocation, archive/retention/legal hold, audit trail, backup drills and error events.
+- SaaS controls: plan status, server-enforced seat allocation, pending-invite reservations, trial/subscription access policy and usage UI.
+- Developer platform: one-time scoped API keys, read-only API v1, signed webhooks, retry outbox and delivery log.
 
-## Features
+## Local setup
 
-- Public pages: `/`, `/about`, `/services`, `/jobs`, `/testimonials`, `/partners`, `/contact`, `/upload-cv`
-- Admin pages: `/admin/login`, `/admin/dashboard`, `/admin/jobs`, `/admin/applications`, `/admin/cv-uploads`, `/admin/testimonials`, `/admin/partners`
-- JWT admin authentication with bcrypt password hashing
-- Jobs CRUD and public job applications
-- CV upload form with multer file storage
-- Testimonial submission and admin approval
-- Partner CRUD with public active partner listing
-- Contact message API
-- SEO metadata per page, semantic sections, responsive cards/tables/forms
-
-## Setup
-
-1. Install dependencies:
+Requirements: Node.js 20+, MongoDB and npm.
 
 ```bash
 npm install
 npm run install:all
-```
-
-2. Configure the backend:
-
-```bash
-cp server/.env.example server/.env
-```
-
-Update `server/.env` with your MongoDB connection string, JWT secret, and admin credentials.
-
-3. Seed initial admin, jobs, testimonials, and partners:
-
-```bash
+copy server\.env.example server\.env
 npm run seed --prefix server
-```
-
-4. Run the full app:
-
-```bash
 npm run dev
 ```
 
-Frontend: `http://localhost:5173`
+- Frontend: `http://localhost:5173`
+- API health: `http://localhost:5000/api/health`
 
-Backend: `http://localhost:5000/api/health`
+Use a long random `JWT_SECRET` and a separate `MFA_ENCRYPTION_KEY`. Never deploy the sample credentials.
 
-## Production Notes
+## Quality checks
 
-- Use a long random `JWT_SECRET`.
-- Set `CLIENT_URL` to the deployed frontend URL.
-- Put MongoDB behind TLS and authenticated credentials.
-- Store uploaded files on durable private storage for production, or mount `server/uploads` on persistent disk.
-- Add email delivery to `contactRoutes.js` if live notifications are required.
+```bash
+npm test
+npm run build
+npm audit
+```
 
-## Yay.com Call Centre Notes
+CI runs the server tests, production frontend build and dependency audit from `.github/workflows/ci.yml`.
 
-- Set the `YAY_*` environment variables from `server/.env.example` in Vercel before using `/admin/calls`.
-- Yay API requests require `X-Auth-Reseller`, `X-Auth-User`, `X-Auth-Password`, and a `User-Agent`.
-- If Yay returns `401` on Vercel, check the Yay API password and the Yay dashboard API allowed IP ranges. Vercel serverless outbound IPs are not fixed, so a locked IP allow-list can block otherwise valid credentials.
-- Use the Call Centre "Test Yay connection" button before placing test calls so failed API auth checks do not create extra call logs.
+## Multi-tenant deployment
 
-## SEO & Deployment Checklist
+Requests resolve the workspace from `X-Workspace-Slug` or a subdomain under `BASE_DOMAIN`. Tenant-scoped Mongoose queries, aggregates and distinct operations automatically add the organisation boundary. Do not use tenant-bypass options in application routes.
 
-- Deploy frontend with SPA fallback enabled. Netlify-style `_redirects` is included in `client/public`.
-- Confirm the live domain is `https://www.innovexresourcegroup.co.uk`; if it changes, update `company.siteUrl` in `client/src/data/content.js`, `client/public/sitemap.xml`, and `client/public/robots.txt`.
-- Submit `https://www.innovexresourcegroup.co.uk/api/sitemap.xml` in Google Search Console after deployment.
-- Keep `/admin/` blocked from indexing via `robots.txt` and admin meta `noindex`.
-- Use HTTPS, enable gzip/Brotli at the host, and cache static assets using the included `_headers` file where supported.
-- Ranking is not instant: add real partner logos/content, job posts, testimonials, and local Cardiff/UK service copy over time for stronger search performance.
+Older installations may still have global unique MongoDB indexes. Review the safe migration first:
 
-## Invoice Scheduling & Sent Mail
+```bash
+npm run migrate:tenant-indexes
+```
 
-- Invoice delivery supports CC recipients, immediate sending, and future scheduling.
-- Successful invoice and reminder emails are recorded in CRM email history and appended to the selected mailbox Sent folder through IMAP.
-- Hostinger defaults are `IMAP_HOST=imap.hostinger.com`, `IMAP_PORT=993`, and `IMAP_SECURE=true`; per-mailbox overrides use `SMTP_INFO_IMAP_*` or `SMTP_MARK_IMAP_*`.
-- The existing daily finance reminder cron also processes overdue scheduled invoices as a fallback.
-- For delivery close to the selected time, call `GET /api/finance/scheduled/run` every five minutes from a scheduler and send `Authorization: Bearer <CRON_SECRET>`.
+During a backed-up maintenance window, apply the reviewed changes:
+
+```bash
+npm run migrate:tenant-indexes:apply
+```
+
+The script only removes obsolete global **unique** indexes from an explicit model allow-list, then creates the declared tenant-aware indexes. It is dry-run-only unless `--apply` is supplied.
+
+## Document security
+
+Recruitment and compliance uploads are signature checked and fail closed. Until ClamAV `clamd` is configured and returns a clean result, new documents remain quarantined and cannot be viewed or downloaded. Production deployments should use private durable object storage instead of relying on an ephemeral application filesystem.
+
+Required environment variables:
+
+```text
+CLAMAV_HOST=127.0.0.1
+CLAMAV_PORT=3310
+CLAMAV_TIMEOUT_MS=8000
+```
+
+## API and webhooks
+
+Create credentials in **Admin → API & Webhooks**. API keys are shown once and only their SHA-256 hashes are stored. Send the key in `X-API-Key` and the workspace slug in `X-Workspace-Slug`.
+
+Read endpoints:
+
+- `GET /api/v1/jobs` — `jobs:read`
+- `GET /api/v1/candidates` — `candidates:read`
+- `GET /api/v1/clients` — `clients:read`
+
+All lists support `page`, `limit` (maximum 100) and `updatedSince`. Webhooks are HMAC-SHA256 signed over `<timestamp>.<raw-body>` and include `X-Innovex-Signature`, `X-Innovex-Timestamp`, `X-Innovex-Event` and `X-Innovex-Event-Id`. The dispatcher blocks local/private destinations, does not follow redirects, times out requests and retries failed deliveries with backoff.
+
+## Operations checklist
+
+- Use HTTPS everywhere and configure exact frontend origins.
+- Run MongoDB with authentication, TLS, point-in-time backups and tested restore drills.
+- Configure ClamAV before accepting production uploads.
+- Configure SMTP/IMAP credentials using secret storage, not committed files.
+- Rotate JWT, MFA encryption, API and webhook secrets using an incident runbook.
+- Schedule application processes continuously so reminders, compliance expiry checks and webhook retries can run.
+- Run the tenant-index dry run and database backup before the first multi-tenant release.
+- Connect a regulated payment provider before taking subscription payments. Current billing UI and enforcement are provider-neutral; they do not claim to collect funds.
+
+## External integrations
+
+Yay click-to-call uses the `YAY_*` environment values. Google/Microsoft calendar sync, commercial job-board distribution and regulated e-signatures require vendor OAuth/API agreements and are intentionally not represented as live without credentials. The API/webhook layer provides the secure integration boundary for those adapters.

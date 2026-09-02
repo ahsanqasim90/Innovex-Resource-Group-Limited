@@ -33,6 +33,8 @@ const emailLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+emailLogSchema.add({ clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "ClientAccount", index: true } });
+
 emailLogSchema.index({ createdAt: -1 });
 emailLogSchema.index({ "sentBy.user": 1, createdAt: -1 });
 emailLogSchema.index({ subject: "text", message: "text", to: "text", fromEmail: "text" });

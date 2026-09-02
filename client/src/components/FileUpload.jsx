@@ -1,7 +1,7 @@
 import { UploadCloud } from "lucide-react";
 import { useState } from "react";
 
-export default function FileUpload({ name = "cv", required = false, label = "Upload CV", helper = "PDF, DOC, or DOCX up to 5MB", prompt = "Choose or drag your CV here", accept = ".pdf,.doc,.docx" }) {
+export default function FileUpload({ name = "cv", required = false, label = "Upload CV", helper = "Secure PDF or DOCX up to 5MB", prompt = "Choose or drag your CV here", accept = ".pdf,.docx" }) {
   const [fileName, setFileName] = useState("");
   const inputId = `${name}-${label.replace(/\s+/g, "-").toLowerCase()}`;
 

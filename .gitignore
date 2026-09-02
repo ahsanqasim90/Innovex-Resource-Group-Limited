@@ -9,3 +9,8 @@ server/uploads/*
 npm-debug.log*
 
 .vercel
+.env*
+.npm-cache/
+tmp/
+output/
+.push-fail

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BookOpenCheck, CircleDollarSign, Clock, FileBadge } from "lucide-react";
 import { api } from "../../api/client.js";
 import { canViewFinance } from "../../auth/permissions.js";
+import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -97,8 +98,8 @@ export default function AdminCourses() {
   }
 
   return (
-    <>
-      <div className="admin-top"><h1>Courses</h1></div>
+    <div className="workspace-pro-suite courses-admin-pro">
+      <AdminSectionHero icon={BookOpenCheck} eyebrow="Training catalogue" title="Courses" description="Build and maintain a professional healthcare training catalogue with pricing and certification details." aside={<div className="workspace-hero-count"><FileBadge size={18} /><span><small>ACTIVE COURSES</small><strong>{summary.active}</strong></span></div>} />
       <StatusMessage status={status} />
 
       <div className="training-summary-grid course-summary-grid">
@@ -173,6 +174,6 @@ export default function AdminCourses() {
           <div className="card meeting-empty"><BookOpenCheck size={32} /><strong>No courses found</strong><span>Add your first healthcare training course above.</span></div>
         )}
       </section>
-    </>
+    </div>
   );
 }

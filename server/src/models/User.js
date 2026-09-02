@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 8 },
     role: {
       type: String,
@@ -15,14 +15,27 @@ const userSchema = new mongoose.Schema(
     outboundCallerIds: [{ type: String, trim: true }],
     assignedSenderEmails: [{ type: String, trim: true, lowercase: true }],
     canCopyData: { type: Boolean, default: false },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    passwordChangedAt: Date,
+    sessionVersion: { type: Number, default: 1 },
+    mfa: {
+      enabled: { type: Boolean, default: false },
+      secret: { type: String, select: false, default: "" },
+      recoveryCodeHashes: { type: [String], select: false, default: [] },
+      enabledAt: Date
+    },
+    lastLoginAt: Date,
+    lastLoginIp: { type: String, trim: true, default: "" },
+    lastLoginUserAgent: { type: String, trim: true, default: "" }
   },
   { timestamps: true }
 );
+userSchema.index({ organization: 1, email: 1 }, { unique: true });
 
 userSchema.pre("save", async function hashPassword(next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
+  this.passwordChangedAt = new Date();
   next();
 });
 

@@ -4,14 +4,12 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { company } from "../data/content.js";
 
 const links = [
-  ["/", "Home"],
-  ["/about", "About"],
   ["/healthcare-recruitment", "Recruitment"],
-  ["/website-development", "Digital"],
-  ["/seo-services", "SEO"],
   ["/courses", "Training"],
+  ["/services", "Digital & SEO"],
   ["/jobs", "Jobs"],
   ["/blogs", "Insights"],
+  ["/about", "About"],
   ["/contact", "Contact"]
 ];
 
@@ -49,8 +47,8 @@ export default function Header() {
           <Link className="button small header-hire-button" to="/hire-staff" onClick={() => setOpen(false)}>
             Hire Staff
           </Link>
-          <Link className="admin-login-link" to="/admin/login" onClick={() => setOpen(false)}>
-            <LockKeyhole size={15} /> Admin Login
+          <Link className="admin-login-link" to="/portal/login" onClick={() => setOpen(false)}>
+            <LockKeyhole size={15} /> Portal
           </Link>
           <Link className="button small header-upload-button" to="/upload-cv" onClick={() => setOpen(false)}>
             Upload CV

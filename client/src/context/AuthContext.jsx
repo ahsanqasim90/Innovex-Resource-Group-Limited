@@ -1,17 +1,16 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { api, setToken } from "../api/client.js";
+import { api, setCsrfToken, setToken } from "../api/client.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(Boolean(localStorage.getItem("innovexToken")));
+  const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
-    if (!localStorage.getItem("innovexToken")) return;
     api("/auth/me")
-      .then((data) => setUser(data.user))
-      .catch(() => setToken(null))
+      .then((data) => { setToken(null); setUser(data.user); setCsrfToken(data.csrfToken); })
+      .catch(() => { setToken(null); setCsrfToken(null); setUser(null); })
       .finally(() => setLoadingUser(false));
   }, []);
 
@@ -21,15 +20,19 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("innovex:logout", onLogout);
   }, []);
 
-  async function login(email, password) {
-    const data = await api("/auth/login", { method: "POST", body: { email, password } });
-    setToken(data.token);
+  async function login(email, password, mfaCode = "") {
+    const data = await api("/auth/login", { method: "POST", body: { email, password, mfaCode } });
+    if (data.mfaRequired && !data.user) return data;
+    setToken(null);
+    setCsrfToken(data.csrfToken);
     setUser(data.user);
     return data;
   }
 
   function logout() {
+    api("/auth/logout", { method: "POST" }).catch(() => {});
     setToken(null);
+    setCsrfToken(null);
     setUser(null);
   }
 

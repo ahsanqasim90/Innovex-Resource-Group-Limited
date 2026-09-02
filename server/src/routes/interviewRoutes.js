@@ -339,17 +339,18 @@ router.post("/:id/follow-up", async (req, res, next) => {
 
 router.delete("/:id", async (req, res, next) => {
   try {
-    const interview = await Interview.findByIdAndDelete(req.params.id);
+    const interview = await Interview.findById(req.params.id);
     if (!interview) return res.status(404).json({ message: "Interview not found" });
+    await interview.archive(req.user._id, "Interview archived");
     await logActivity(req, {
       module: "Interviews",
-      action: "Deleted",
+      action: "Archived",
       entityType: "Interview",
       entityId: interview._id,
-      summary: `Deleted interview for ${interview.candidateName}`,
+      summary: `Archived interview for ${interview.candidateName}`,
       metadata: { jobTitle: interview.jobTitle, clientName: interview.clientName }
     });
-    res.json({ message: "Interview deleted" });
+    res.json({ message: "Interview archived" });
   } catch (error) {
     next(error);
   }

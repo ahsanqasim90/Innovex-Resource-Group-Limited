@@ -131,17 +131,18 @@ router.put("/:id", async (req, res, next) => {
 
 router.delete("/:id", async (req, res, next) => {
   try {
-    const course = await Course.findByIdAndDelete(req.params.id);
+    const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ message: "Course not found" });
+    await course.archive(req.user._id, "Course archived");
     await logActivity(req, {
       module: "Courses",
-      action: "Deleted",
+      action: "Archived",
       entityType: "Course",
       entityId: course._id,
-      summary: `Deleted course ${course.title}`,
+      summary: `Archived course ${course.title}`,
       metadata: { category: course.category }
     });
-    res.json({ message: "Course deleted" });
+    res.json({ message: "Course archived" });
   } catch (error) {
     next(error);
   }

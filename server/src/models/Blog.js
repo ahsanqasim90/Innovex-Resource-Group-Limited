@@ -14,7 +14,7 @@ const imageSchema = new mongoose.Schema(
 const blogSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
-    slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    slug: { type: String, required: true, trim: true, lowercase: true },
     category: { type: String, default: "Healthcare Recruitment", trim: true },
     excerpt: { type: String, required: true, trim: true, maxlength: 320 },
     content: { type: String, required: true },
@@ -27,6 +27,7 @@ const blogSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+blogSchema.index({ organization: 1, slug: 1 }, { unique: true });
 
 blogSchema.index({ title: "text", excerpt: "text", content: "text", category: "text" });
 blogSchema.index({ isPublished: 1, publishedAt: -1 });

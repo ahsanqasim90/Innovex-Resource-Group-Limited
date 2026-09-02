@@ -23,7 +23,7 @@ const lineItemSchema = new mongoose.Schema({
 }, { _id: true });
 
 const invoiceSchema = new mongoose.Schema({
-  invoiceNumber: { type: String, required: true, unique: true, trim: true, index: true },
+  invoiceNumber: { type: String, required: true, trim: true, index: true },
   invoiceType: { type: String, enum: ["Recruitment", "Training", "Website", "SEO", "Compliance", "Other"], default: "Recruitment" },
   issueDate: { type: Date, required: true, default: Date.now },
   dueDate: { type: Date, required: true },
@@ -75,6 +75,8 @@ const invoiceSchema = new mongoose.Schema({
   updatedBy: actorSchema
 }, { timestamps: true });
 
+invoiceSchema.add({ clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "ClientAccount", index: true } });
+
 invoiceSchema.pre("validate", function calculateTotals(next) {
   this.financialYear = financialYearFor(this.issueDate);
   this.lineItems = (this.lineItems || []).map((item) => {
@@ -113,5 +115,6 @@ invoiceSchema.index({ clientName: "text", billingEmail: "text", invoiceNumber: "
 invoiceSchema.index({ dueDate: 1, status: 1, reminderEnabled: 1 });
 invoiceSchema.index({ scheduledStatus: 1, scheduledSendAt: 1 });
 invoiceSchema.index({ issueDate: -1, financialYear: 1 });
+invoiceSchema.index({ organization: 1, invoiceNumber: 1 }, { unique: true });
 
 export default mongoose.model("Invoice", invoiceSchema);

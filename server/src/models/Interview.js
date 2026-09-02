@@ -8,6 +8,7 @@ const interviewSchema = new mongoose.Schema(
     candidateName: { type: String, required: true, trim: true },
     candidateEmail: { type: String, required: true, lowercase: true, trim: true },
     candidatePhone: { type: String, required: true, trim: true },
+    schedulingRequest: { type: mongoose.Schema.Types.ObjectId, ref: "SchedulingRequest", index: true },
     candidatePostcode: { type: String, trim: true },
     visaStatus: { type: String, trim: true },
     jobTitle: { type: String, required: true, trim: true },

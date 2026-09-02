@@ -189,10 +189,11 @@ router.post("/:id/send", async (req, res, next) => {
 
 router.delete("/:id", requirePermission("trainingQuotations.manage"), async (req, res, next) => {
   try {
-    const quotation = await TrainingQuotation.findByIdAndDelete(req.params.id);
+    const quotation = await TrainingQuotation.findById(req.params.id);
     if (!quotation) return res.status(404).json({ message: "Training quotation not found" });
-    await logActivity(req, { module: "Course Quotations", action: "Deleted", entityType: "TrainingQuotation", entityId: quotation._id, summary: `Deleted ${quotation.quotationNumber}` });
-    res.json({ message: "Training quotation deleted" });
+    await quotation.archive(req.user._id, "Training quotation archived");
+    await logActivity(req, { module: "Course Quotations", action: "Archived", entityType: "TrainingQuotation", entityId: quotation._id, summary: `Archived ${quotation.quotationNumber}` });
+    res.json({ message: "Training quotation archived" });
   } catch (error) { next(error); }
 });
 

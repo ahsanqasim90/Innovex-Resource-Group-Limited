@@ -1,15 +1,22 @@
 import express from "express";
 import Candidate from "../models/Candidate.js";
+import CandidateActivity from "../models/CandidateActivity.js";
 import EmailLog from "../models/EmailLog.js";
 import Job from "../models/Job.js";
 import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
-import { uploadCandidateCsv } from "../middleware/upload.js";
+import { uploadCandidateCsv, uploadCv } from "../middleware/upload.js";
+import { secureDocumentMeta } from "../services/documentIntelligenceService.js";
 import { sendCandidateOutreachEmail } from "../services/emailService.js";
+import { runAutomations } from "../services/automationService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
 router.use(protect, requirePermission("talentPool.view"));
+
+function activityActor(req) {
+  return { user: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role };
+}
 
 const candidateFields = [
   "name",
@@ -28,7 +35,10 @@ const candidateFields = [
   "status",
   "source",
   "tags",
-  "notes"
+  "notes",
+  "lawfulBasis",
+  "privacyNoticeSentAt",
+  "retentionReviewDate"
 ];
 
 const validCandidateStatuses = new Set([
@@ -540,7 +550,7 @@ router.get("/", async (req, res, next) => {
     if (req.query.availability) filter.availability = new RegExp(escapeRegex(req.query.availability), "i");
 
     if (radiusOrigin) {
-      const candidates = await Candidate.find(filter).select("-outreachHistory.message").sort({ updatedAt: -1 }).limit(5000).lean();
+      const candidates = await Candidate.find(filter).select("-outreachHistory.message -cv.data").sort({ updatedAt: -1 }).limit(5000).lean();
       const scored = candidates
         .map((candidate) => {
           const exactDistance = haversineMiles(radiusOrigin.latitude, radiusOrigin.longitude, candidate.latitude, candidate.longitude);
@@ -570,7 +580,7 @@ router.get("/", async (req, res, next) => {
     }
 
     const [items, total] = await Promise.all([
-      Candidate.find(filter).select("-outreachHistory.message").sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
+      Candidate.find(filter).select("-outreachHistory.message -cv.data").sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
       Candidate.countDocuments(filter)
     ]);
 
@@ -685,7 +695,7 @@ router.get("/match", async (req, res, next) => {
     if (!filter.$or.length) delete filter.$or;
 
     const candidates = await Candidate.find(filter)
-      .select("-outreachHistory.message")
+      .select("-outreachHistory.message -cv.data")
       .sort({ updatedAt: -1 })
       .limit(500)
       .lean();
@@ -715,20 +725,39 @@ router.get("/match", async (req, res, next) => {
   }
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/", uploadCv.single("cv"), async (req, res, next) => {
   try {
     requireFields(req.body, ["name"]);
-    const candidate = await Candidate.create(sanitizeCandidate(req.body));
-    res.status(201).json(candidate);
+    const payload = sanitizeCandidate(req.body);
+    if (req.file) {
+      payload.cv = await secureDocumentMeta(req.file, req.user);
+    }
+    const candidate = await Candidate.create(payload);
+    await runAutomations({ entityType: "Candidate", event: "created", record: candidate.toObject(), actor: req.user }).catch(() => null);
+    const result = candidate.toObject();
+    if (result.cv) {
+      delete result.cv.data;
+      delete result.cv.extractedText;
+    }
+    res.status(201).json(result);
   } catch (error) {
     next(error);
   }
 });
 
-router.put("/:id", async (req, res, next) => {
+router.put("/:id", uploadCv.single("cv"), async (req, res, next) => {
   try {
-    const candidate = await Candidate.findByIdAndUpdate(req.params.id, sanitizeCandidate(req.body), { new: true, runValidators: true });
-    if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+    const before = await Candidate.findById(req.params.id).select("status name").lean();
+    if (!before) return res.status(404).json({ message: "Candidate not found" });
+    const payload = sanitizeCandidate(req.body);
+    if (req.file) {
+      payload.cv = await secureDocumentMeta(req.file, req.user);
+    }
+    const candidate = await Candidate.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true }).select("-cv.data");
+    if (payload.status && before.status !== candidate.status) {
+      await CandidateActivity.create({ candidate: candidate._id, type: "Status change", channel: "CRM", summary: `Status changed from ${before.status} to ${candidate.status}`, details: `Candidate profile updated by ${req.user.name}.`, createdBy: activityActor(req) });
+      await runAutomations({ entityType: "Candidate", event: "status_changed", record: candidate.toObject(), actor: req.user, changes: { status: { from: before.status, to: candidate.status } } }).catch(() => null);
+    }
     res.json(candidate);
   } catch (error) {
     next(error);
@@ -737,12 +766,24 @@ router.put("/:id", async (req, res, next) => {
 
 router.delete("/:id", async (req, res, next) => {
   try {
-    const candidate = await Candidate.findByIdAndDelete(req.params.id);
+    const candidate = await Candidate.findById(req.params.id);
     if (!candidate) return res.status(404).json({ message: "Candidate not found" });
-    res.json({ message: "Candidate deleted" });
+    await candidate.archive(req.user._id, String(req.body?.reason || "Candidate archived"));
+    await CandidateActivity.create({ candidate: candidate._id, type: "Status change", channel: "CRM", summary: "Candidate archived", details: candidate.archiveReason, createdBy: activityActor(req) });
+    res.json({ message: "Candidate archived" });
   } catch (error) {
     next(error);
   }
+});
+
+router.post("/:id/restore", async (req, res, next) => {
+  try {
+    const candidate = await Candidate.findOne({ _id: req.params.id }).setOptions({ withArchived: true });
+    if (!candidate) return res.status(404).json({ message: "Archived candidate not found" });
+    await candidate.restore();
+    await CandidateActivity.create({ candidate: candidate._id, type: "Status change", channel: "CRM", summary: "Candidate restored", details: `Restored by ${req.user.name}.`, createdBy: activityActor(req) });
+    res.json(candidate);
+  } catch (error) { next(error); }
 });
 
 router.post("/import", uploadCandidateCsv.single("file"), async (req, res, next) => {
@@ -830,7 +871,7 @@ router.post("/outreach", async (req, res, next) => {
     }
 
     const job = req.body.jobId ? await Job.findById(req.body.jobId).lean() : null;
-    const candidates = await Candidate.find({ _id: { $in: candidateIds }, email: { $ne: "" }, status: { $ne: "Do Not Contact" } });
+    const candidates = await Candidate.find({ _id: { $in: candidateIds }, email: { $ne: "" }, status: { $ne: "Do Not Contact" } }).select("-cv.data");
     let sent = 0;
     let archived = 0;
     const failed = [];
@@ -866,6 +907,7 @@ router.post("/outreach", async (req, res, next) => {
         });
         candidate.status = candidate.status === "Available" ? "Contacted" : candidate.status;
         candidate.lastContactedAt = new Date();
+        candidate.lastCommunicationAt = candidate.lastContactedAt;
         candidate.outreachHistory.unshift({
           job: job?._id,
           jobTitle: job?.title || req.body.jobTitle,
@@ -900,7 +942,11 @@ router.patch("/bulk-status", async (req, res, next) => {
     const update = { status: req.body.status };
     if (req.body.status === "Contacted") update.lastContactedAt = new Date();
 
+    const changedCandidates = await Candidate.find({ _id: { $in: candidateIds }, status: { $ne: req.body.status } }).select("_id status").lean();
     const result = await Candidate.updateMany({ _id: { $in: candidateIds } }, { $set: update });
+    if (changedCandidates.length) {
+      await CandidateActivity.insertMany(changedCandidates.map((candidate) => ({ candidate: candidate._id, type: "Status change", channel: "CRM", summary: `Status changed from ${candidate.status} to ${req.body.status}`, details: "Bulk status update from Talent Pool.", createdBy: activityActor(req) })), { ordered: false });
+    }
     const updated = result.modifiedCount || result.matchedCount || 0;
     res.json({ updated, message: `Updated ${updated} candidate${updated === 1 ? "" : "s"}.` });
   } catch (error) {
@@ -910,7 +956,7 @@ router.patch("/bulk-status", async (req, res, next) => {
 
 router.get("/:id", async (req, res, next) => {
   try {
-    const candidate = await Candidate.findById(req.params.id).lean();
+    const candidate = await Candidate.findById(req.params.id).select("-cv.data").lean();
     if (!candidate) return res.status(404).json({ message: "Candidate not found" });
     res.json(candidate);
   } catch (error) {

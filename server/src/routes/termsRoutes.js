@@ -374,15 +374,15 @@ router.delete("/:id", canManageTerms, async (req, res, next) => {
     if (terms.status !== "Draft") {
       return res.status(400).json({ message: "Only draft terms can be deleted. Cancel sent/signed terms instead." });
     }
-    await terms.deleteOne();
+    await terms.archive(req.user._id, "Draft client terms archived");
     await logActivity(req, {
       module: "Client Terms",
-      action: "Deleted",
+      action: "Archived",
       entityType: "ClientTerms",
       entityId: terms._id,
-      summary: `Deleted draft client terms ${terms.documentNumber}`
+      summary: `Archived draft client terms ${terms.documentNumber}`
     });
-    res.json({ message: "Client terms deleted" });
+    res.json({ message: "Client terms archived" });
   } catch (error) {
     next(error);
   }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Mail, Phone, Users } from "lucide-react";
 import { api } from "../../api/client.js";
+import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
 
@@ -117,7 +118,7 @@ export default function AdminMeetings() {
 
   return (
     <>
-      <div className="admin-top"><h1>Meetings</h1></div>
+      <AdminSectionHero icon={CalendarClock} eyebrow="Relationship management" title="Meetings" description="Schedule client conversations, prevent diary conflicts and keep follow-up details together." aside={<div className="workspace-hero-count"><Users size={18} /><span><small>UPCOMING</small><strong>{summary.upcoming}</strong></span></div>} />
       <StatusMessage status={status} />
       <div className="interview-summary-grid">
         <div className="interview-summary-card"><span>Total meetings</span><strong>{summary.total}</strong></div>

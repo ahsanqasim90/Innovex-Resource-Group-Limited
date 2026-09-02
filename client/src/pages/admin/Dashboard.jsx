@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   BriefcaseBusiness,
   CalendarClock,
+  CalendarPlus,
   GraduationCap,
-  LayoutDashboard,
+  Inbox,
   LineChart,
-  Search,
+  Plus,
   ShieldCheck,
   TrendingUp,
   UserCheck,
+  UserRoundSearch,
   UsersRound
 } from "lucide-react";
 import { api } from "../../api/client.js";
@@ -21,8 +23,27 @@ function money(value) {
   return `\u00a3${Number(value || 0).toLocaleString()}`;
 }
 
+function compactMoney(value) {
+  const amount = Number(value || 0);
+  const absolute = Math.abs(amount);
+  const format = (divisor, suffix) => {
+    const compact = (absolute / divisor).toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+    return `${amount < 0 ? "-" : ""}\u00a3${compact}${suffix}`;
+  };
+  if (absolute >= 1_000_000) return format(1_000_000, "m");
+  if (absolute >= 1_000) return format(1_000, "k");
+  return money(amount);
+}
+
 function dateLabel(value) {
   return value ? new Date(value).toLocaleDateString("en-GB") : "-";
+}
+
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 function DashboardSection({ title, subtitle, children }) {
@@ -45,14 +66,13 @@ export default function Dashboard() {
   const { user } = useAuth();
   const showFinance = canViewFinance(user);
   const [data, setData] = useState({ stats: {}, recentApplications: [], recentInterviews: [], recentMeetings: [], trainingReminders: [], recentTrainingBookings: [], recentActivityLogs: [] });
-  const [sectionSearch, setSectionSearch] = useState("");
   useEffect(() => {
     api("/dashboard/stats").then(setData).catch(() => {});
   }, []);
   const stats = data.stats || {};
   const heroMetrics = showFinance ? [
-    ["Total revenue", money(stats.totalRevenue), LineChart],
-    ["Training profit", money(stats.totalTrainingProfit), TrendingUp],
+    ["Total revenue", compactMoney(stats.totalRevenue), LineChart, money(stats.totalRevenue)],
+    ["Training profit", compactMoney(stats.totalTrainingProfit), TrendingUp, money(stats.totalTrainingProfit)],
     ["Live jobs", stats.activeJobs ?? 0, BriefcaseBusiness]
   ] : [
     ["Live jobs", stats.activeJobs ?? 0, BriefcaseBusiness],
@@ -112,75 +132,35 @@ export default function Dashboard() {
       ]
     }
   ];
-  const adminSections = useMemo(() => {
-    const sections = [
-      ["Dashboard", "/admin/dashboard", "overview stats operations", "dashboard.view"],
-      ["Attendance", "/admin/attendance", "employee attendance check in daily cv report productivity", "attendance.view"],
-      ["Jobs", "/admin/jobs", "vacancies roles job adverts", "jobs.view"],
-      ["Applications", "/admin/applications", "job applications applicants", "applications.view"],
-      ["CV Uploads", "/admin/cv-uploads", "candidate cvs documents", "cvs.view"],
-      ["Talent Pool", "/admin/talent-pool", "candidates search sourcing outreach", "talentPool.view"],
-      ["Business Leads", "/admin/business-leads", "care homes clients prospects", "businessLeads.view"],
-      ["Email Centre", "/admin/emails", "email compose bulk campaigns", "emails.view"],
-      ["Client Terms", "/admin/client-terms", "terms commercial schedule rates", "terms.view"],
-      ["Call Centre", "/admin/calls", "calls dialler phone outreach", "calls.view"],
-      ["Interviews", "/admin/interviews", "candidate interviews placements", "interviews.view"],
-      ["Meetings", "/admin/meetings", "appointments meetings reminders", "meetings.view"],
-      ["Courses", "/admin/courses", "training courses library", "courses.view"],
-      ["Training Bookings", "/admin/training-bookings", "training bookings quotes sessions", "trainingBookings.view"],
-      ["Course Quotations", "/admin/training-quotations", "training quotation proposal pdf email price", "trainingQuotations.view"],
-      ["Finance Centre", "/admin/finance", "invoices expenses ledger payments", null],
-      ["Blogs", "/admin/blogs", "website content seo articles", "blogs.view"],
-      ["Testimonials", "/admin/testimonials", "reviews feedback approvals", "testimonials.view"],
-      ["Partners", "/admin/partners", "partner logos clients", "partners.view"]
-    ];
-    const query = sectionSearch.trim().toLowerCase();
-    return sections
-      .filter(([, path, , permission]) => (path === "/admin/finance" ? showFinance : hasPermission(user, permission)))
-      .filter(([label, , keywords]) => !query || `${label} ${keywords}`.toLowerCase().includes(query))
-      .slice(0, query ? 8 : 5);
-  }, [sectionSearch, showFinance, user]);
+  const quickActions = [
+    ["Submit candidate", "Send a profile to review", "/admin/recruitment-ats", Plus, "recruitmentPipeline.submit"],
+    ["Create vacancy", "Publish a new role", "/admin/jobs", BriefcaseBusiness, "jobs.view"],
+    ["Search talent", "Explore your candidate pool", "/admin/talent-pool", UserRoundSearch, "talentPool.view"],
+    ["Plan interview", "Create an interview record", "/admin/interviews", CalendarPlus, "interviews.view"],
+    ["Review enquiries", "Respond to new website leads", "/admin/website-enquiries", Inbox, "contacts.view"]
+  ].filter(([, , , , permission]) => hasPermission(user, permission));
   return (
     <>
-      <section className="dashboard-hero">
-        <div className="dashboard-hero-brand">
-          <div className="dashboard-logo-panel">
-            <img src="/Logo.png" alt="Innovex Resource Group Limited logo" />
-          </div>
-          <div>
-            <span className="eyebrow">Innovex Resource Group Limited</span>
-            <h1><LayoutDashboard size={30} /> Operations Dashboard</h1>
-            <p>{showFinance ? "Track recruitment, interviews, meetings, training revenue and client activity from one professional admin workspace." : "Track recruitment, interviews, meetings, training and client activity from one professional admin workspace."}</p>
-          </div>
+      <section className="dashboard-hero dashboard-hero-v2">
+        <div className="dashboard-welcome-copy">
+          <span className="dashboard-live-label"><i /> Your workspace is up to date</span>
+          <h1>{greeting()}, {user?.name?.split(" ")?.[0] || "there"}.</h1>
+          <p>Here is what needs your attention across recruitment and operations today.</p>
         </div>
         <div className="dashboard-hero-metrics">
-          {heroMetrics.map(([label, value, Icon]) => (
+          {heroMetrics.map(([label, value, Icon, fullValue]) => (
             <article className="dashboard-hero-metric" key={label}>
               <Icon size={20} />
               <span>{label}</span>
-              <strong>{value}</strong>
+              <strong title={fullValue || undefined}>{value}</strong>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="dashboard-section-search" aria-label="Admin section search">
-        <div className="dashboard-section-search-box">
-          <Search size={19} />
-          <input
-            value={sectionSearch}
-            onChange={(event) => setSectionSearch(event.target.value)}
-            placeholder="Search CRM section, e.g. invoices, candidates, calls..."
-          />
-        </div>
-        <div className="dashboard-search-results">
-          {adminSections.map(([label, path]) => (
-            <button type="button" key={path} className="dashboard-search-card" onClick={() => navigate(path)}>
-              <span>{label}</span>
-              <ArrowRight size={16} />
-            </button>
-          ))}
-        </div>
+      <section className="dashboard-quick-actions" aria-label="Quick actions">
+        <header><div><span>Quick actions</span><h2>Start something</h2></div><p>Common tasks, one click away.</p></header>
+        <div>{quickActions.map(([label, description, path, Icon]) => <button type="button" key={path} onClick={() => navigate(path)}><span><Icon size={18} /></span><span><strong>{label}</strong><small>{description}</small></span><ArrowRight size={16} /></button>)}</div>
       </section>
 
       <section className="dashboard-kpi-grid">

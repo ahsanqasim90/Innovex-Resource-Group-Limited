@@ -26,7 +26,7 @@ const lineItemSchema = new mongoose.Schema(
 
 const trainingQuotationSchema = new mongoose.Schema(
   {
-    quotationNumber: { type: String, required: true, unique: true, trim: true, index: true },
+    quotationNumber: { type: String, required: true, trim: true, index: true },
     status: { type: String, enum: ["Draft", "Sent", "Accepted", "Declined", "Expired"], default: "Draft", index: true },
     issueDate: { type: Date, required: true, default: Date.now, index: true },
     validDays: { type: Number, default: 14, min: 1, max: 365 },
@@ -87,5 +87,6 @@ trainingQuotationSchema.pre("validate", function calculateTotals(next) {
 
 trainingQuotationSchema.index({ clientName: "text", contactName: "text", clientEmail: "text", quotationNumber: "text" });
 trainingQuotationSchema.index({ status: 1, issueDate: -1 });
+trainingQuotationSchema.index({ organization: 1, quotationNumber: 1 }, { unique: true });
 
 export default mongoose.model("TrainingQuotation", trainingQuotationSchema);

@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed": "node src/seed.js"
+    "test": "node --test",
+    "seed": "node src/seed.js",
+    "migrate:tenant-indexes": "node src/scripts/migrateTenantIndexes.js",
+    "migrate:tenant-indexes:apply": "node src/scripts/migrateTenantIndexes.js --apply"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -18,6 +21,7 @@
     "helmet": "^8.0.0",
     "imapflow": "^1.4.3",
     "jsonwebtoken": "^9.0.2",
+    "mailparser": "^3.9.17",
     "mongoose": "^8.9.2",
     "morgan": "^1.10.0",
     "multer": "^2.2.0",
@@ -27,5 +31,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }

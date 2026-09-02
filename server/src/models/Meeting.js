@@ -19,6 +19,8 @@ const meetingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+meetingSchema.add({ clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "ClientAccount", index: true } });
+
 meetingSchema.index({ attendeeName: "text", companyName: "text", meetingTitle: "text", meetingPurpose: "text" });
 meetingSchema.index({ meetingDate: 1, meetingTime: 1, meetingStatus: 1 });
 meetingSchema.index({ attendeeName: 1, meetingDate: 1, meetingTime: 1 });

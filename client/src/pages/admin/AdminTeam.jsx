@@ -129,7 +129,7 @@ export default function AdminTeam() {
   }
 
   return (
-    <>
+    <div className="workspace-pro-suite team-admin-pro">
       <section className="team-hero talent-hero talent-crm-hero">
         <div className="talent-hero-copy">
           <span className="eyebrow">Access control</span>
@@ -147,6 +147,13 @@ export default function AdminTeam() {
           <strong>Least-access CRM</strong>
           <p>Employees only see the sections assigned by the owner. Backend APIs also check permissions.</p>
         </div>
+      </section>
+
+      <section className="team-access-summary">
+        <article><span><UsersRound size={18} /></span><div><small>Total accounts</small><strong>{users.length}</strong></div></article>
+        <article><span><ShieldCheck size={18} /></span><div><small>Active team</small><strong>{users.filter((member) => member.isActive).length}</strong></div></article>
+        <article><span><LockKeyhole size={18} /></span><div><small>Copy restricted</small><strong>{users.filter((member) => !member.canCopyData).length}</strong></div></article>
+        <article><span><UserCog size={18} /></span><div><small>Role profiles</small><strong>{new Set(users.map((member) => member.role)).size}</strong></div></article>
       </section>
 
       <StatusMessage status={status} />
@@ -263,6 +270,6 @@ export default function AdminTeam() {
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 }

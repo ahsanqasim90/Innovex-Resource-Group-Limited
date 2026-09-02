@@ -76,6 +76,7 @@ async function resolveTarget(body) {
 async function markTargetContacted(target) {
   if (!target?.record) return;
   target.record.lastContactedAt = new Date();
+  if (target.targetType === "Candidate") target.record.lastCommunicationAt = target.record.lastContactedAt;
   if (target.targetType === "Candidate" && target.record.status === "Available") target.record.status = "Contacted";
   if (target.targetType === "BusinessLead" && target.record.status === "New") target.record.status = "Contacted";
   await target.record.save();
@@ -227,16 +228,17 @@ router.patch("/:id", async (req, res, next) => {
 
 router.delete("/:id", async (req, res, next) => {
   try {
-    const call = await CallLog.findByIdAndDelete(req.params.id);
+    const call = await CallLog.findById(req.params.id);
     if (!call) return res.status(404).json({ message: "Call log not found" });
+    await call.archive(req.user._id, "Call log archived");
     await logActivity(req, {
       module: "Calls",
-      action: "delete",
+      action: "archive",
       entityType: "CallLog",
       entityId: call._id,
-      summary: `${req.user.name} deleted a call log for ${call.targetName}`
+      summary: `${req.user.name} archived a call log for ${call.targetName}`
     });
-    res.json({ message: "Call log deleted" });
+    res.json({ message: "Call log archived" });
   } catch (error) {
     next(error);
   }

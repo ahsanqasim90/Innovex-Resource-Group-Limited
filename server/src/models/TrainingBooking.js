@@ -54,6 +54,8 @@ const trainingBookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+trainingBookingSchema.add({ clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "ClientAccount", index: true } });
+
 trainingBookingSchema.pre("validate", function calculateProfit(next) {
   const quoted = Number(this.quotedPrice || 0);
   const trainerCost = Number(this.actualTrainerCost || 0);

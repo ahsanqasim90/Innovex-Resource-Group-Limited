@@ -3,6 +3,7 @@ import Chatbot from "../components/Chatbot.jsx";
 import Footer from "../components/Footer.jsx";
 import Header from "../components/Header.jsx";
 import SiteIntegrations from "../components/SiteIntegrations.jsx";
+import CookieConsent from "../components/CookieConsent.jsx";
 
 export default function AppLayout() {
   return (
@@ -15,6 +16,7 @@ export default function AppLayout() {
       </main>
       <Footer />
       <Chatbot />
+      <CookieConsent />
     </>
   );
 }

@@ -24,8 +24,18 @@ export default function Footer() {
           <Link to="/hire-staff">Hire staff / request candidates</Link>
           <Link to="/website-development">Website development</Link>
           <Link to="/seo-services">SEO services</Link>
+          <Link to="/crm-systems">CRM systems</Link>
           <Link to="/courses">Courses & training</Link>
           <Link to="/blogs">Insights & blog</Link>
+          <Link to="/newsletters">Newsletter</Link>
+          <Link to="/privacy">Privacy notice</Link>
+          <Link to="/security">Security</Link>
+          <Link to="/terms">Terms</Link>
+          <Link to="/dpa">DPA</Link>
+          <Link to="/subprocessors">Subprocessors</Link>
+          <Link to="/status">Status</Link>
+          <Link to="/support">Support</Link>
+          <Link to="/pricing">CRM pricing</Link>
           <Link to="/testimonials">Testimonials</Link>
           <Link to="/partners">Partners</Link>
           <Link to="/admin/login">Admin login</Link>
@@ -41,7 +51,7 @@ export default function Footer() {
       </div>
       <div className="footer-bottom">
         <span>{`Copyright \u00a9 ${year} ${company.name}. All rights reserved.`}</span>
-        <span>Designed and developed by {company.name}.</span>
+        <span>Registered in {company.registeredIn} · Company no. {company.companyNumber} · Registered office: {contact.address}</span>
       </div>
     </footer>
   );

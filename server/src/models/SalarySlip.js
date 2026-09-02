@@ -14,7 +14,7 @@ const moneyField = { type: Number, default: 0, min: 0 };
 
 const salarySlipSchema = new mongoose.Schema(
   {
-    slipNumber: { type: String, required: true, unique: true, index: true },
+    slipNumber: { type: String, required: true, index: true },
     employeeName: { type: String, required: true, trim: true, index: true },
     employeeEmail: { type: String, required: true, trim: true, lowercase: true, index: true },
     employeePhone: { type: String, trim: true },
@@ -79,5 +79,6 @@ salarySlipSchema.pre("validate", function calculateSalarySlipTotals(next) {
 
 salarySlipSchema.index({ employeeName: "text", employeeEmail: "text", jobTitle: "text", department: "text", slipNumber: "text" });
 salarySlipSchema.index({ createdAt: -1 });
+salarySlipSchema.index({ organization: 1, slipNumber: 1 }, { unique: true });
 
 export default mongoose.model("SalarySlip", salarySlipSchema);

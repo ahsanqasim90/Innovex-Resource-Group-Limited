@@ -2,7 +2,6 @@ import multer from "multer";
 
 const allowedCvMimeTypes = new Set([
   "application/pdf",
-  "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 ]);
 
@@ -14,6 +13,7 @@ const allowedCsvMimeTypes = new Set([
   "text/plain"
 ]);
 const allowedReceiptMimeTypes = new Set([...allowedImageMimeTypes, "application/pdf"]);
+const allowedComplianceMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 
 function safeFilename(originalName) {
   return `${Date.now()}-${originalName.replace(/[^a-z0-9.\-_]/gi, "-").toLowerCase()}`;
@@ -29,7 +29,7 @@ export const uploadCv = multer({
       cb(null, true);
       return;
     }
-    cb(new Error("CV must be a PDF, DOC, or DOCX file"));
+    cb(new Error("CV must be a genuine PDF or DOCX file"));
   }
 });
 
@@ -92,6 +92,15 @@ export const uploadExpenseReceipt = multer({
       return;
     }
     cb(new Error("Receipt must be a PDF, JPG, PNG, WEBP, or SVG file"));
+  }
+});
+
+export const uploadComplianceDocument = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (allowedComplianceMimeTypes.has(file.mimetype)) return cb(null, true);
+    cb(new Error("Compliance evidence must be a genuine PDF, JPG, PNG or WEBP file"));
   }
 });
 

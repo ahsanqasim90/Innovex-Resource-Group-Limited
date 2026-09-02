@@ -78,9 +78,10 @@ router.put("/:id", protect, requirePermission("partners.view"), uploadPartnerLog
 
 router.delete("/:id", protect, requirePermission("partners.view"), async (req, res, next) => {
   try {
-    const partner = await Partner.findByIdAndDelete(req.params.id);
+    const partner = await Partner.findById(req.params.id);
     if (!partner) return res.status(404).json({ message: "Partner not found" });
-    res.json({ message: "Partner deleted" });
+    await partner.archive(req.user._id, "Partner archived");
+    res.json({ message: "Partner archived" });
   } catch (error) {
     next(error);
   }

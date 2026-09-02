@@ -1,4 +1,6 @@
 import { runMeetingReminders } from "./meetingReminderService.js";
+import { forEachActiveOrganization } from "../tenancy/tenantJobs.js";
+import SystemEvent from "../models/SystemEvent.js";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -16,8 +18,12 @@ export function startMeetingReminderScheduler() {
   const runHour = Number(process.env.MEETING_REMINDER_HOUR || process.env.INTERVIEW_REMINDER_HOUR || 8);
   const run = async () => {
     try {
-      const result = await runMeetingReminders();
-      console.log(`Meeting reminders checked: ${result.count}`);
+      const results = await forEachActiveOrganization(async (organization) => {
+        const result = await runMeetingReminders();
+        await SystemEvent.create({ type: "Queue", severity: "Info", status: "Resolved", title: "Meeting reminder run completed", message: `${result.count} meetings checked for ${organization.name}`, lastSeenAt: new Date(), resolvedAt: new Date(), metadata: { count: result.count } });
+        return result;
+      });
+      console.log(`Meeting reminders completed for ${results.length} workspaces`);
     } catch (error) {
       console.error("Meeting reminder check failed", error);
     }

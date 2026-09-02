@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CheckCircle2,
   Database,
@@ -7,12 +8,14 @@ import {
   Mail,
   MapPin,
   MessageSquareText,
+  Pencil,
   PhoneCall,
   Search,
   Send,
   ShieldCheck,
   Sparkles,
   Target,
+  Trash2,
   UploadCloud,
   UserCheck,
   UserPlus,
@@ -37,7 +40,10 @@ const emptyCandidate = {
   status: "Available",
   source: "Talent Pool",
   tags: "",
-  notes: ""
+  notes: "",
+  lawfulBasis: "Not recorded",
+  privacyNoticeSentAt: "",
+  retentionReviewDate: ""
 };
 
 const emptyFilters = { search: "", role: "", postcode: "", radiusMiles: "", status: "", visaStatus: "", availability: "" };
@@ -127,11 +133,13 @@ function fromCandidate(candidate) {
 }
 
 export default function AdminTalentPool() {
+  const navigate = useNavigate();
   const [candidates, setCandidates] = useState([]);
   const [stats, setStats] = useState({});
   const [jobs, setJobs] = useState([]);
   const [filters, setFilters] = useState(emptyFilters);
   const [form, setForm] = useState(emptyCandidate);
+  const [candidateCv, setCandidateCv] = useState(null);
   const [editing, setEditing] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 25, radiusMeta: null });
@@ -253,12 +261,20 @@ export default function AdminTalentPool() {
     event.preventDefault();
     setSaving(true);
     try {
+      const body = new FormData();
+      const payload = toCandidatePayload(form);
+      Object.entries(payload).forEach(([key, value]) => {
+        if (Array.isArray(value)) body.append(key, value.join(", "));
+        else if (value !== undefined && value !== null) body.append(key, value);
+      });
+      if (candidateCv) body.append("cv", candidateCv);
       await api(editing ? `/candidates/${editing}` : "/candidates", {
         method: editing ? "PUT" : "POST",
-        body: toCandidatePayload(form)
+        body
       });
-      setStatus({ message: editing ? "Candidate updated." : "Candidate added to talent pool." });
+      setStatus({ message: `${editing ? "Candidate updated" : "Candidate added to talent pool"}${candidateCv ? " with CV" : ""}.` });
       setForm(emptyCandidate);
+      setCandidateCv(null);
       setEditing(null);
       await load(1);
       loadStats();
@@ -478,7 +494,7 @@ export default function AdminTalentPool() {
   ];
 
   return (
-    <>
+    <div className="talent-pool-page">
       <section className="talent-hero talent-crm-hero">
         <div className="talent-hero-copy">
           <span className="eyebrow">Recruitment CRM</span>
@@ -583,11 +599,25 @@ export default function AdminTalentPool() {
             </select>
             <input placeholder="Tags, comma separated" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
             <input placeholder="Source" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} />
+            <select value={form.lawfulBasis} onChange={(e) => setForm({ ...form, lawfulBasis: e.target.value })} aria-label="Candidate data lawful basis">
+              <option>Not recorded</option><option>Consent</option><option>Legitimate interests</option><option>Contract</option><option>Legal obligation</option>
+            </select>
+            <label className="talent-compliance-date"><span>Privacy notice sent</span><input type="date" value={form.privacyNoticeSentAt ? String(form.privacyNoticeSentAt).slice(0, 10) : ""} onChange={(e) => setForm({ ...form, privacyNoticeSentAt: e.target.value })} /></label>
+            <label className="talent-compliance-date"><span>Retention review</span><input type="date" value={form.retentionReviewDate ? String(form.retentionReviewDate).slice(0, 10) : ""} onChange={(e) => setForm({ ...form, retentionReviewDate: e.target.value })} /></label>
           </div>
           <textarea placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <label className={`talent-cv-upload${candidateCv ? " has-file" : ""}`}>
+            <input key={`${editing || "new"}-${candidateCv ? candidateCv.name : "empty"}`} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setCandidateCv(event.target.files?.[0] || null)} />
+            <span className="talent-cv-upload-icon"><FileUp size={21} /></span>
+            <span className="talent-cv-upload-copy">
+              <strong>{candidateCv ? candidateCv.name : "Attach candidate CV"}</strong>
+              <small>{candidateCv ? "File selected and ready to upload" : editing && candidates.find((candidate) => candidate._id === editing)?.cv?.originalName ? `Current: ${candidates.find((candidate) => candidate._id === editing).cv.originalName}` : "Optional · secure PDF or DOCX · maximum 5 MB"}</small>
+            </span>
+            <span className="talent-cv-upload-action">{candidateCv || editing && candidates.find((candidate) => candidate._id === editing)?.cv?.originalName ? "Replace file" : "Choose file"}</span>
+          </label>
           <div className="actions">
             <SubmitButton loading={saving} loadingText="Saving candidate...">{editing ? "Update Candidate" : "Add Candidate"}</SubmitButton>
-            {editing && <button className="button secondary" type="button" onClick={() => { setEditing(null); setForm(emptyCandidate); }}>Cancel</button>}
+            {editing && <button className="button secondary" type="button" onClick={() => { setEditing(null); setForm(emptyCandidate); setCandidateCv(null); }}>Cancel</button>}
           </div>
         </form>
 
@@ -735,7 +765,7 @@ export default function AdminTalentPool() {
           </div>
           <strong>{Number(pagination.total || 0).toLocaleString()} records</strong>
         </div>
-        <form className="form-grid" onSubmit={applyFilters}>
+        <form className="form-grid talent-filter-form" onSubmit={applyFilters}>
           <label className="filter-field">
             <span>Search</span>
             <div className="input-with-icon"><Search size={18} /><input placeholder="Name, email, phone, keywords" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} /></div>
@@ -830,12 +860,14 @@ export default function AdminTalentPool() {
               </div>
             </div>
           )}
-          <button className="button">
-            {selectedPostcodeRoles.length
-              ? `Show ${selectedPostcodeRoles.length} selected role${selectedPostcodeRoles.length === 1 ? "" : "s"}`
-              : "Apply Filters"}
-          </button>
-          <button className="button secondary" type="button" onClick={resetFilters}>Reset</button>
+          <div className="talent-filter-actions">
+            <button className="button">
+              {selectedPostcodeRoles.length
+                ? `Show ${selectedPostcodeRoles.length} selected role${selectedPostcodeRoles.length === 1 ? "" : "s"}`
+                : "Apply Filters"}
+            </button>
+            <button className="button secondary" type="button" onClick={resetFilters}>Reset filters</button>
+          </div>
         </form>
       </section>
 
@@ -856,6 +888,15 @@ export default function AdminTalentPool() {
 
       <div className="table-wrap talent-table">
         <table>
+          <colgroup>
+            <col className="talent-col-select" />
+            <col className="talent-col-candidate" />
+            <col className="talent-col-role" />
+            <col className="talent-col-availability" />
+            <col className="talent-col-status" />
+            <col className="talent-col-contact" />
+            <col className="talent-col-actions" />
+          </colgroup>
           <thead>
             <tr>
               <th>Select</th>
@@ -872,12 +913,13 @@ export default function AdminTalentPool() {
               <tr><td colSpan="7">Loading candidates...</td></tr>
             ) : candidates.length ? candidates.map((candidate) => (
               <tr key={candidate._id}>
-                <td><input type="checkbox" checked={selectedIds.includes(candidate._id)} onChange={() => toggleSelected(candidate._id)} /></td>
+                <td><input type="checkbox" aria-label={`Select ${candidate.name}`} checked={selectedIds.includes(candidate._id)} onChange={() => toggleSelected(candidate._id)} /></td>
                 <td>
                   <div className="candidate-cell">
                     <span className="candidate-avatar">{String(candidate.name || "?").slice(0, 1).toUpperCase()}</span>
                     <div>
                       <strong>{candidate.name}</strong>
+                      <span className="candidate-record-id">IRG-{String(candidate._id).slice(-8).toUpperCase()} {candidate.cv?.originalName ? "· CV attached" : "· No CV"}</span>
                       <span className="muted">{candidate.email || "No email"} &middot; {candidate.phone || "No phone"}</span>
                     </div>
                   </div>
@@ -886,10 +928,13 @@ export default function AdminTalentPool() {
                 <td>{candidate.visaStatus || "-"}<br /><span className="muted">{candidate.availability || candidate.shiftPreference || "-"}</span></td>
                 <td><span className="status-chip table-chip">{candidate.status}</span></td>
                 <td>{formatDate(candidate.lastContactedAt)}</td>
-                <td className="actions compact-actions">
-                  <button className="button small call-action-button" onClick={() => startCandidateCall(candidate)} disabled={!candidate.phone}><PhoneCall size={14} /> Call</button>
-                  <button className="button small" onClick={() => { setEditing(candidate._id); setForm(fromCandidate(candidate)); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</button>
-                  <button className="button secondary small" onClick={() => removeCandidate(candidate._id)}>Delete</button>
+                <td className="talent-actions-cell">
+                  <div className="talent-action-dock" aria-label={`Actions for ${candidate.name}`}>
+                    <button className="talent-row-action history" type="button" title={`Open communication history for ${candidate.name}`} onClick={() => navigate(`/admin/candidate-communications?candidate=${candidate._id}`)}><MessageSquareText size={15} /><span>History</span></button>
+                    <button className="talent-row-action call" type="button" title={`Call ${candidate.name}`} onClick={() => startCandidateCall(candidate)} disabled={!candidate.phone}><PhoneCall size={15} /><span>Call</span></button>
+                    <button className="talent-row-action edit" type="button" title={`Edit ${candidate.name}`} onClick={() => { setEditing(candidate._id); setForm(fromCandidate(candidate)); setCandidateCv(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Pencil size={15} /><span>Edit</span></button>
+                    <button className="talent-row-action delete" type="button" title={`Delete ${candidate.name}`} onClick={() => removeCandidate(candidate._id)}><Trash2 size={15} /><span>Delete</span></button>
+                  </div>
                 </td>
               </tr>
             )) : (
@@ -904,6 +949,6 @@ export default function AdminTalentPool() {
         <span>Page {pagination.page} of {pagination.pages} &middot; {Number(pagination.total || 0).toLocaleString()} candidates</span>
         <button className="button secondary" disabled={pagination.page >= pagination.pages} onClick={() => load(pagination.page + 1)}>Next</button>
       </div>
-    </>
+    </div>
   );
 }

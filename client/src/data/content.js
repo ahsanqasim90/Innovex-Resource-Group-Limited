@@ -39,6 +39,8 @@ export const values = ["Compliance first", "Care-led recruitment", "Reliable com
 
 export const company = {
   name: "Innovex Resource Group Limited",
+  companyNumber: "15975820",
+  registeredIn: "England and Wales",
   siteUrl: "https://www.innovexresourcegroup.co.uk",
   compliance: [
     "Registered with Companies House",

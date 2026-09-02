@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import express from "express";
 import EmailLog from "../models/EmailLog.js";
 import HrCounter from "../models/HrCounter.js";
@@ -228,10 +229,11 @@ router.post("/salary-slips/:id/send", requirePermission("salarySlips.view"), asy
 
 router.delete("/salary-slips/:id", requirePermission("salarySlips.view"), async (req, res, next) => {
   try {
-    const slip = await SalarySlip.findByIdAndDelete(req.params.id);
+    const slip = await SalarySlip.findById(req.params.id);
     if (!slip) return res.status(404).json({ message: "Salary slip not found" });
-    await logActivity(req, { module: "HR Documents", action: "Deleted", entityType: "SalarySlip", entityId: slip._id, summary: `Deleted salary slip ${slip.slipNumber}` });
-    res.json({ message: "Salary slip deleted" });
+    await slip.archive(req.user._id, "Salary slip archived");
+    await logActivity(req, { module: "HR Documents", action: "Archived", entityType: "SalarySlip", entityId: slip._id, summary: `Archived salary slip ${slip.slipNumber}` });
+    res.json({ message: "Salary slip archived" });
   } catch (error) {
     next(error);
   }
@@ -284,15 +286,19 @@ router.post("/offer-letters", requirePermission("offerLetters.view"), async (req
 router.put("/offer-letters/:id", requirePermission("offerLetters.view"), async (req, res, next) => {
   try {
     if (req.body.candidateEmail) validateEmail(req.body.candidateEmail);
+    const offer = await OfferLetter.findById(req.params.id);
+    if (!offer) return res.status(404).json({ message: "Offer letter not found" });
+    if (offer.status !== "Draft") return res.status(409).json({ message: "A sent offer is immutable. Withdraw it and create a revised offer instead." });
     const updates = pick(req.body, offerFields);
+    delete updates.status;
     if (updates.cc !== undefined) {
       updates.cc = normalizeCc(updates.cc);
       validateCc(updates.cc);
     }
     if (updates.senderEmail !== undefined) updates.senderEmail = senderOrReject(req, updates.senderEmail);
     updates.updatedBy = actor(req);
-    const offer = await OfferLetter.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
-    if (!offer) return res.status(404).json({ message: "Offer letter not found" });
+    offer.set(updates);
+    await offer.save();
     await logActivity(req, { module: "HR Documents", action: "Updated", entityType: "OfferLetter", entityId: offer._id, summary: `Updated offer letter ${offer.offerNumber}` });
     res.json(offer);
   } catch (error) {
@@ -315,6 +321,7 @@ router.post("/offer-letters/:id/send", requirePermission("offerLetters.view"), a
   try {
     const offer = await OfferLetter.findById(req.params.id);
     if (!offer) return res.status(404).json({ message: "Offer letter not found" });
+    if (offer.status !== "Draft") return res.status(409).json({ message: "Only a draft offer can be sent" });
     const cc = req.body.cc !== undefined ? normalizeCc(req.body.cc) : offer.cc;
     validateCc(cc);
     const fromEmail = senderOrReject(req, req.body.fromEmail || offer.senderEmail);
@@ -325,6 +332,8 @@ router.post("/offer-letters/:id/send", requirePermission("offerLetters.view"), a
     offer.senderEmail = result.fromEmail;
     offer.cc = cc;
     offer.sentAt = new Date();
+    offer.documentHash = crypto.createHash("sha256").update(pdf).digest("hex");
+    offer.acceptance = { status: "Pending", documentHash: offer.documentHash };
     offer.sentFolderSaved = Boolean(result.sentFolderSaved);
     offer.sentFolderError = result.sentFolderError || "";
     offer.updatedBy = actor(req);
@@ -339,13 +348,26 @@ router.post("/offer-letters/:id/send", requirePermission("offerLetters.view"), a
 
 router.delete("/offer-letters/:id", requirePermission("offerLetters.view"), async (req, res, next) => {
   try {
-    const offer = await OfferLetter.findByIdAndDelete(req.params.id);
+    const offer = await OfferLetter.findById(req.params.id);
     if (!offer) return res.status(404).json({ message: "Offer letter not found" });
-    await logActivity(req, { module: "HR Documents", action: "Deleted", entityType: "OfferLetter", entityId: offer._id, summary: `Deleted offer letter ${offer.offerNumber}` });
-    res.json({ message: "Offer letter deleted" });
+    await offer.archive(req.user._id, "Offer letter archived");
+    await logActivity(req, { module: "HR Documents", action: "Archived", entityType: "OfferLetter", entityId: offer._id, summary: `Archived offer letter ${offer.offerNumber}` });
+    res.json({ message: "Offer letter archived" });
   } catch (error) {
     next(error);
   }
+});
+
+router.patch("/offer-letters/:id/withdraw", requirePermission("offerLetters.approve"), async (req, res, next) => {
+  try {
+    const offer = await OfferLetter.findOne({ _id: req.params.id, status: "Sent" });
+    if (!offer) return res.status(409).json({ message: "Only an offer awaiting a candidate decision can be withdrawn" });
+    offer.status = "Withdrawn";
+    offer.updatedBy = actor(req);
+    await offer.save();
+    await logActivity(req, { module: "HR Documents", action: "Withdrawn", entityType: "OfferLetter", entityId: offer._id, summary: `Withdrew offer letter ${offer.offerNumber}` });
+    res.json(offer);
+  } catch (error) { next(error); }
 });
 
 export default router;

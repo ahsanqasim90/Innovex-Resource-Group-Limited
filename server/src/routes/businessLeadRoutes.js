@@ -491,9 +491,10 @@ router.put("/:id", async (req, res, next) => {
 
 router.delete("/:id", async (req, res, next) => {
   try {
-    const lead = await BusinessLead.findByIdAndDelete(req.params.id);
+    const lead = await BusinessLead.findById(req.params.id);
     if (!lead) return res.status(404).json({ message: "Business lead not found" });
-    res.json({ message: "Business lead deleted" });
+    await lead.archive(req.user._id, "Business lead archived");
+    res.json({ message: "Business lead archived" });
   } catch (error) {
     next(error);
   }

@@ -66,6 +66,7 @@ router.get("/stats", async (req, res, next) => {
       totalCandidates,
       availableCandidates,
       interestedTalent,
+      placements,
       todayCalls,
       followUpsDue,
       recentCalls,
@@ -105,6 +106,7 @@ router.get("/stats", async (req, res, next) => {
       Candidate.countDocuments(),
       Candidate.countDocuments({ status: "Available" }),
       Candidate.countDocuments({ status: "Interested" }),
+      Candidate.countDocuments({ status: "Placed" }),
       CallLog.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
       CallLog.countDocuments({
         followUpAt: {
@@ -123,7 +125,7 @@ router.get("/stats", async (req, res, next) => {
       newCvs,
       pendingReviews,
       partners,
-      placements: 128,
+      placements,
       messages,
       pendingInterviews,
       selectedCandidates,

@@ -42,7 +42,7 @@ function normalizeEnum(value, allowedValues) {
 
 const offerLetterSchema = new mongoose.Schema(
   {
-    offerNumber: { type: String, required: true, unique: true, index: true },
+    offerNumber: { type: String, required: true, index: true },
     candidateName: { type: String, required: true, trim: true, index: true },
     candidateEmail: { type: String, required: true, trim: true, lowercase: true, index: true },
     candidatePhone: { type: String, trim: true },
@@ -73,6 +73,18 @@ const offerLetterSchema = new mongoose.Schema(
     customMessage: { type: String, trim: true },
     sentAt: { type: Date },
     acceptedAt: { type: Date },
+    documentHash: { type: String, trim: true, default: "" },
+    acceptance: {
+      status: { type: String, enum: ["Pending", "Accepted", "Declined"], default: "Pending" },
+      signerName: { type: String, trim: true, default: "" },
+      signerEmail: { type: String, trim: true, lowercase: true, default: "" },
+      declarationVersion: { type: String, trim: true, default: "" },
+      signedAt: Date,
+      declinedAt: Date,
+      ipHash: { type: String, trim: true, default: "" },
+      userAgent: { type: String, trim: true, maxlength: 500, default: "" },
+      documentHash: { type: String, trim: true, default: "" }
+    },
     sentFolderSaved: { type: Boolean, default: false },
     sentFolderError: { type: String, trim: true },
     createdBy: actorSchema,
@@ -83,5 +95,6 @@ const offerLetterSchema = new mongoose.Schema(
 
 offerLetterSchema.index({ candidateName: "text", candidateEmail: "text", roleTitle: "text", offerNumber: "text" });
 offerLetterSchema.index({ createdAt: -1 });
+offerLetterSchema.index({ organization: 1, offerNumber: 1 }, { unique: true });
 
 export default mongoose.model("OfferLetter", offerLetterSchema);

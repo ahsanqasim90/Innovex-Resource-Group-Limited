@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { BookOpenText, PenLine } from "lucide-react";
 import { api, publicAssetUrl } from "../../api/client.js";
+import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import FileUpload from "../../components/FileUpload.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
@@ -88,7 +90,7 @@ export default function AdminBlogs() {
 
   return (
     <>
-      <div className="admin-top"><h1>Admin Blogs</h1></div>
+      <AdminSectionHero icon={BookOpenText} eyebrow="Content studio" title="Blogs" description="Create search-friendly articles, control publishing and manage the Innovex knowledge library." aside={<div className="workspace-hero-count"><PenLine size={18} /><span><small>ARTICLES</small><strong>{blogs.length}</strong></span></div>} />
       <StatusMessage status={status} />
       <form className="card form blog-admin-form" onSubmit={save}>
         <div className="admin-form-title">

@@ -6,6 +6,7 @@ import { allPermissions, permissionGroups, rolePresets, safeUser } from "../conf
 import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 import { logActivity } from "../services/activityLogService.js";
+import { assertSeatAvailable, assertActiveSeatAvailable } from "../services/subscriptionService.js";
 
 const router = express.Router();
 
@@ -78,6 +79,7 @@ router.post("/", async (req, res, next) => {
       return res.status(400).json({ message: "Password must be at least 8 characters" });
     }
     const payload = userPayload(req.body);
+    await assertSeatAvailable(req.organization);
     payload.password = req.body.password;
     const user = await User.create(payload);
     await logActivity(req, { module: "Team", action: "User created", entityType: "User", entityId: user._id, summary: `Created ${user.role} account for ${user.name}` });
@@ -98,6 +100,7 @@ router.put("/:id", async (req, res, next) => {
 
     const previousRole = user.role;
     const previousActive = user.isActive;
+    if (!previousActive && req.body.isActive === true) await assertActiveSeatAvailable(req.organization);
     user.set(userPayload(req.body, user));
     if (req.body.password) {
       if (String(req.body.password).length < 8) {
@@ -120,12 +123,27 @@ router.delete("/:id", async (req, res, next) => {
     if (String(req.params.id) === String(req.user._id)) {
       return res.status(400).json({ message: "You cannot delete your own account" });
     }
-    const user = await User.findByIdAndDelete(req.params.id);
+    const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "Team member not found" });
-    res.json({ message: "Team member deleted" });
+    user.isActive = false;
+    await user.archive(req.user._id, String(req.body?.reason || "Team member archived"));
+    await logActivity(req, { module: "Team", action: "User archived", entityType: "User", entityId: user._id, summary: `${user.name} was archived and access revoked` });
+    res.json({ message: "Team member archived and access revoked" });
   } catch (error) {
     next(error);
   }
+});
+
+router.post("/:id/restore", async (req, res, next) => {
+  try {
+    const user = await User.findOne({ _id: req.params.id }).setOptions({ withArchived: true });
+    if (!user) return res.status(404).json({ message: "Archived team member not found" });
+    await assertActiveSeatAvailable(req.organization);
+    user.isActive = true;
+    await user.restore();
+    await logActivity(req, { module: "Team", action: "User restored", entityType: "User", entityId: user._id, summary: `${user.name} was restored` });
+    res.json(safeUser(user));
+  } catch (error) { next(error); }
 });
 
 export default router;

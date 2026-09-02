@@ -67,6 +67,8 @@ const businessLeadSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+businessLeadSchema.add({ clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "ClientAccount", index: true } });
+
 businessLeadSchema.index({
   companyName: "text",
   contactName: "text",

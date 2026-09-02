@@ -183,17 +183,18 @@ router.put("/:id", async (req, res, next) => {
 
 router.delete("/:id", async (req, res, next) => {
   try {
-    const meeting = await Meeting.findByIdAndDelete(req.params.id);
+    const meeting = await Meeting.findById(req.params.id);
     if (!meeting) return res.status(404).json({ message: "Meeting not found" });
+    await meeting.archive(req.user._id, "Meeting archived");
     await logActivity(req, {
       module: "Meetings",
-      action: "Deleted",
+      action: "Archived",
       entityType: "Meeting",
       entityId: meeting._id,
-      summary: `Deleted ${meeting.meetingTitle} with ${meeting.attendeeName}`,
+      summary: `Archived ${meeting.meetingTitle} with ${meeting.attendeeName}`,
       metadata: { companyName: meeting.companyName, meetingDate: meeting.meetingDate }
     });
-    res.json({ message: "Meeting deleted" });
+    res.json({ message: "Meeting archived" });
   } catch (error) {
     next(error);
   }

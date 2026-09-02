@@ -76,7 +76,7 @@ const defaultClauses = [
 
 const clientTermsSchema = new mongoose.Schema(
   {
-    documentNumber: { type: String, required: true, unique: true, trim: true, index: true },
+    documentNumber: { type: String, required: true, trim: true, index: true },
     title: { type: String, trim: true, default: "Terms of Business" },
     agreementType: {
       type: String,
@@ -136,6 +136,9 @@ const clientTermsSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+clientTermsSchema.index({ organization: 1, documentNumber: 1 }, { unique: true });
+
+clientTermsSchema.add({ clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "ClientAccount", index: true } });
 
 clientTermsSchema.index({
   clientName: "text",

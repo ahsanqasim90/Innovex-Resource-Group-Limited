@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { CalendarCheck2, UserRoundCheck } from "lucide-react";
 import { api } from "../../api/client.js";
 import { canViewFinance } from "../../auth/permissions.js";
+import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import InterviewDetails from "./interviews/InterviewDetails.jsx";
@@ -153,7 +155,7 @@ export default function AdminInterviews() {
 
   return (
     <>
-      <div className="admin-top"><h1>Interviews</h1></div>
+      <AdminSectionHero icon={CalendarCheck2} eyebrow="Candidate coordination" title="Interviews" description="Manage interview bookings, confirmation emails, outcomes and placement value from one workspace." aside={<div className="workspace-hero-count"><UserRoundCheck size={18} /><span><small>PENDING</small><strong>{summary.pending}</strong></span></div>} />
       <StatusMessage status={status} />
       <div className="interview-summary-grid">
         <div className="interview-summary-card"><span>Total bookings</span><strong>{summary.total}</strong></div>
