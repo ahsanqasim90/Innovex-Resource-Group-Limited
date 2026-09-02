@@ -1,7 +1,46 @@
 import { Link } from "react-router-dom";
+import { ArrowUpRight } from "lucide-react";
 import { company, contact } from "../data/content.js";
 import ComplianceBadges from "./ComplianceBadges.jsx";
 import SocialLinks from "./SocialLinks.jsx";
+
+const footerGroups = [
+  {
+    title: "Services",
+    links: [
+      ["/healthcare-recruitment", "Healthcare recruitment"],
+      ["/hire-staff", "Hire staff"],
+      ["/website-development", "Website development"],
+      ["/seo-services", "SEO services"],
+      ["/crm-systems", "CRM systems"],
+      ["/courses", "Courses & training"]
+    ]
+  },
+  {
+    title: "Resources",
+    links: [
+      ["/jobs", "Current opportunities"],
+      ["/blogs", "Insights & blog"],
+      ["/newsletters", "Newsletter"],
+      ["/pricing", "CRM pricing"],
+      ["/testimonials", "Testimonials"],
+      ["/partners", "Partners"]
+    ]
+  },
+  {
+    title: "Trust & account",
+    links: [
+      ["/privacy", "Privacy notice"],
+      ["/security", "Security"],
+      ["/terms", "Terms"],
+      ["/dpa", "DPA"],
+      ["/subprocessors", "Subprocessors"],
+      ["/status", "System status"],
+      ["/support", "Support"],
+      ["/admin/login", "Admin login"]
+    ]
+  }
+];
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -17,28 +56,24 @@ export default function Footer() {
           <p>Innovex Resource Group supports UK employers with healthcare recruitment, businesses worldwide with website development and SEO, and care organisations with professional training enquiries.</p>
           <ComplianceBadges compact />
         </div>
-        <div className="footer-links">
-          <h3>Quick links</h3>
-          <Link to="/jobs">Current opportunities</Link>
-          <Link to="/healthcare-recruitment">Healthcare recruitment</Link>
-          <Link to="/hire-staff">Hire staff / request candidates</Link>
-          <Link to="/website-development">Website development</Link>
-          <Link to="/seo-services">SEO services</Link>
-          <Link to="/crm-systems">CRM systems</Link>
-          <Link to="/courses">Courses & training</Link>
-          <Link to="/blogs">Insights & blog</Link>
-          <Link to="/newsletters">Newsletter</Link>
-          <Link to="/privacy">Privacy notice</Link>
-          <Link to="/security">Security</Link>
-          <Link to="/terms">Terms</Link>
-          <Link to="/dpa">DPA</Link>
-          <Link to="/subprocessors">Subprocessors</Link>
-          <Link to="/status">Status</Link>
-          <Link to="/support">Support</Link>
-          <Link to="/pricing">CRM pricing</Link>
-          <Link to="/testimonials">Testimonials</Link>
-          <Link to="/partners">Partners</Link>
-          <Link to="/admin/login">Admin login</Link>
+        <div className="footer-navigation">
+          <div className="footer-navigation-heading">
+            <span>EXPLORE INNOVEX</span>
+            <h3>Everything in the right place.</h3>
+          </div>
+          <div className="footer-link-groups">
+            {footerGroups.map((group) => (
+              <nav className="footer-link-group" aria-label={`${group.title} links`} key={group.title}>
+                <h4>{group.title}</h4>
+                {group.links.map(([href, label]) => (
+                  <Link to={href} key={href}>
+                    <span>{label}</span>
+                    <ArrowUpRight aria-hidden="true" />
+                  </Link>
+                ))}
+              </nav>
+            ))}
+          </div>
         </div>
         <div className="footer-contact">
           <h3>Contact</h3>
