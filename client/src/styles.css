@@ -11742,6 +11742,7 @@ textarea:focus-visible {
 .portal-access-card > p { margin: 0 0 1rem; color: #6d7e81; line-height: 1.55; }
 .portal-access-card form { display: grid; gap: .8rem; }
 .portal-access-card form label { display: grid; gap: .35rem; color: #536b6f; font-size: .75rem; font-weight: 750; }
+.portal-access-card form label > small { color: #72878b; font-size: .69rem; font-weight: 650; line-height: 1.4; }
 .portal-access-card form label > div { display: flex; align-items: center; border: 1px solid #d7e2e3; border-radius: .7rem; background: white; }
 .portal-access-card form label svg { width: 17px; margin-left: .7rem; color: #819194; }
 .portal-access-card form input { flex: 1; padding: .75rem .65rem; border: 0; outline: 0; background: transparent; }
