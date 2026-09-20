@@ -8,11 +8,13 @@ import { logActivity } from "../services/activityLogService.js";
 import { notifyPortalMembersOfVacancy } from "../services/portalNotificationService.js";
 import { runAutomations } from "../services/automationService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
-import { assertSalaryLooksRight, normaliseJobPayload } from "../utils/jobQuality.js";
+import { cachePublicResponse } from "../utils/httpCache.js";
+import { assertSalaryLooksRight, normaliseJobPayload, redactClientName } from "../utils/jobQuality.js";
 
 const router = express.Router();
 const jobFields = ["reference", "clientName", "clientAccount", "title", "location", "postcode", "salary", "type", "shift", "description", "requirements", "priority", "openings", "assignedRecruiters", "vacancyStatus", "closingDate"];
 const vacancyStatuses = ["Open", "Paused", "Closed", "Filled"];
+const publicJobFields = "_id reference title location postcode salary type shift description requirements vacancyStatus closingDate createdAt updatedAt";
 
 function protectAdminQuery(req, res, next) {
   if (req.query.admin) return protect(req, res, () => requirePermission("jobs.view")(req, res, next));
@@ -57,8 +59,11 @@ router.get("/", protectAdminQuery, async (req, res, next) => {
     const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1);
     const query = Job.find(filter).sort({ createdAt: -1 });
     if (req.query.admin) query.select("+clientName +assignedRecruiters").populate("assignedRecruiters", "name email role");
+    else query.select(`${publicJobFields} +clientName`).lean();
     if (limit) query.skip(req.query.paginated === "1" ? (page - 1) * limit : 0).limit(limit);
-    const [jobs, total] = await Promise.all([query, req.query.paginated === "1" ? Job.countDocuments(filter) : Promise.resolve(0)]);
+    const [foundJobs, total] = await Promise.all([query, req.query.paginated === "1" ? Job.countDocuments(filter) : Promise.resolve(0)]);
+    const jobs = req.query.admin ? foundJobs : foundJobs.map((job) => redactClientName(job));
+    if (!req.query.admin) cachePublicResponse(res);
     if (req.query.paginated === "1") {
       return res.json({ items: jobs, total, page, pages: Math.ceil(total / (limit || 12)) || 1, limit: limit || 12 });
     }
@@ -79,8 +84,11 @@ router.get("/:id", protectAdminQuery, async (req, res, next) => {
         };
     const query = Job.findOne(filter);
     if (req.query.admin) query.select("+clientName +assignedRecruiters").populate("assignedRecruiters", "name email role");
-    const job = await query;
-    if (!job) return res.status(404).json({ message: "Job not found" });
+    else query.select(`${publicJobFields} +clientName`).lean();
+    const found = await query;
+    if (!found) return res.status(404).json({ message: "Job not found" });
+    const job = req.query.admin ? found : redactClientName(found);
+    if (!req.query.admin) cachePublicResponse(res);
     res.json(job);
   } catch (error) {
     next(error);

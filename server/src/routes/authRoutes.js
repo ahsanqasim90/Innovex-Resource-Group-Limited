@@ -138,7 +138,7 @@ router.post("/reset-password/:token", recoveryLimiter, async (req, res, next) =>
   } catch (error) { next(error); }
 });
 
-router.get("/me", protect, (req, res) => res.json({ user: safeUser(req.user), csrfToken: req.auth?.csrf || "" }));
+router.get("/me", protect, (req, res) => res.set("Cache-Control", "private, no-store").json({ user: safeUser(req.user), csrfToken: req.auth?.csrf || "" }));
 
 router.post("/logout", protect, async (req, res, next) => {
   try {

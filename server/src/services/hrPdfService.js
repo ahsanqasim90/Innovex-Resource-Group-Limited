@@ -54,6 +54,13 @@ function drawAsset(doc, filename, x, y, options = {}) {
   }
 }
 
+function salarySignatureAsset(directorName) {
+  const normalized = String(directorName || "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (normalized === "muhammad ahsan qasim") return "director-signature-muhammad-ahsan-qasim.png";
+  if (normalized === "fawad khan") return "director-signature-fawad.png";
+  return "";
+}
+
 function drawHeader(doc, title, reference) {
   doc.rect(0, 0, PAGE_WIDTH, 10).fill(gold);
   doc.rect(0, 10, PAGE_WIDTH, 105).fill(deepTeal);
@@ -183,12 +190,13 @@ export function generateSalarySlipPdf(slip) {
       attestationY + 32,
       { width: 285, lineGap: 2 }
     );
-    drawAsset(doc, "director-signature-fawad.png", 356, attestationY + 14, { fit: [86, 40], align: "center", valign: "center" });
-    drawAsset(doc, "innovex-stamp.png", 458, attestationY + 10, { fit: [62, 62], align: "center", valign: "center" });
-    doc.moveTo(356, attestationY + 60).lineTo(438, attestationY + 60).strokeColor(line).stroke();
-    doc.fillColor(ink).font("Helvetica-Bold").fontSize(8.2).text(safe(slip.directorName, "Fawad Khan"), 356, attestationY + 67, { width: 96, lineBreak: false });
-    doc.fillColor(muted).font("Helvetica").fontSize(7.2).text(safe(slip.directorTitle, "Director"), 356, attestationY + 78, { width: 96, lineBreak: false });
-    doc.fillColor(muted).font("Helvetica").fontSize(6.5).text("Authorised signatory", 456, attestationY + 72, { width: 70, align: "center" });
+    const signatureAsset = salarySignatureAsset(slip.directorName);
+    if (signatureAsset) drawAsset(doc, signatureAsset, 350, attestationY + 10, { fit: [140, 47], align: "center", valign: "center" });
+    drawAsset(doc, "innovex-stamp.png", 501, attestationY + 13, { fit: [42, 42], align: "center", valign: "center" });
+    doc.moveTo(350, attestationY + 60).lineTo(490, attestationY + 60).strokeColor(line).stroke();
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(7.8).text(safe(slip.directorName, "Muhammad Ahsan Qasim"), 350, attestationY + 66, { width: 140, align: "center", lineBreak: false, ellipsis: true });
+    doc.fillColor(muted).font("Helvetica").fontSize(6.8).text(safe(slip.directorTitle, "Co-Founder & Director"), 350, attestationY + 77, { width: 140, align: "center", lineBreak: false, ellipsis: true });
+    doc.fillColor(muted).font("Helvetica").fontSize(6.2).text("Authorised signatory", 495, attestationY + 65, { width: 53, align: "center" });
 
     finish(doc, resolve, chunks);
   });

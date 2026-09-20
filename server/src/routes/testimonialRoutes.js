@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import Testimonial from "../models/Testimonial.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields } from "../utils.js";
+import { cachePublicResponse } from "../utils/httpCache.js";
 
 const router = express.Router();
 const publicFields = ["name", "reviewType", "role", "company", "rating", "message"];
@@ -17,7 +18,10 @@ function protectAdminQuery(req, res, next) {
 router.get("/", protectAdminQuery, async (req, res, next) => {
   try {
     const filter = req.query.admin ? {} : { status: "Approved" };
-    const testimonials = await Testimonial.find(filter).sort({ createdAt: -1 });
+    const query = Testimonial.find(filter).sort({ createdAt: -1 });
+    if (!req.query.admin) query.lean();
+    const testimonials = await query;
+    if (!req.query.admin) cachePublicResponse(res);
     res.json(testimonials);
   } catch (error) {
     next(error);

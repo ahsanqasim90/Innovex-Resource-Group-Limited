@@ -23,6 +23,7 @@ import {
 import { api, downloadFile } from "../../api/client.js";
 import CvReviewModal from "../../components/CvReviewModal.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { hasPermission } from "../../auth/permissions.js";
 
 const emptyCandidate = {
   job: "",
@@ -242,6 +243,7 @@ function CandidateDetail({ item, canReview, onClose, onUpdated }) {
 
 export default function AdminRecruitmentAts() {
   const { user } = useAuth();
+  const canSubmit = hasPermission(user, "recruitmentPipeline.submit");
   const [data, setData] = useState({ submissions: [], vacancies: [], stats: {}, canReview: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -282,7 +284,7 @@ export default function AdminRecruitmentAts() {
     <div className="ats-page">
       <section className="ats-hero">
         <div><span className="ats-live"><i /> LIVE RECRUITMENT OPERATIONS</span><h1>Recruitment Command Centre</h1><p>One accountable workflow from recruiter submission to client approval, interview and placement.</p></div>
-        <button className="ats-primary-action" type="button" onClick={() => setSubmitOpen(true)}><Plus size={19} /><span>Submit candidate<small>Send to admin review</small></span></button>
+        {canSubmit && <button className="ats-primary-action" type="button" onClick={() => setSubmitOpen(true)}><Plus size={19} /><span>Submit candidate<small>Send to admin review</small></span></button>}
       </section>
 
       <section className="ats-metrics">
@@ -319,12 +321,12 @@ export default function AdminRecruitmentAts() {
           <div className="ats-vacancy-grid">
             {data.vacancies.map((job) => {
               const jobSubmissions = data.submissions.filter((item) => item.job?._id === job._id);
-              return <article className="ats-vacancy-card" key={job._id}><header><span className={`ats-priority ${String(job.priority || "Medium").toLowerCase()}`}>{job.priority || "Medium"} priority</span><span>{job.reference || `VAC-${job._id.slice(-5).toUpperCase()}`}</span></header><h2>{job.title}</h2><p>{job.clientName || "Confidential client"}</p><div className="ats-vacancy-meta"><span><MapPin size={15} />{job.location}</span><span><BriefcaseBusiness size={15} />{job.type}</span></div><div className="ats-vacancy-stats"><div><strong>{job.openings || 1}</strong><span>Openings</span></div><div><strong>{jobSubmissions.length}</strong><span>Submitted</span></div><div><strong>{jobSubmissions.filter((item) => item.stage.includes("Interview")).length}</strong><span>Interviews</span></div></div><footer><span>Closes {dateLabel(job.closingDate)}</span><button type="button" onClick={() => { setSubmitOpen(true); }}>Submit candidate <ArrowRight size={15} /></button></footer></article>;
+              return <article className="ats-vacancy-card" key={job._id}><header><span className={`ats-priority ${String(job.priority || "Medium").toLowerCase()}`}>{job.priority || "Medium"} priority</span><span>{job.reference || `VAC-${job._id.slice(-5).toUpperCase()}`}</span></header><h2>{job.title}</h2><p>{job.clientName || "Confidential client"}</p><div className="ats-vacancy-meta"><span><MapPin size={15} />{job.location}</span><span><BriefcaseBusiness size={15} />{job.type}</span></div><div className="ats-vacancy-stats"><div><strong>{job.openings || 1}</strong><span>Openings</span></div><div><strong>{jobSubmissions.length}</strong><span>Submitted</span></div><div><strong>{jobSubmissions.filter((item) => item.stage.includes("Interview")).length}</strong><span>Interviews</span></div></div><footer><span>Closes {dateLabel(job.closingDate)}</span>{canSubmit && <button type="button" onClick={() => { setSubmitOpen(true); }}>Submit candidate <ArrowRight size={15} /></button>}</footer></article>;
             })}
           </div>
         )}
       </section>
-      {submitOpen && <CandidateSubmitModal vacancies={data.vacancies} onClose={() => setSubmitOpen(false)} onCreated={load} />}
+      {submitOpen && canSubmit && <CandidateSubmitModal vacancies={data.vacancies} onClose={() => setSubmitOpen(false)} onCreated={load} />}
       {selected && <CandidateDetail item={selected} canReview={data.canReview} onClose={() => setSelected(null)} onUpdated={(updated) => { setSelected(updated); load(); }} />}
     </div>
   );

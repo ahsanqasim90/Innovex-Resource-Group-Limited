@@ -8,6 +8,17 @@ export default function PortalAccess({ mode = "login" }) {
   const [params] = useSearchParams(); const navigate = useNavigate();
   const [invitation, setInvitation] = useState(null); const [status, setStatus] = useState(null); const [working, setWorking] = useState(false);
   const token = params.get("token") || "";
+  useEffect(() => {
+    const preloadPortal = () => import("./PortalDashboard.jsx");
+    let idleId;
+    let timer;
+    if ("requestIdleCallback" in window) idleId = window.requestIdleCallback(preloadPortal, { timeout: 1200 });
+    else timer = window.setTimeout(preloadPortal, 300);
+    return () => {
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, []);
   useEffect(() => { if (params.get("workspace")) setWorkspaceSlug(params.get("workspace")); if (mode === "activate" && token) portalApi(`/portal/invitation/${encodeURIComponent(token)}`).then(setInvitation).catch((error) => setStatus({ type: "error", message: error.message })); }, [mode, params, token]);
   async function submit(event) {
     event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget)); setWorking(true); setStatus(null);

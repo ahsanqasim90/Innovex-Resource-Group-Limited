@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Code2, Globe2, LineChart, Megaphone, MonitorSmartphone, Search } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, Code2, Globe2, GraduationCap, Layers3, LineChart, Megaphone, MonitorSmartphone, Search, ShieldCheck } from "lucide-react";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import { company, digitalServices, services } from "../data/content.js";
@@ -9,7 +9,7 @@ const digitalIcons = [MonitorSmartphone, Search, Megaphone, Globe2];
 const faqs = [
   {
     question: "What services does Innovex provide?",
-    answer: "Innovex provides recruitment, website development and SEO/digital growth services for UK businesses."
+    answer: "Innovex provides specialist recruitment, healthcare training, website development, SEO and tailored CRM systems."
   },
   {
     question: "Do you only work with care providers?",
@@ -32,7 +32,7 @@ const faqs = [
 export default function Services() {
   return (
     <>
-      <section className="section" id="recruitment">
+      <section className="section services-overview-section" id="recruitment">
         <SEO
           title="Services"
           path="/services"
@@ -54,23 +54,37 @@ export default function Services() {
             }))
           }}
         />
-        <SectionHeading as="h1" eyebrow="Services" title="Healthcare staffing services for care providers" />
-        <article className="card service-intro-card">
-          <h2>Innovex supports organisations through recruitment, website development, and SEO.</h2>
-          <p>Our recruitment services focus on healthcare and social care, while our website and SEO services support growing UK businesses across wider sectors.</p>
-        </article>
-        <div className="card-grid">
-          {services.map((service) => (
+        <section className="services-overview-hero">
+          <div className="services-overview-copy">
+            <span className="eyebrow">Innovex services</span>
+            <h1>People, skills and systems for organisations that want to grow.</h1>
+            <p>Specialist recruitment, professional healthcare training and practical digital services delivered by one responsive team.</p>
+            <div className="actions"><Link className="button" to="/contact">Discuss your requirements <ArrowRight size={17} /></Link><Link className="button secondary" to="/about">Why Innovex</Link></div>
+          </div>
+          <div className="services-overview-panel">
+            <span>One accountable partner</span>
+            <article><ShieldCheck /><div><strong>Recruitment</strong><small>Source, screen and coordinate the right people.</small></div></article>
+            <article><GraduationCap /><div><strong>Training</strong><small>Build capability across healthcare teams.</small></div></article>
+            <article><Layers3 /><div><strong>Digital</strong><small>Websites, SEO and tailored CRM systems.</small></div></article>
+          </div>
+        </section>
+        <div className="services-section-heading"><span className="eyebrow">Healthcare recruitment</span><h2>Support across the full hiring journey.</h2><p>Choose the area closest to your current requirement.</p></div>
+        <div className="card-grid services-recruitment-grid">
+          {services.map((service, index) => (
             <article className="card" key={service.title}>
-              <div className="badge">Recruitment Service</div>
+              <header><span><BriefcaseBusiness size={19} /></span><small>0{index + 1}</small></header>
               <h3>{service.title}</h3>
               <p>{service.description}</p>
-              <Link className="button secondary small" to="/healthcare-recruitment">Learn More</Link>
+              <Link to="/healthcare-recruitment">Explore service <ArrowRight size={16} /></Link>
             </article>
           ))}
         </div>
       </section>
 
+      <section className="section services-extra-divisions" aria-label="Training and CRM services">
+        <article><span className="eyebrow">Training</span><h2>Develop the skills your care team needs.</h2><p>Explore healthcare courses and request a quotation for your team, preferred dates and location.</p><Link className="button secondary" to="/courses">Explore training</Link></article>
+        <article><span className="eyebrow">Digital systems</span><h2>Bring your business workflows together.</h2><p>Discuss a tailored CRM for managing relationships, recruitment, tasks and reporting in one workspace.</p><Link className="button secondary" to="/crm-systems">Explore CRM systems</Link></article>
+      </section>
       <section className="section alt digital-section" id="website-development">
         <div className="digital-showcase">
           <div>

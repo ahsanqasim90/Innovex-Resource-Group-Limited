@@ -70,7 +70,7 @@ function csvCell(value) {
 }
 
 const emptyReport = { cvsDownloaded: 0, cvsSubmitted: 0, notes: "", workLocation: "Office" };
-const REPORT_REFRESH_MS = 5000;
+const REPORT_REFRESH_MS = 30000;
 
 export default function AdminAttendance() {
   const { user } = useAuth();
@@ -106,13 +106,15 @@ export default function AdminAttendance() {
     } : emptyReport);
   }
 
-  async function loadToday() {
+  async function loadToday({ silent = false } = {}) {
     try {
       const data = await api("/attendance/today");
       setToday(data.today);
       applyAttendance(data.attendance);
+      return data.attendance;
     } catch (error) {
-      setStatus({ type: "error", message: error.message });
+      if (!silent) setStatus({ type: "error", message: error.message });
+      return null;
     }
   }
 
@@ -236,6 +238,7 @@ export default function AdminAttendance() {
       setStatus({ message: "Attendance marked successfully. Have a productive day!" });
       if (canManage) loadReport();
     } catch (error) {
+      if (error.data?.attendance) applyAttendance(error.data.attendance);
       setStatus({ type: "error", message: error.message });
     } finally {
       setCheckingIn(false);
@@ -265,14 +268,20 @@ export default function AdminAttendance() {
       setStatus({ message: "You have checked out successfully." });
       if (canManage) loadReport();
     } catch (error) {
-      setStatus({ type: "error", message: error.message });
+      const serverAttendance = error.data?.attendance || await loadToday({ silent: true });
+      if (serverAttendance?.checkOutAt) {
+        applyAttendance(serverAttendance);
+        setStatus({ message: "You have checked out successfully." });
+      } else {
+        setStatus({ type: "error", message: error.message });
+      }
     } finally {
       setCheckingOut(false);
     }
   }
 
   const todayMetrics = useMemo(() => [
-    ["Attendance", attendance ? "Present" : "Not marked", UserRoundCheck, attendance ? "success" : "warning"],
+    ["Session status", attendance?.checkOutAt ? "Completed" : attendance ? "In progress" : "Not started", attendance?.checkOutAt ? CheckCircle2 : UserRoundCheck, attendance ? "success" : "warning"],
     ["Check in", timeLabel(attendance?.checkInAt), LogIn, ""],
     ["Check out", timeLabel(attendance?.checkOutAt), LogOut, ""],
     ["Hours today", attendance ? durationLabel(attendance) : "-", Clock3, ""]
@@ -310,8 +319,8 @@ export default function AdminAttendance() {
           <div className="attendance-card-heading">
             <span><MapPin size={20} /></span>
             <div>
-              <h2>Mark attendance</h2>
-              <p>Your check-in time is securely recorded when you press the button.</p>
+              <h2>{attendance?.checkOutAt ? "Session completed" : "Mark attendance"}</h2>
+              <p>{attendance?.checkOutAt ? `Your work session ended successfully at ${timeLabel(attendance.checkOutAt)}.` : "Your check-in time is securely recorded when you press the button."}</p>
             </div>
           </div>
           <label className="attendance-field">
@@ -329,7 +338,10 @@ export default function AdminAttendance() {
           ) : (
             <div className="attendance-confirmed">
               <CheckCircle2 size={23} />
-              <div><strong>Attendance marked</strong><span>{attendance.workLocation} · {timeLabel(attendance.checkInAt)}</span></div>
+              <div>
+                <strong>{attendance.checkOutAt ? "Session ended successfully" : "Attendance marked"}</strong>
+                <span>{attendance.workLocation} · {timeLabel(attendance.checkInAt)}{attendance.checkOutAt ? ` to ${timeLabel(attendance.checkOutAt)} · ${durationLabel(attendance)}` : ""}</span>
+              </div>
             </div>
           )}
         </article>
@@ -339,7 +351,7 @@ export default function AdminAttendance() {
             <span><BarChart3 size={20} /></span>
             <div>
               <h2>Today's work report</h2>
-              <p>Enter your totals for today. You can update them until check-out.</p>
+              <p>{attendance?.checkOutAt ? `Completed and locked at ${timeLabel(attendance.checkOutAt)}.` : "Enter your totals for today. You can update them until check-out."}</p>
             </div>
           </div>
           <div className="attendance-count-grid">
@@ -359,10 +371,13 @@ export default function AdminAttendance() {
           <div className="actions attendance-report-actions">
             <SubmitButton loading={saving} loadingText="Saving report..." disabled={!attendance || Boolean(attendance?.checkOutAt)}><Save size={17} /> Save Daily Report</SubmitButton>
             <button className="button secondary" type="button" disabled={!attendance || Boolean(attendance?.checkOutAt) || checkingOut} onClick={checkOut}>
-              <LogOut size={17} /> {attendance?.checkOutAt ? "Checked Out" : checkingOut ? "Checking out..." : "Check Out"}
+              <LogOut size={17} /> {attendance?.checkOutAt ? "Session Completed" : checkingOut ? "Checking out..." : "Check Out"}
             </button>
           </div>
           {!attendance && <small className="attendance-help">Mark your attendance first to unlock the daily report.</small>}
+          {attendance && attendance.attendanceDate !== today && !attendance.checkOutAt && (
+            <small className="attendance-help">You have an open session from {dateLabel(attendance.attendanceDate)}. Check out to close it safely.</small>
+          )}
         </form>
       </section>
 

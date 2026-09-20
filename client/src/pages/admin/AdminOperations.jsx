@@ -4,6 +4,7 @@ import { api } from "../../api/client.js";
 import { hasPermission } from "../../auth/permissions.js";
 import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
+import AdminLoadState from "../../components/AdminLoadState.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 const dateTime = (value) => value ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
@@ -41,7 +42,7 @@ export default function AdminOperations() {
     catch (error) { setStatus({ type: "error", message: error.message }); }
   }
 
-  if (!overview) return <div className="admin-loading-screen">Checking platform operations…</div>;
+  if (!overview) return <AdminLoadState error={status?.type === "error" ? status.message : ""} onRetry={() => { setStatus(null); loadOverview(); }} label="Checking platform operations…" />;
   return <div className="operations-page">
     <AdminSectionHero eyebrow="Platform reliability" title="Operations & Audit" description="Monitor service health, investigate errors, verify recovery readiness and search the tenant-specific audit trail." aside={<div className="workspace-hero-count"><Activity size={18} /><span><small>API STATUS</small><strong>{overview.health.api}</strong></span></div>} />
     <StatusMessage status={status} />

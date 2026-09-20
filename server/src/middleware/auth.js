@@ -68,11 +68,11 @@ export async function protect(req, res, next) {
   }
 }
 
-export function requirePermission(permission) {
+export function requirePermission(permission, { inferAction = true } = {}) {
   return (req, res, next) => {
     let required = permission;
     const [moduleName, action] = String(permission || "").split(".");
-    if (action === "view") {
+    if (inferAction && action === "view") {
       const path = String(req.path || "").toLowerCase();
       const method = String(req.method || "GET").toUpperCase();
       if (path.includes("export")) required = `${moduleName}.export`;

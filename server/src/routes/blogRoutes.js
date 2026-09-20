@@ -3,6 +3,7 @@ import Blog from "../models/Blog.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { fileMeta, uploadBlogImage } from "../middleware/upload.js";
 import { pick, requireFields } from "../utils.js";
+import { cachePublicResponse } from "../utils/httpCache.js";
 
 const router = express.Router();
 const fields = ["title", "slug", "category", "excerpt", "content", "metaTitle", "metaDescription", "author", "isPublished", "publishedAt"];
@@ -49,7 +50,10 @@ function protectAdminQuery(req, res, next) {
 router.get("/", protectAdminQuery, async (req, res, next) => {
   try {
     const filter = req.query.admin ? {} : publicFilter(req);
-    const blogs = await Blog.find(filter).select("-featuredImage.data").sort({ publishedAt: -1, createdAt: -1 });
+    const query = Blog.find(filter).select("-featuredImage.data").sort({ publishedAt: -1, createdAt: -1 });
+    if (!req.query.admin) query.lean();
+    const blogs = await query;
+    if (!req.query.admin) cachePublicResponse(res);
     res.json(blogs.map(serializeBlog));
   } catch (error) {
     next(error);
@@ -62,6 +66,7 @@ router.get("/slug/:slug", async (req, res, next) => {
     if (!req.query.admin) filter.isPublished = true;
     const blog = await Blog.findOne(filter).select("-featuredImage.data");
     if (!blog) return res.status(404).json({ message: "Blog not found" });
+    if (!req.query.admin) cachePublicResponse(res);
     res.json(serializeBlog(blog));
   } catch (error) {
     next(error);

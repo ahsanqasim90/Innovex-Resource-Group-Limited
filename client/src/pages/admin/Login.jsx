@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight, BriefcaseBusiness, ChartNoAxesCombined, Check, Eye, EyeOff,
   KeyRound, LockKeyhole, Mail, ShieldCheck, Sparkles, UsersRound
@@ -17,6 +17,21 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [mfaRequired, setMfaRequired] = useState(false);
   const [credentials, setCredentials] = useState(null);
+
+  useEffect(() => {
+    const preloadWorkspace = () => Promise.allSettled([
+      import("../../layouts/AdminLayout.jsx"),
+      import("./Dashboard.jsx")
+    ]);
+    let idleId;
+    let timer;
+    if ("requestIdleCallback" in window) idleId = window.requestIdleCallback(preloadWorkspace, { timeout: 1200 });
+    else timer = window.setTimeout(preloadWorkspace, 300);
+    return () => {
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, []);
 
   async function submit(event) {
     event.preventDefault();

@@ -1,6 +1,6 @@
 import Organization from "../models/Organization.js";
 import { workspaceAccessState } from "../services/subscriptionService.js";
-import { getDefaultOrganizationId, runWithTenant } from "../tenancy/tenantContext.js";
+import { getDefaultOrganization, getDefaultOrganizationId, runWithTenant, setDefaultOrganization } from "../tenancy/tenantContext.js";
 
 function requestedWorkspace(req) {
   const explicit = String(req.get("x-workspace-slug") || "").trim().toLowerCase();
@@ -17,7 +17,11 @@ export async function resolveTenant(req, res, next) {
     let organization = null;
     if (slug) organization = await Organization.findOne({ slug });
     if (!slug && getDefaultOrganizationId()) {
-      organization = await Organization.findById(getDefaultOrganizationId());
+      organization = getDefaultOrganization();
+      if (!organization) {
+        organization = await Organization.findById(getDefaultOrganizationId());
+        if (organization) setDefaultOrganization(organization);
+      }
     }
     if (!organization) return res.status(503).json({ message: "Workspace is not available" });
     const access = workspaceAccessState(organization);

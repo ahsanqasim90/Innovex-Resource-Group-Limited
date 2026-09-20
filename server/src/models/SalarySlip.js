@@ -47,8 +47,8 @@ const salarySlipSchema = new mongoose.Schema(
       trim: true,
       default: "Full payment may take additional time to be received because payment is processed through a broker. Payments may also be received partially before the remaining balance is completed."
     },
-    directorName: { type: String, trim: true, default: "Fawad Khan" },
-    directorTitle: { type: String, trim: true, default: "Director" },
+    directorName: { type: String, trim: true, default: "Muhammad Ahsan Qasim" },
+    directorTitle: { type: String, trim: true, default: "Co-Founder & Director" },
     attestationText: {
       type: String,
       trim: true,

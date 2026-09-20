@@ -35,7 +35,7 @@ export default function HomeJobsSlider({ jobs = [], loading = false }) {
       <div className="home-jobs-shell">
         <div className="home-jobs-loading">
           <BriefcaseBusiness size={22} />
-          <span>Loading latest roles from the Innovex admin panel...</span>
+          <span>Loading current vacancies…</span>
         </div>
       <div className="home-jobs-rail">
           {[1, 2, 3].map((item) => <JobSkeleton key={item} />)}
@@ -49,7 +49,7 @@ export default function HomeJobsSlider({ jobs = [], loading = false }) {
       <div className="home-jobs-empty card">
         <BriefcaseBusiness size={30} />
         <h3>New healthcare roles are being updated</h3>
-        <p>Our recruitment team refreshes live vacancies from the admin panel. Browse all roles or upload your CV for matching opportunities.</p>
+          <p>Browse current roles or upload your CV so our recruitment team can help you find matching opportunities.</p>
         <div className="actions">
           <Link className="button secondary" to="/jobs">View All Jobs</Link>
           <Link className="button" to="/upload-cv">Upload CV</Link>

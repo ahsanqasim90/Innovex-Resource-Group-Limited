@@ -3,12 +3,12 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
-import Home from "./pages/Home.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { canViewFinance, hasPermission } from "./auth/permissions.js";
 import "./styles.css";
 
 const AdminLayout = React.lazy(() => import("./layouts/AdminLayout.jsx"));
+const Home = React.lazy(() => import("./pages/Home.jsx"));
 const About = React.lazy(() => import("./pages/About.jsx"));
 const BlogDetail = React.lazy(() => import("./pages/BlogDetail.jsx"));
 const Blogs = React.lazy(() => import("./pages/Blogs.jsx"));
@@ -46,6 +46,7 @@ const AdminTalentPool = React.lazy(() => import("./pages/admin/AdminTalentPool.j
 const AdminCandidateCommunications = React.lazy(() => import("./pages/admin/AdminCandidateCommunications.jsx"));
 const AdminCvLibrary = React.lazy(() => import("./pages/admin/AdminCvLibrary.jsx"));
 const AdminVacancyIntelligence = React.lazy(() => import("./pages/admin/AdminVacancyIntelligence.jsx"));
+const AdminCandidateMatch = React.lazy(() => import("./pages/admin/AdminCandidateMatch.jsx"));
 const AdminBusinessLeads = React.lazy(() => import("./pages/admin/AdminBusinessLeads.jsx"));
 const AdminCalls = React.lazy(() => import("./pages/admin/AdminCalls.jsx"));
 const AdminInterviews = React.lazy(() => import("./pages/admin/AdminInterviews.jsx"));
@@ -64,6 +65,7 @@ const AdminWorkspaceSettings = React.lazy(() => import("./pages/admin/AdminWorks
 const AdminArchive = React.lazy(() => import("./pages/admin/AdminArchive.jsx"));
 const AdminOperations = React.lazy(() => import("./pages/admin/AdminOperations.jsx"));
 const AdminAutomations = React.lazy(() => import("./pages/admin/AdminAutomations.jsx"));
+const AdminTasks = React.lazy(() => import("./pages/admin/AdminTasks.jsx"));
 const AdminCompliance = React.lazy(() => import("./pages/admin/AdminCompliance.jsx"));
 const AdminReports = React.lazy(() => import("./pages/admin/AdminReports.jsx"));
 const AdminPortals = React.lazy(() => import("./pages/admin/AdminPortals.jsx"));
@@ -80,13 +82,22 @@ function RequireAuth({ children }) {
 }
 
 function RequirePermission({ permission, children }) {
-  const { user, loadingUser } = useAuth();
+  const { user, loadingUser, refreshUser } = useAuth();
+  const [checking, setChecking] = React.useState(false);
+  const [error, setError] = React.useState("");
+  async function checkAccess() {
+    setChecking(true); setError("");
+    try { await refreshUser(); } catch (error) { setError(error.message); }
+    finally { setChecking(false); }
+  }
   if (loadingUser) return <div className="admin-loading-screen">Checking permissions...</div>;
   if (!hasPermission(user, permission)) {
     return (
       <section className="card admin-denied-card">
         <h1>Access restricted</h1>
-        <p>Your account does not have permission to view this admin area.</p>
+        <p>Your account does not have permission to view this admin area. If your manager has just updated your access, check again.</p>
+        <button className="button" onClick={checkAccess} disabled={checking}>{checking ? "Checking access…" : "Check updated access"}</button>
+        {error && <p role="alert">{error}</p>}
       </section>
     );
   }
@@ -170,6 +181,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="cv-uploads" element={<RequirePermission permission="cvs.view"><AdminCvs /></RequirePermission>} />
             <Route path="cv-library" element={<RequirePermission permission="candidateCvs.view"><AdminCvLibrary /></RequirePermission>} />
             <Route path="vacancy-intelligence" element={<RequirePermission permission="vacancyIntelligence.view"><AdminVacancyIntelligence /></RequirePermission>} />
+            <Route path="candidate-match" element={<RequirePermission permission="vacancyIntelligence.view"><AdminCandidateMatch /></RequirePermission>} />
             <Route path="talent-pool" element={<RequirePermission permission="talentPool.view"><AdminTalentPool /></RequirePermission>} />
             <Route path="candidate-communications" element={<RequirePermission permission="talentPool.view"><AdminCandidateCommunications /></RequirePermission>} />
             <Route path="business-leads" element={<RequirePermission permission="businessLeads.view"><AdminBusinessLeads /></RequirePermission>} />
@@ -195,6 +207,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="archive" element={<RequirePermission permission="archive.manage"><AdminArchive /></RequirePermission>} />
             <Route path="operations" element={<RequirePermission permission="audit.view"><AdminOperations /></RequirePermission>} />
             <Route path="automations" element={<RequirePermission permission="automations.view"><AdminAutomations /></RequirePermission>} />
+            <Route path="tasks" element={<RequirePermission permission="automations.view"><AdminTasks /></RequirePermission>} />
             <Route path="compliance" element={<RequirePermission permission="compliance.view"><AdminCompliance /></RequirePermission>} />
             <Route path="reports" element={<RequirePermission permission="reports.view"><AdminReports /></RequirePermission>} />
             <Route path="portals" element={<RequirePermission permission="portals.manage"><AdminPortals /></RequirePermission>} />
