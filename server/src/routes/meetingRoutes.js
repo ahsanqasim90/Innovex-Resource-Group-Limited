@@ -4,6 +4,7 @@ import { protect, requirePermission } from "../middleware/auth.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 import { logActivity } from "../services/activityLogService.js";
 import { runMeetingReminders } from "../services/meetingReminderService.js";
+import { rejectUnlessCron } from "../utils/cronAuth.js";
 
 const router = express.Router();
 const fields = [
@@ -69,10 +70,7 @@ async function meetingStats() {
 
 router.get("/reminders/run", async (req, res, next) => {
   try {
-    const secret = process.env.CRON_SECRET;
-    if (secret && req.headers.authorization !== `Bearer ${secret}` && req.query.secret !== secret) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    if (rejectUnlessCron(req, res)) return;
     res.json(await runMeetingReminders());
   } catch (error) {
     next(error);

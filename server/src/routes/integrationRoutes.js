@@ -5,13 +5,23 @@ import WebhookDelivery from "../models/WebhookDelivery.js";
 import WebhookEndpoint from "../models/WebhookEndpoint.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../services/activityLogService.js";
-import { deliverWebhook, validateWebhookUrl } from "../services/webhookService.js";
+import { deliverWebhook, processWebhookOutbox, validateWebhookUrl } from "../services/webhookService.js";
+import { rejectUnlessCron } from "../utils/cronAuth.js";
 import { encryptSecret, tokenHash } from "../utils/authSecurity.js";
 import { requireFields } from "../utils.js";
 
 const router = express.Router();
 const scopes = ["jobs:read", "candidates:read", "clients:read"];
 const events = ["candidate.created", "candidate.status_changed", "job.created", "job.approved", "application.created", "compliance.document_expiring"];
+
+// Retries pending webhook deliveries. Needs a frequent Vercel Cron (Pro plan) because serverless has no background timer.
+router.get("/outbox/run", async (req, res, next) => {
+  try {
+    if (rejectUnlessCron(req, res)) return;
+    const results = await processWebhookOutbox();
+    res.json({ workspaces: results.length, processed: results.reduce((sum, count) => sum + Number(count || 0), 0) });
+  } catch (error) { next(error); }
+});
 
 router.use(protect, requirePermission("integrations.manage"));
 

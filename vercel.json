@@ -3,6 +3,11 @@
   "installCommand": "npm install && npm install --prefix client",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "client/dist",
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 60
+    }
+  },
   "redirects": [
     {
       "source": "/(.*)",
@@ -60,6 +65,14 @@
     {
       "path": "/api/terms/reminders/run",
       "schedule": "30 8 * * *"
+    },
+    {
+      "path": "/api/meetings/reminders/run",
+      "schedule": "45 8 * * *"
+    },
+    {
+      "path": "/api/compliance/expiry/run",
+      "schedule": "0 7 * * *"
     }
   ]
 }
