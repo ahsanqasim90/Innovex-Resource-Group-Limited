@@ -2,7 +2,6 @@ import express from "express";
 import mongoose from "mongoose";
 import Attendance from "../models/Attendance.js";
 import User from "../models/User.js";
-import { hasPermission } from "../config/permissions.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../services/activityLogService.js";
 import { generateAttendanceReportPdf } from "../services/attendancePdfService.js";
@@ -10,8 +9,11 @@ import { generateAttendanceReportPdf } from "../services/attendancePdfService.js
 const router = express.Router();
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const REPORT_LIMIT_DAYS = 366;
+const OPEN_SESSION_MAX_AGE_MS = 36 * 60 * 60 * 1000;
 
-router.use(protect, requirePermission("attendance.view"));
+// My Attendance includes self check-in, daily updates and check-out. Those
+// handlers scope records to req.user; employee reports have a separate guard.
+router.use(protect, requirePermission("attendance.view", { inferAction: false }));
 
 function londonDate(value = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -55,6 +57,20 @@ function cleanLocation(value) {
     throw error;
   }
   return location;
+}
+
+async function findPersonalAttendanceSession(userId, now = new Date()) {
+  const todayAttendance = await Attendance.findOne({ user: userId, attendanceDate: londonDate(now) });
+  if (todayAttendance) return todayAttendance;
+
+  // A tab can stay open across midnight and some shifts legitimately cross a
+  // calendar boundary. Keep that session recoverable without ever selecting
+  // another employee's record or an unrelated historical entry.
+  return Attendance.findOne({
+    user: userId,
+    checkOutAt: null,
+    checkInAt: { $gte: new Date(now.getTime() - OPEN_SESSION_MAX_AGE_MS) }
+  }).sort({ checkInAt: -1 });
 }
 
 function reportError(message) {
@@ -128,7 +144,7 @@ async function attendanceReport(req) {
 router.get("/today", async (req, res, next) => {
   try {
     const today = londonDate();
-    const attendance = await Attendance.findOne({ user: req.user._id, attendanceDate: today }).lean();
+    const attendance = await findPersonalAttendanceSession(req.user._id);
     res.json({ today, attendance });
   } catch (error) {
     next(error);
@@ -138,8 +154,13 @@ router.get("/today", async (req, res, next) => {
 router.post("/check-in", async (req, res, next) => {
   try {
     const attendanceDate = londonDate();
-    const existing = await Attendance.findOne({ user: req.user._id, attendanceDate });
-    if (existing) return res.status(409).json({ message: "Your attendance is already marked for today", attendance: existing });
+    const existing = await findPersonalAttendanceSession(req.user._id);
+    if (existing) {
+      const message = existing.checkOutAt
+        ? "Your attendance is already marked for today"
+        : "You already have an open attendance session. Please check out before starting another one.";
+      return res.status(409).json({ message, attendance: existing });
+    }
 
     const attendance = await Attendance.create({
       user: req.user._id,
@@ -167,7 +188,7 @@ router.post("/check-in", async (req, res, next) => {
 
 router.put("/today", async (req, res, next) => {
   try {
-    const attendance = await Attendance.findOne({ user: req.user._id, attendanceDate: londonDate() });
+    const attendance = await findPersonalAttendanceSession(req.user._id);
     if (!attendance) return res.status(400).json({ message: "Please mark your attendance before saving today's report" });
     if (attendance.checkOutAt) return res.status(409).json({ message: "Today's report is locked because you have already checked out" });
 
@@ -184,9 +205,12 @@ router.put("/today", async (req, res, next) => {
 
 router.post("/check-out", async (req, res, next) => {
   try {
-    const attendance = await Attendance.findOne({ user: req.user._id, attendanceDate: londonDate() });
+    const attendance = await findPersonalAttendanceSession(req.user._id);
     if (!attendance) return res.status(400).json({ message: "Please mark your attendance before checking out" });
-    if (attendance.checkOutAt) return res.status(409).json({ message: "You have already checked out today", attendance });
+    // Checkout is intentionally idempotent. If the browser retries after a
+    // slow/lost response, return the completed session instead of showing an
+    // error and leaving the employee unsure whether the action worked.
+    if (attendance.checkOutAt) return res.json(attendance);
 
     attendance.cvsDownloaded = integerCount(req.body.cvsDownloaded ?? attendance.cvsDownloaded, "CVs downloaded");
     attendance.cvsSubmitted = integerCount(req.body.cvsSubmitted ?? attendance.cvsSubmitted, "CVs submitted");

@@ -5,56 +5,29 @@ import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import applicationRoutes from "./routes/applicationRoutes.js";
-import analyticsRoutes from "./routes/analyticsRoutes.js";
-import automationRoutes from "./routes/automationRoutes.js";
-import archiveRoutes from "./routes/archiveRoutes.js";
-import attendanceRoutes from "./routes/attendanceRoutes.js";
-import authRoutes from "./routes/authRoutes.js";
-import blogRoutes from "./routes/blogRoutes.js";
-import businessLeadRoutes from "./routes/businessLeadRoutes.js";
-import callRoutes from "./routes/callRoutes.js";
-import candidateRoutes from "./routes/candidateRoutes.js";
-import candidateCvRoutes from "./routes/candidateCvRoutes.js";
-import candidateCommunicationRoutes from "./routes/candidateCommunicationRoutes.js";
-import clientAccountRoutes from "./routes/clientAccountRoutes.js";
-import contactRoutes from "./routes/contactRoutes.js";
-import complianceRoutes from "./routes/complianceRoutes.js";
-import courseRoutes from "./routes/courseRoutes.js";
-import cvRoutes from "./routes/cvRoutes.js";
-import dashboardRoutes from "./routes/dashboardRoutes.js";
-import emailRoutes from "./routes/emailRoutes.js";
-import employeeSuggestionRoutes from "./routes/employeeSuggestionRoutes.js";
-import financeRoutes from "./routes/financeRoutes.js";
-import hrRoutes from "./routes/hrRoutes.js";
-import interviewRoutes from "./routes/interviewRoutes.js";
-import integrationRoutes from "./routes/integrationRoutes.js";
-import jobRoutes from "./routes/jobRoutes.js";
-import meetingRoutes from "./routes/meetingRoutes.js";
-import newsletterRoutes from "./routes/newsletterRoutes.js";
-import organizationRoutes from "./routes/organizationRoutes.js";
-import operationsRoutes from "./routes/operationsRoutes.js";
-import partnerRoutes from "./routes/partnerRoutes.js";
-import portalNotificationRoutes from "./routes/portalNotificationRoutes.js";
-import portalRoutes from "./routes/portalRoutes.js";
-import portalAdminRoutes from "./routes/portalAdminRoutes.js";
-import publicApiRoutes from "./routes/publicApiRoutes.js";
-import recruitmentWorkflowRoutes from "./routes/recruitmentWorkflowRoutes.js";
-import seoRoutes from "./routes/seoRoutes.js";
-import schedulingRoutes from "./routes/schedulingRoutes.js";
-import testimonialRoutes from "./routes/testimonialRoutes.js";
-import termsRoutes from "./routes/termsRoutes.js";
-import trainingBookingRoutes from "./routes/trainingBookingRoutes.js";
-import trainingQuotationRoutes from "./routes/trainingQuotationRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
-import vacancyIntelligenceRoutes from "./routes/vacancyIntelligenceRoutes.js";
-import webLeadRoutes from "./routes/webLeadRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import { resolveTenant } from "./middleware/tenant.js";
 
 dotenv.config();
 
 const app = express();
+
+// Serverless functions should not evaluate every admin module for a simple
+// login or public-content request. Cache each dynamic import after its first
+// use in a warm function instance.
+function lazyRoute(loader) {
+  let routePromise;
+  return async function loadRoute(req, res, next) {
+    try {
+      routePromise ||= loader().then((module) => module.default);
+      const route = await routePromise;
+      return route(req, res, next);
+    } catch (error) {
+      routePromise = undefined;
+      return next(error);
+    }
+  };
+}
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "same-site" },
@@ -74,50 +47,52 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true,
 
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "Innovex API" }));
 app.use("/api", resolveTenant);
-app.use("/api", seoRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/v1", publicApiRoutes);
-app.use("/api/blogs", blogRoutes);
-app.use("/api/business-leads", businessLeadRoutes);
-app.use("/api/calls", callRoutes);
-app.use("/api/candidates", candidateRoutes);
-app.use("/api/candidate-cvs", candidateCvRoutes);
-app.use("/api/candidate-communications", candidateCommunicationRoutes);
-app.use("/api/client-accounts", clientAccountRoutes);
-app.use("/api/jobs", jobRoutes);
-app.use("/api/applications", applicationRoutes);
-app.use("/api/analytics", analyticsRoutes);
-app.use("/api/automations", automationRoutes);
-app.use("/api/archive", archiveRoutes);
-app.use("/api/portal-notifications", portalNotificationRoutes);
-app.use("/api/portal", portalRoutes);
-app.use("/api/portal-admin", portalAdminRoutes);
-app.use("/api/recruitment-workflow", recruitmentWorkflowRoutes);
-app.use("/api/attendance", attendanceRoutes);
-app.use("/api/cv-uploads", cvRoutes);
-app.use("/api/testimonials", testimonialRoutes);
-app.use("/api/terms", termsRoutes);
-app.use("/api/partners", partnerRoutes);
-app.use("/api/contact", contactRoutes);
-app.use("/api/compliance", complianceRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/emails", emailRoutes);
-app.use("/api/employee-suggestions", employeeSuggestionRoutes);
-app.use("/api/finance", financeRoutes);
-app.use("/api/hr", hrRoutes);
-app.use("/api/interviews", interviewRoutes);
-app.use("/api/scheduling", schedulingRoutes);
-app.use("/api/integrations", integrationRoutes);
-app.use("/api/meetings", meetingRoutes);
-app.use("/api/newsletters", newsletterRoutes);
-app.use("/api/organizations", organizationRoutes);
-app.use("/api/operations", operationsRoutes);
-app.use("/api/courses", courseRoutes);
-app.use("/api/training-bookings", trainingBookingRoutes);
-app.use("/api/training-quotations", trainingQuotationRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/vacancy-intelligence", vacancyIntelligenceRoutes);
-app.use("/api/web-leads", webLeadRoutes);
+app.use("/api/auth", lazyRoute(() => import("./routes/authRoutes.js")));
+app.use("/api/v1", lazyRoute(() => import("./routes/publicApiRoutes.js")));
+app.use("/api/blogs", lazyRoute(() => import("./routes/blogRoutes.js")));
+app.use("/api/business-leads", lazyRoute(() => import("./routes/businessLeadRoutes.js")));
+app.use("/api/calls", lazyRoute(() => import("./routes/callRoutes.js")));
+app.use("/api/candidates", lazyRoute(() => import("./routes/candidateRoutes.js")));
+app.use("/api/candidate-cvs", lazyRoute(() => import("./routes/candidateCvRoutes.js")));
+app.use("/api/candidate-communications", lazyRoute(() => import("./routes/candidateCommunicationRoutes.js")));
+app.use("/api/client-accounts", lazyRoute(() => import("./routes/clientAccountRoutes.js")));
+app.use("/api/jobs", lazyRoute(() => import("./routes/jobRoutes.js")));
+app.use("/api/applications", lazyRoute(() => import("./routes/applicationRoutes.js")));
+app.use("/api/analytics", lazyRoute(() => import("./routes/analyticsRoutes.js")));
+app.use("/api/automations", lazyRoute(() => import("./routes/automationRoutes.js")));
+app.use("/api/archive", lazyRoute(() => import("./routes/archiveRoutes.js")));
+app.use("/api/portal-notifications", lazyRoute(() => import("./routes/portalNotificationRoutes.js")));
+app.use("/api/admin-badges", lazyRoute(() => import("./routes/adminBadgeRoutes.js")));
+app.use("/api/candidate-match", lazyRoute(() => import("./routes/candidateMatchRoutes.js")));
+app.use("/api/portal", lazyRoute(() => import("./routes/portalRoutes.js")));
+app.use("/api/portal-admin", lazyRoute(() => import("./routes/portalAdminRoutes.js")));
+app.use("/api/recruitment-workflow", lazyRoute(() => import("./routes/recruitmentWorkflowRoutes.js")));
+app.use("/api/attendance", lazyRoute(() => import("./routes/attendanceRoutes.js")));
+app.use("/api/cv-uploads", lazyRoute(() => import("./routes/cvRoutes.js")));
+app.use("/api/testimonials", lazyRoute(() => import("./routes/testimonialRoutes.js")));
+app.use("/api/terms", lazyRoute(() => import("./routes/termsRoutes.js")));
+app.use("/api/partners", lazyRoute(() => import("./routes/partnerRoutes.js")));
+app.use("/api/contact", lazyRoute(() => import("./routes/contactRoutes.js")));
+app.use("/api/compliance", lazyRoute(() => import("./routes/complianceRoutes.js")));
+app.use("/api/dashboard", lazyRoute(() => import("./routes/dashboardRoutes.js")));
+app.use("/api/emails", lazyRoute(() => import("./routes/emailRoutes.js")));
+app.use("/api/employee-suggestions", lazyRoute(() => import("./routes/employeeSuggestionRoutes.js")));
+app.use("/api/finance", lazyRoute(() => import("./routes/financeRoutes.js")));
+app.use("/api/hr", lazyRoute(() => import("./routes/hrRoutes.js")));
+app.use("/api/interviews", lazyRoute(() => import("./routes/interviewRoutes.js")));
+app.use("/api/scheduling", lazyRoute(() => import("./routes/schedulingRoutes.js")));
+app.use("/api/integrations", lazyRoute(() => import("./routes/integrationRoutes.js")));
+app.use("/api/meetings", lazyRoute(() => import("./routes/meetingRoutes.js")));
+app.use("/api/newsletters", lazyRoute(() => import("./routes/newsletterRoutes.js")));
+app.use("/api/organizations", lazyRoute(() => import("./routes/organizationRoutes.js")));
+app.use("/api/operations", lazyRoute(() => import("./routes/operationsRoutes.js")));
+app.use("/api/courses", lazyRoute(() => import("./routes/courseRoutes.js")));
+app.use("/api/training-bookings", lazyRoute(() => import("./routes/trainingBookingRoutes.js")));
+app.use("/api/training-quotations", lazyRoute(() => import("./routes/trainingQuotationRoutes.js")));
+app.use("/api/users", lazyRoute(() => import("./routes/userRoutes.js")));
+app.use("/api/vacancy-intelligence", lazyRoute(() => import("./routes/vacancyIntelligenceRoutes.js")));
+app.use("/api/web-leads", lazyRoute(() => import("./routes/webLeadRoutes.js")));
+app.use("/api", lazyRoute(() => import("./routes/seoRoutes.js")));
 
 app.use(notFound);
 app.use(errorHandler);

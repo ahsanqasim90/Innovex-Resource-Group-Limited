@@ -15,7 +15,9 @@ const router = express.Router();
 const SHARED_STAGES = RECRUITMENT_STAGES.filter((stage) => !["Pending admin review", "Changes requested", "Admin rejected"].includes(stage));
 const ADMIN_ONLY_STAGES = new Set(RECRUITMENT_STAGES.filter((stage) => stage !== "Withdrawn"));
 
-router.use(protect, requirePermission("recruitmentPipeline.view"));
+// ATS uses submit/review actions, not generic create/edit/approve permissions.
+// In particular, /overview and /cv-review are read endpoints.
+router.use(protect, requirePermission("recruitmentPipeline.view", { inferAction: false }));
 
 function actor(user) {
   return { user: user._id, name: user.name, email: user.email, role: user.role };
@@ -177,14 +179,18 @@ router.post("/", requirePermission("recruitmentPipeline.submit"), uploadCv.singl
 
 router.patch("/:id/stage", async (req, res, next) => {
   try {
+    if (!hasPermission(req.user, "recruitmentPipeline.submit") && !isReviewer(req.user)) {
+      return res.status(403).json({ message: "You do not have permission to update candidate stages" });
+    }
     const submission = await visibleSubmission(req.params.id, req.user);
     if (!submission) return res.status(404).json({ message: "Candidate submission not found" });
     const nextStage = clean(req.body.stage);
     if (!RECRUITMENT_STAGES.includes(nextStage)) return res.status(400).json({ message: "Invalid recruitment stage" });
 
     const ownsSubmission = String(submission.submittedBy?.user) === String(req.user._id);
-    const recruiterResubmit = ownsSubmission && submission.stage === "Changes requested" && nextStage === "Pending admin review";
-    const recruiterWithdraw = ownsSubmission && nextStage === "Withdrawn";
+    const canSubmit = hasPermission(req.user, "recruitmentPipeline.submit");
+    const recruiterResubmit = canSubmit && ownsSubmission && submission.stage === "Changes requested" && nextStage === "Pending admin review";
+    const recruiterWithdraw = canSubmit && ownsSubmission && nextStage === "Withdrawn";
     if (ADMIN_ONLY_STAGES.has(nextStage) && !isReviewer(req.user) && !recruiterResubmit) {
       return res.status(403).json({ message: "Only an authorised reviewer can move a candidate to this stage" });
     }

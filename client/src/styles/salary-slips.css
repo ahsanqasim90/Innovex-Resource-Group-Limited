@@ -1,0 +1,135 @@
+.salary-payee-picker {
+  position: relative;
+  margin-bottom: 4px;
+  padding: 16px;
+  border: 1px solid #cae1df;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #f2fbf9, #fffdf7);
+}
+
+.salary-payee-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #173f46;
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.salary-payee-combobox {
+  position: relative;
+}
+
+.hr-form-grid .salary-payee-combobox > input {
+  width: 100%;
+  padding-left: 42px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23087870' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 14px 50%;
+}
+
+.salary-payee-options {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 7px);
+  right: 0;
+  left: 0;
+  overflow: auto;
+  max-height: 330px;
+  padding: 7px;
+  border: 1px solid #ccdcde;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 42px rgba(9, 56, 65, .17);
+}
+
+.salary-payee-options button {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  color: #173f46;
+  text-align: left;
+  background: transparent;
+}
+
+.salary-payee-options button:hover,
+.salary-payee-options button:focus-visible {
+  background: #edf8f6;
+  transform: none;
+}
+
+.salary-payee-avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 10px;
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 850;
+  background: linear-gradient(145deg, #08786f, #07505b);
+}
+
+.salary-payee-copy {
+  overflow: hidden;
+}
+
+.salary-payee-copy strong,
+.salary-payee-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.salary-payee-copy small {
+  margin-top: 3px;
+  color: #6a7f84;
+  font-size: .7rem;
+  font-weight: 600;
+}
+
+.salary-payee-source {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #086f66;
+  font-size: .62rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  background: #dff5ef;
+}
+
+.salary-payee-source.candidate {
+  color: #705413;
+  background: #fff2c9;
+}
+
+.salary-payee-options > p {
+  margin: 0;
+  padding: 16px;
+  color: #6a7f84;
+  text-align: center;
+}
+
+.salary-payee-help {
+  display: block;
+  margin-top: 8px;
+  color: #60777d;
+  font-size: .7rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 600px) {
+  .salary-payee-picker {
+    padding: 13px;
+  }
+
+  .salary-payee-source {
+    display: none;
+  }
+}

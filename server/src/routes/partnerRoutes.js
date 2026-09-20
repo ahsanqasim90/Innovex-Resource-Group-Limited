@@ -3,6 +3,7 @@ import Partner from "../models/Partner.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { fileMeta, uploadPartnerLogo } from "../middleware/upload.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
+import { cachePublicResponse } from "../utils/httpCache.js";
 
 const router = express.Router();
 const fields = ["name", "serviceProvided", "location", "contactEmail", "isActive"];
@@ -35,7 +36,10 @@ function protectAdminQuery(req, res, next) {
 router.get("/", protectAdminQuery, async (req, res, next) => {
   try {
     const filter = req.query.admin ? {} : { isActive: true };
-    const partners = await Partner.find(filter).select("-logo.data").sort({ createdAt: -1 });
+    const query = Partner.find(filter).select("-logo.data").sort({ createdAt: -1 });
+    if (!req.query.admin) query.lean();
+    const partners = await query;
+    if (!req.query.admin) cachePublicResponse(res);
     res.json(partners.map(serializePartner));
   } catch (error) {
     next(error);

@@ -1,4 +1,4 @@
-import { ArrowRight, ShieldCheck, Users, HeartHandshake, MonitorSmartphone, Search, GraduationCap, CalendarCheck, BadgeCheck, BriefcaseBusiness, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, ShieldCheck, Users, HeartHandshake, MonitorSmartphone, GraduationCap, CalendarCheck, BadgeCheck, BriefcaseBusiness, CheckCircle2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
@@ -8,6 +8,7 @@ import PartnerLogoSlider from "../components/PartnerLogoSlider.jsx";
 import SEO from "../components/SEO.jsx";
 import SectionHeading from "../components/SectionHeading.jsx";
 import TestimonialSlider from "../components/TestimonialSlider.jsx";
+import TestimonialReviewText from "../components/TestimonialReviewText.jsx";
 
 const helpCards = [
   {
@@ -20,16 +21,16 @@ const helpCards = [
   },
   {
     icon: MonitorSmartphone,
-    title: "Digital Services",
-    text: "Web development and SEO for organisations that need a credible, conversion-focused online presence.",
-    points: ["Websites and web applications", "Technical and on-page SEO", "International project enquiries"],
+    title: "Digital",
+    text: "Websites, SEO and tailored CRM systems that help organisations attract enquiries and manage their work.",
+    points: ["Websites and web applications", "Technical and on-page SEO", "CRM systems and workflows"],
     cta: "Discuss a Digital Project",
     to: "/website-development"
   },
   {
     icon: GraduationCap,
-    title: "Healthcare Courses",
-    text: "Training enquiry support for care homes, children's homes, nursing homes and healthcare teams.",
+    title: "Training",
+    text: "Healthcare training for care homes, children's homes, nursing homes and healthcare teams.",
     points: ["Course selection", "Delegate planning", "Quotation support"],
     cta: "Explore Courses",
     to: "/courses"
@@ -59,13 +60,27 @@ export default function Home() {
   const [partners, setPartners] = useState([]);
 
   useEffect(() => {
+    let active = true;
     api("/jobs?limit=9")
-      .then((data) => setJobs(data))
-      .catch(() => setJobs([]))
-      .finally(() => setJobsLoading(false));
-    api("/testimonials").then(setTestimonials).catch(() => {});
-    api("/blogs").then((data) => setBlogs(data.slice(0, 3))).catch(() => {});
-    api("/partners").then((data) => setPartners(data)).catch(() => {});
+      .then((data) => active && setJobs(data))
+      .catch(() => active && setJobs([]))
+      .finally(() => active && setJobsLoading(false));
+
+    const loadSecondaryContent = () => {
+      api("/testimonials").then((data) => active && setTestimonials(data)).catch(() => {});
+      api("/blogs").then((data) => active && setBlogs(data.slice(0, 3))).catch(() => {});
+      api("/partners").then((data) => active && setPartners(data)).catch(() => {});
+    };
+    let idleId;
+    let timer;
+    if ("requestIdleCallback" in window) idleId = window.requestIdleCallback(loadSecondaryContent, { timeout: 1400 });
+    else timer = window.setTimeout(loadSecondaryContent, 450);
+
+    return () => {
+      active = false;
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, []);
 
   return (
@@ -73,37 +88,28 @@ export default function Home() {
       <SEO title="Recruitment, Training, Websites & CRM Systems" path="/" description="Innovex Resource Group supports organisations with specialist recruitment, professional training, modern websites and tailored CRM systems." />
       <section className="home-premium-hero">
         <div className="home-premium-hero-copy">
-          <span className="home-premium-kicker"><BadgeCheck size={17} /> Recruitment · Training · Websites · CRM</span>
-          <h1>People, technology and training—built for your <em>growth.</em></h1>
-          <p>One accountable team for specialist recruitment, professional healthcare training, modern websites and tailored CRM systems.</p>
+          <span className="home-premium-kicker"><BadgeCheck size={17} /> Recruitment · Training · Digital</span>
+          <h1>The right people.<br />The skills and systems<br />to <em>grow.</em></h1>
+          <p>Specialist healthcare recruitment, practical training and digital services. One team to help your organisation move forward.</p>
           <div className="home-premium-actions">
-            <Link className="button home-premium-primary" to="/services">Explore our services <ArrowRight size={18} /></Link>
-            <Link className="button home-premium-secondary" to="/contact">Start a conversation</Link>
+            <Link className="button home-premium-primary" to="/contact">Discuss your requirements <ArrowRight size={18} /></Link>
+            <Link className="button home-premium-secondary" to="/jobs">Find a job <ArrowRight size={18} /></Link>
           </div>
-          <div className="home-premium-capabilities" aria-label="Innovex capabilities">
-            <span><ShieldCheck size={18} /><strong>Recruitment</strong></span>
-            <span><MonitorSmartphone size={18} /><strong>Websites</strong></span>
-            <span><BriefcaseBusiness size={18} /><strong>CRM systems</strong></span>
-            <span><GraduationCap size={18} /><strong>Training</strong></span>
-          </div>
+
         </div>
 
-        <div className="home-premium-bento" aria-label="Explore Innovex services">
-          <Link className="home-premium-bento-card" to="/healthcare-recruitment">
-            <img src="/innovex-care-team-hero.jpg" alt="Healthcare professionals representing Innovex recruitment" width="960" height="640" loading="eager" fetchPriority="high" />
+        <div className="home-premium-bento home-service-mosaic" aria-label="Explore our three divisions">
+          <Link className="home-premium-bento-card home-mosaic-main" to="/healthcare-recruitment">
+            <img src="/innovex-care-team-hero.jpg" alt="Healthcare team" width="960" height="640" fetchPriority="high" decoding="async" />
             <span><ShieldCheck size={18} /><strong>Recruitment</strong><small>Specialist UK staffing</small></span>
           </Link>
-          <Link className="home-premium-bento-card" to="/website-development">
-            <img src="/innovex-web-development-hero.jpg" alt="Digital team creating a modern business website" width="960" height="640" loading="eager" fetchPriority="high" />
-            <span><MonitorSmartphone size={18} /><strong>Websites</strong><small>Modern digital experiences</small></span>
-          </Link>
-          <Link className="home-premium-bento-card" to="/crm-systems">
-            <img src="/innovex-crm-systems-hero.jpg" alt="Tailored CRM dashboard and business workflow" width="960" height="640" loading="eager" fetchPriority="high" />
-            <span><BriefcaseBusiness size={18} /><strong>CRM systems</strong><small>Smarter business workflows</small></span>
-          </Link>
           <Link className="home-premium-bento-card" to="/courses">
-            <img src="/innovex-training-hero.jpg" alt="Professional healthcare training session" width="960" height="640" loading="eager" fetchPriority="high" />
-            <span><GraduationCap size={18} /><strong>Training</strong><small>Practical team development</small></span>
+            <img src="/innovex-training-hero.jpg" alt="Healthcare training session" width="960" height="640" loading="lazy" decoding="async" />
+            <span><GraduationCap size={18} /><strong>Training</strong><small>Develop your team</small></span>
+          </Link>
+          <Link className="home-premium-bento-card" to="/services#website-development">
+            <img src="/innovex-web-development-hero.jpg" alt="Team working on a business website" width="960" height="640" loading="lazy" decoding="async" />
+            <span><MonitorSmartphone size={18} /><strong>Digital</strong><small>Websites, SEO & CRM</small></span>
           </Link>
         </div>
       </section>
@@ -112,8 +118,13 @@ export default function Home() {
         <span>One accountable partner</span>
         <strong><ShieldCheck size={19} /> Recruitment</strong>
         <strong><GraduationCap size={19} /> Training</strong>
-        <strong><MonitorSmartphone size={19} /> Digital growth</strong>
+        <strong><MonitorSmartphone size={19} /> Digital</strong>
       </div>
+
+      {testimonials[0] && <section className="home-featured-proof" aria-label="Client and candidate feedback">
+        <div><span className="eyebrow">From the people we support</span><h2>Experience, in their words.</h2><Link to="/testimonials">Read more feedback <ArrowRight size={16} /></Link></div>
+        <div><TestimonialReviewText text={testimonials[0].message} /><p><strong>{testimonials[0].name}</strong><span>{[testimonials[0].role, testimonials[0].company].filter(Boolean).join(" · ")}</span></p></div>
+      </section>}
 
       <section className="home-premium-divisions">
         <div className="home-premium-section-intro">
@@ -161,28 +172,16 @@ export default function Home() {
         <HomeJobsSlider jobs={jobs} loading={jobsLoading} />
       </section>
 
-      <section className="home-premium-values">
-        <div className="home-premium-section-intro">
-          <span className="eyebrow">Why Innovex</span>
-          <h2>Professional delivery. Human service.</h2>
-        </div>
-        <div className="home-premium-value-grid">
-          {[["Care-sector understanding", "We recognise the operational pressure behind every vacancy.", ShieldCheck], ["Clear communication", "Straightforward updates for employers and candidates at every stage.", Users], ["Partnership mindset", "Support designed around lasting working relationships, not quick transactions.", HeartHandshake]].map(([title, text, Icon]) => (
-            <article key={title}><span><Icon size={23} /></span><h3>{title}</h3><p>{text}</p></article>
-          ))}
-        </div>
-      </section>
-
       <section className="section training-home-section home-premium-training">
         <div className="training-home-card">
           <div><span className="eyebrow">Healthcare training</span><h2>Build capability across your care team.</h2><p>Choose the training your staff need, share delegate numbers and location, and receive a tailored quotation from our team.</p></div>
-          <div className="training-home-points"><span><GraduationCap size={18} /> Active course library</span><span><Users size={18} /> Delegate-based enquiries</span><span><CalendarCheck size={18} /> Preferred date planning</span></div>
+          <div className="training-home-points"><span><GraduationCap size={18} /> Browse healthcare courses</span><span><Users size={18} /> Quotes for your team</span><span><CalendarCheck size={18} /> Plan your preferred dates</span></div>
           <Link className="button" to="/courses">Explore courses <ArrowRight size={17} /></Link>
         </div>
       </section>
 
       <section className="home-premium-digital">
-        <div className="home-premium-digital-heading"><span><Sparkles size={18} /> Digital services</span><h2>A stronger digital presence for organisations ready to grow.</h2><p>Modern websites and practical SEO support built around credibility, clarity and measurable business goals.</p><div><Link className="button" to="/website-development">Website projects</Link><Link className="button secondary" to="/seo-services">SEO support</Link></div></div>
+        <div className="home-premium-digital-heading"><span><Sparkles size={18} /> Digital services</span><h2>Websites that attract enquiries. Systems that organise the work.</h2><p>Website development, search visibility and tailored CRM systems, designed around how your business works.</p><div><Link className="button" to="/website-development">Website projects</Link><Link className="button secondary" to="/crm-systems">Explore CRM systems</Link></div></div>
         <div className="home-premium-digital-grid">
           {digitalProof.map((item, index) => <article key={item.title}><small>0{index + 1}</small><h3>{item.title}</h3><p>{item.text}</p></article>)}
         </div>

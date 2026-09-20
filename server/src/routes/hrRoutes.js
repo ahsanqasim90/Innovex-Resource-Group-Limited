@@ -1,9 +1,11 @@
 import crypto from "node:crypto";
 import express from "express";
 import EmailLog from "../models/EmailLog.js";
+import Candidate from "../models/Candidate.js";
 import HrCounter from "../models/HrCounter.js";
 import OfferLetter from "../models/OfferLetter.js";
 import SalarySlip from "../models/SalarySlip.js";
+import User from "../models/User.js";
 import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { generateOfferLetterPdf, generateSalarySlipPdf } from "../services/hrPdfService.js";
@@ -125,6 +127,81 @@ router.use(protect);
 
 router.get("/senders", (req, res) => {
   res.json(allowedSenderAccountsForUser(req.user));
+});
+
+const teamRoleDetails = {
+  super_admin: { jobTitle: "Administrator", department: "Administration" },
+  admin: { jobTitle: "Administrator", department: "Administration" },
+  recruitment: { jobTitle: "Recruitment Consultant", department: "Recruitment" },
+  sales: { jobTitle: "Sales Consultant", department: "Sales" },
+  sales_manager: { jobTitle: "Sales Manager", department: "Sales" },
+  training: { jobTitle: "Training Consultant", department: "Training" },
+  marketing: { jobTitle: "Marketing Consultant", department: "Marketing" },
+  external_agent: { jobTitle: "External Agent", department: "External" },
+  viewer: { jobTitle: "Team Member", department: "Operations" }
+};
+
+router.get("/salary-payees", requirePermission("salarySlips.view"), async (req, res, next) => {
+  try {
+    const [candidates, users, previousSlips] = await Promise.all([
+      Candidate.find({
+        email: { $nin: [null, ""] },
+        status: { $nin: ["Not Interested", "Do Not Contact"] }
+      }).select("name email phone desiredRole status").sort({ name: 1 }).limit(500).lean(),
+      User.find({ isActive: true }).select("name email role").sort({ name: 1 }).lean(),
+      SalarySlip.find({}).select("employeeName employeeEmail employeePhone employeeId jobTitle department").sort({ createdAt: -1 }).limit(500).lean()
+    ]);
+
+    const previousByEmail = new Map();
+    for (const slip of previousSlips) {
+      const email = String(slip.employeeEmail || "").trim().toLowerCase();
+      if (email && !previousByEmail.has(email)) previousByEmail.set(email, slip);
+    }
+
+    const candidateByEmail = new Map(
+      candidates.map((candidate) => [String(candidate.email || "").trim().toLowerCase(), candidate])
+    );
+    const payees = new Map();
+
+    for (const candidate of candidates) {
+      const email = String(candidate.email || "").trim().toLowerCase();
+      const previous = previousByEmail.get(email) || {};
+      payees.set(email, {
+        id: `candidate:${candidate._id}`,
+        name: candidate.name,
+        email,
+        phone: candidate.phone || previous.employeePhone || "",
+        employeeId: previous.employeeId || "",
+        jobTitle: previous.jobTitle || candidate.desiredRole || "",
+        department: previous.department || "",
+        source: "candidate",
+        status: candidate.status
+      });
+    }
+
+    for (const user of users) {
+      const email = String(user.email || "").trim().toLowerCase();
+      if (!email) continue;
+      const candidate = candidateByEmail.get(email) || {};
+      const previous = previousByEmail.get(email) || {};
+      const roleDetails = teamRoleDetails[user.role] || teamRoleDetails.viewer;
+      payees.set(email, {
+        id: `team:${user._id}`,
+        name: user.name || candidate.name || previous.employeeName || email,
+        email,
+        phone: candidate.phone || previous.employeePhone || "",
+        employeeId: previous.employeeId || "",
+        jobTitle: previous.jobTitle || candidate.desiredRole || roleDetails.jobTitle,
+        department: previous.department || roleDetails.department,
+        source: candidate._id ? "team-and-candidate" : "team",
+        status: user.isActive === false ? "Inactive" : "Active"
+      });
+    }
+
+    res.json(Array.from(payees.values()).sort((a, b) => a.name.localeCompare(b.name)));
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get("/salary-slips", requirePermission("salarySlips.view"), async (req, res, next) => {

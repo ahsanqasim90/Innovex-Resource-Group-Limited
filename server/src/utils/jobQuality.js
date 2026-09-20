@@ -64,3 +64,23 @@ export function assertSalaryLooksRight(salary) {
     throw error;
   }
 }
+
+function escapeForRegex(value = "") {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Public visitors and candidates must never see the client / care home name.
+// Removes the client name field and blanks it out of any text the record carries.
+export function redactClientName(record, clientName = record?.clientName) {
+  if (!record || typeof record !== "object") return record;
+  const out = { ...record };
+  const name = String(clientName || "").trim();
+  const pattern = name.length >= 3 ? new RegExp(escapeForRegex(name), "gi") : null;
+  const scrub = (value) => (pattern && typeof value === "string" ? value.replace(pattern, "our client") : value);
+  for (const [key, value] of Object.entries(out)) {
+    if (typeof value === "string") out[key] = scrub(value);
+    else if (Array.isArray(value)) out[key] = value.map(scrub);
+  }
+  delete out.clientName;
+  return out;
+}

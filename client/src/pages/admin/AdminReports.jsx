@@ -3,6 +3,7 @@ import { BarChart3, BriefcaseBusiness, Clock3, Coins, TrendingUp, UserCheck, Use
 import { api } from "../../api/client.js";
 import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
+import AdminLoadState from "../../components/AdminLoadState.jsx";
 
 const money = (value) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(value || 0));
 
@@ -15,7 +16,7 @@ export default function AdminReports() {
   const maxFunnel = useMemo(() => Math.max(1, ...(data?.funnel || []).map((item) => item.count)), [data]);
   const maxSource = useMemo(() => Math.max(1, ...(data?.sourceQuality || []).map((item) => item.candidates)), [data]);
   const maxApplications = useMemo(() => Math.max(1, ...(data?.applicationSources || []).map((item) => item.applications)), [data]);
-  if (!data) return <div className="admin-loading-screen">Preparing recruitment analytics…</div>;
+  if (!data) return <AdminLoadState error={status?.type === "error" ? status.message : ""} onRetry={() => { setStatus(null); load(); }} label="Preparing recruitment analytics…" />;
   return <div className="reports-page"><AdminSectionHero icon={BarChart3} eyebrow="Decision intelligence" title="Recruitment Analytics" description="Understand pipeline conversion, source quality, recruiter performance, time-to-fill and commercial outcomes." aside={<div className="workspace-hero-count"><TrendingUp size={18} /><span><small>PLACEMENTS</small><strong>{data.metrics.placements}</strong></span></div>} /><StatusMessage status={status} />
     <div className="reports-period"><span>Reporting period</span><select value={days} onChange={(event) => { const period = Number(event.target.value); setDays(period); load(period); }}><option value="90">Last 90 days</option><option value="180">Last 6 months</option><option value="365">Last 12 months</option><option value="730">Last 24 months</option></select></div>
     <section className="reports-kpis"><article><BriefcaseBusiness /><div><small>Open vacancies</small><strong>{data.metrics.openVacancies}</strong></div></article><article><UsersRound /><div><small>New candidates</small><strong>{data.metrics.candidates}</strong></div></article><article><Clock3 /><div><small>Average time to fill</small><strong>{data.metrics.averageTimeToFillDays}d</strong></div></article><article><UserCheck /><div><small>Interview → placement</small><strong>{data.metrics.interviewToPlacementRate}%</strong></div></article>{data.finance && <article><Coins /><div><small>Placement revenue</small><strong>{money(data.finance.placementRevenue)}</strong></div></article>}</section>

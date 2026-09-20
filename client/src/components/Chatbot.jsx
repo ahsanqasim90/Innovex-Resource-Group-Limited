@@ -423,7 +423,7 @@ export default function Chatbot() {
               <span className="chatbot-online-dot"></span>
             </span>
             <span className="chatbot-launcher-copy">
-              <small>Online now</small>
+              <small>Enquiry assistant</small>
               <strong>Chat with Innovex</strong>
             </span>
           </>

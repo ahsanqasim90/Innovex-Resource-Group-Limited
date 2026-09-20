@@ -1,5 +1,6 @@
 import express from "express";
 import User from "../models/User.js";
+import ActivityLog from "../models/ActivityLog.js";
 import { outboundCallerIds } from "../config/calling.js";
 import { publicEmailAccounts } from "../config/emailAccounts.js";
 import { allPermissions, permissionGroups, rolePresets, safeUser } from "../config/permissions.js";
@@ -67,6 +68,21 @@ router.get("/", async (req, res, next) => {
   try {
     const users = await User.find().select("-password").sort({ createdAt: -1 }).lean();
     res.json(users.map((user) => safeUser(user)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/:id/activity", async (req, res, next) => {
+  try {
+    const member = await User.findById(req.params.id).select("name email role isActive createdAt lastLoginAt").lean();
+    if (!member) return res.status(404).json({ message: "Team member not found" });
+    const activities = await ActivityLog.find({ "actor.user": member._id })
+      .select("module action summary createdAt")
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean();
+    res.json({ member: safeUser(member), createdAt: member.createdAt, lastLoginAt: member.lastLoginAt || null, activities });
   } catch (error) {
     next(error);
   }

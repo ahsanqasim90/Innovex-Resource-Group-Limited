@@ -4,6 +4,7 @@ import { api } from "../../api/client.js";
 import { hasPermission } from "../../auth/permissions.js";
 import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
+import AdminLoadState from "../../components/AdminLoadState.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 
@@ -61,7 +62,7 @@ export default function AdminWorkspaceSettings() {
     catch (error) { setStatus({ type: "error", message: error.message }); }
   }
 
-  if (!organization) return <div className="admin-loading-screen">Loading workspace settings…</div>;
+  if (!organization) return <AdminLoadState error={status?.type === "error" ? status.message : ""} onRetry={() => { setStatus(null); load(); }} label="Loading workspace settings…" />;
   const usage = organization.usage || {};
   const seatPercent = Math.min(100, Math.round(((usage.reservedSeats || 0) / (usage.seatLimit || 1)) * 100));
   return <div className="workspace-settings-page">

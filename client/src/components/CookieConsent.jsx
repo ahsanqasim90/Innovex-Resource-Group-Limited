@@ -22,9 +22,8 @@ export default function CookieConsent() {
   function save(value) { applyConsent(value); setVisible(false); }
   return <aside className="cookie-consent" role="dialog" aria-modal="false" aria-label="Cookie choices">
     <button className="cookie-close" onClick={() => save(false)} aria-label="Use essential cookies only"><X /></button>
-    <span className="cookie-icon"><Cookie /></span><div className="cookie-copy"><strong>Your privacy choices</strong><p>Essential cookies keep the website and secure portal working. Analytics is optional and stays off unless you allow it.</p><Link to="/privacy">Read our privacy and cookie notice</Link></div>
+    <span className="cookie-icon"><Cookie /></span><div className="cookie-copy"><strong>Your privacy choices</strong><p>We use essential cookies to run this site. Optional analytics stays off unless you choose it.</p><Link to="/privacy">Privacy & cookies</Link></div>
     {customise && <label className="cookie-toggle"><span><ShieldCheck /><span><strong>Privacy-safe analytics</strong><small>Anonymous usage trends; no form or CV data.</small></span></span><input type="checkbox" checked={analytics} onChange={(event) => setAnalytics(event.target.checked)} /></label>}
-    <div className="cookie-actions"><button onClick={() => save(false)}>Essential only</button><button onClick={() => setCustomise((value) => !value)}><Settings2 />Customise</button><button className="accept" onClick={() => save(customise ? analytics : true)}>Accept analytics</button></div>
+    <div className="cookie-actions"><button onClick={() => save(false)}>Essential only</button><button onClick={() => setCustomise((value) => !value)}><Settings2 />Customise</button><button className="accept" onClick={() => save(customise ? analytics : true)}>{customise ? "Save choices" : "Accept analytics"}</button></div>
   </aside>;
 }
-

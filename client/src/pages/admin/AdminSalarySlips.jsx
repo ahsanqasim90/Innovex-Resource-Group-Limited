@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, downloadFile } from "../../api/client.js";
+import "../../styles/salary-slips.css";
 
 const initialForm = {
   employeeName: "",
@@ -24,8 +25,8 @@ const initialForm = {
   otherAllowance: "",
   tax: "",
   otherDeduction: "",
-  directorName: "Fawad Khan",
-  directorTitle: "Director",
+  directorName: "Muhammad Ahsan Qasim",
+  directorTitle: "Co-Founder & Director",
   attestationText: "This salary slip has been issued by Innovex Resource Group Limited and is attested as a true record of the payment details shown above.",
   senderEmail: "",
   cc: "",
@@ -44,6 +45,10 @@ export default function AdminSalarySlips() {
   const [form, setForm] = useState(initialForm);
   const [slips, setSlips] = useState([]);
   const [senders, setSenders] = useState([]);
+  const [payees, setPayees] = useState([]);
+  const [payeeQuery, setPayeeQuery] = useState("");
+  const [payeePickerOpen, setPayeePickerOpen] = useState(false);
+  const [payeesLoading, setPayeesLoading] = useState(true);
   const [editingId, setEditingId] = useState("");
   const [selected, setSelected] = useState(null);
   const [filters, setFilters] = useState({ search: "", status: "" });
@@ -57,6 +62,14 @@ export default function AdminSalarySlips() {
     return { gross, deductions, net: gross - deductions };
   }, [form]);
 
+  const filteredPayees = useMemo(() => {
+    const query = payeeQuery.trim().toLowerCase();
+    const matches = query
+      ? payees.filter((payee) => [payee.name, payee.email, payee.jobTitle, payee.department].some((value) => String(value || "").toLowerCase().includes(query)))
+      : payees;
+    return matches.slice(0, 10);
+  }, [payees, payeeQuery]);
+
   async function loadSlips() {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
     const data = await api(`/hr/salary-slips${query ? `?${query}` : ""}`);
@@ -65,10 +78,14 @@ export default function AdminSalarySlips() {
   }
 
   useEffect(() => {
-    api("/hr/senders").then((data) => {
-      setSenders(data);
-      if (data[0]) setForm((current) => ({ ...current, senderEmail: current.senderEmail || data[0].address }));
-    }).catch(() => {});
+    Promise.allSettled([api("/hr/senders"), api("/hr/salary-payees")]).then(([senderResult, payeeResult]) => {
+      if (senderResult.status === "fulfilled") {
+        setSenders(senderResult.value);
+        if (senderResult.value[0]) setForm((current) => ({ ...current, senderEmail: current.senderEmail || senderResult.value[0].address }));
+      }
+      if (payeeResult.status === "fulfilled") setPayees(payeeResult.value);
+      setPayeesLoading(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -79,9 +96,41 @@ export default function AdminSalarySlips() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateDirectorName(value) {
+    const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
+    const presetTitle = normalized === "muhammad ahsan qasim"
+      ? "Co-Founder & Director"
+      : normalized === "fawad khan"
+        ? "Director"
+        : "";
+    setForm((current) => ({
+      ...current,
+      directorName: value,
+      directorTitle: presetTitle || current.directorTitle
+    }));
+  }
+
   function resetForm() {
     setEditingId("");
+    setPayeeQuery("");
+    setPayeePickerOpen(false);
     setForm({ ...initialForm, senderEmail: senders[0]?.address || "" });
+  }
+
+  function selectPayee(payee) {
+    setForm((current) => ({
+      ...current,
+      employeeName: payee.name || "",
+      employeeEmail: payee.email || "",
+      employeePhone: payee.phone || "",
+      employeeId: payee.employeeId || "",
+      jobTitle: payee.jobTitle || "",
+      department: payee.department || ""
+    }));
+    setPayeeQuery(`${payee.name} · ${payee.email}`);
+    setPayeePickerOpen(false);
+    setMessage(`${payee.name}'s basic details have been added. Review them before creating the slip.`);
+    setError("");
   }
 
   async function saveSlip(event) {
@@ -108,6 +157,7 @@ export default function AdminSalarySlips() {
   function editSlip(slip) {
     setEditingId(slip._id);
     setSelected(slip);
+    setPayeeQuery(`${slip.employeeName} · ${slip.employeeEmail}`);
     setForm({
       ...initialForm,
       ...slip,
@@ -180,6 +230,42 @@ export default function AdminSalarySlips() {
             <h3>{editingId ? "Edit salary slip" : "Create salary slip"}</h3>
           </div>
           <div className="hr-form-grid">
+            <div className="full salary-payee-picker">
+              <span className="salary-payee-label">Current candidate or employee</span>
+              <div className={`salary-payee-combobox${payeePickerOpen ? " is-open" : ""}`}>
+                <input
+                  type="search"
+                  value={payeeQuery}
+                  onChange={(event) => {
+                    setPayeeQuery(event.target.value);
+                    setPayeePickerOpen(true);
+                  }}
+                  onFocus={() => setPayeePickerOpen(true)}
+                  onBlur={() => window.setTimeout(() => setPayeePickerOpen(false), 150)}
+                  placeholder={payeesLoading ? "Loading current people..." : "Search by name, email, job title or department"}
+                  disabled={payeesLoading}
+                  aria-label="Search current candidates and employees"
+                  aria-expanded={payeePickerOpen}
+                  autoComplete="off"
+                />
+                {payeePickerOpen && !payeesLoading && (
+                  <div className="salary-payee-options" role="listbox">
+                    {filteredPayees.map((payee) => (
+                      <button key={payee.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => selectPayee(payee)}>
+                        <span className="salary-payee-avatar" aria-hidden="true">{payee.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span>
+                        <span className="salary-payee-copy">
+                          <strong>{payee.name}</strong>
+                          <small>{payee.email}{payee.jobTitle ? ` · ${payee.jobTitle}` : ""}</small>
+                        </span>
+                        <span className={`salary-payee-source ${payee.source}`}>{payee.source.startsWith("team") ? "Team" : "Candidate"}</span>
+                      </button>
+                    ))}
+                    {!filteredPayees.length && <p>No current person matches this search.</p>}
+                  </div>
+                )}
+              </div>
+              <small className="salary-payee-help">Selecting a person fills their basic details below. Payment dates and amounts stay blank for this salary period.</small>
+            </div>
             <label>Employee name<input value={form.employeeName} onChange={(e) => update("employeeName", e.target.value)} required /></label>
             <label>Employee email<input type="email" value={form.employeeEmail} onChange={(e) => update("employeeEmail", e.target.value)} required /></label>
             <label>Employee phone<input value={form.employeePhone} onChange={(e) => update("employeePhone", e.target.value)} /></label>
@@ -201,7 +287,7 @@ export default function AdminSalarySlips() {
             <label>Other allowance<input type="number" step="0.01" value={form.otherAllowance} onChange={(e) => update("otherAllowance", e.target.value)} /></label>
             <label>Tax<input type="number" step="0.01" value={form.tax} onChange={(e) => update("tax", e.target.value)} /></label>
             <label>Other deduction<input type="number" step="0.01" value={form.otherDeduction} onChange={(e) => update("otherDeduction", e.target.value)} /></label>
-            <label>Director name<input value={form.directorName} onChange={(e) => update("directorName", e.target.value)} /></label>
+            <label>Director name<input value={form.directorName} onChange={(e) => updateDirectorName(e.target.value)} /></label>
             <label>Director title<input value={form.directorTitle} onChange={(e) => update("directorTitle", e.target.value)} /></label>
             <label>Send from<select value={form.senderEmail} onChange={(e) => update("senderEmail", e.target.value)}>{senders.map((sender) => <option key={sender.address} value={sender.address}>{sender.label} ({sender.address})</option>)}</select></label>
             <label className="full">CC emails<input value={form.cc} onChange={(e) => update("cc", e.target.value)} placeholder="optional, comma separated" /></label>
