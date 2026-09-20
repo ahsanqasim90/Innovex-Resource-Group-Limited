@@ -21,15 +21,21 @@ function safeFilename(originalName) {
 
 const memoryStorage = multer.memoryStorage();
 
+// Phones, Google Drive and some email apps label genuine PDF/DOCX files with a generic type
+// (application/octet-stream, application/x-pdf ...). Judge by extension in that case; the real
+// file content is verified later from its magic bytes, so a renamed file is still rejected.
+const genericCvMimeTypes = new Set(["", "application/octet-stream", "application/x-pdf", "application/acrobat", "application/x-zip-compressed", "application/zip"]);
+
 export const uploadCv = multer({
   storage: memoryStorage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (allowedCvMimeTypes.has(file.mimetype)) {
+    const mimetype = String(file.mimetype || "").toLowerCase();
+    if (allowedCvMimeTypes.has(mimetype) || (genericCvMimeTypes.has(mimetype) && /\.(pdf|docx)$/i.test(file.originalname || ""))) {
       cb(null, true);
       return;
     }
-    cb(new Error("CV must be a genuine PDF or DOCX file"));
+    cb(Object.assign(new Error("Please upload your CV as a PDF or Word (.docx) file."), { statusCode: 400 }));
   }
 });
 

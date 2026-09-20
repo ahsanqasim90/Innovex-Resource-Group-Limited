@@ -8,6 +8,7 @@ import { logActivity } from "../services/activityLogService.js";
 import { notifyPortalMembersOfVacancy } from "../services/portalNotificationService.js";
 import { runAutomations } from "../services/automationService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
+import { assertSalaryLooksRight, normaliseJobPayload } from "../utils/jobQuality.js";
 
 const router = express.Router();
 const jobFields = ["reference", "clientName", "clientAccount", "title", "location", "postcode", "salary", "type", "shift", "description", "requirements", "priority", "openings", "assignedRecruiters", "vacancyStatus", "closingDate"];
@@ -89,7 +90,8 @@ router.get("/:id", protectAdminQuery, async (req, res, next) => {
 router.post("/", protect, requirePermission("jobs.view"), async (req, res, next) => {
   try {
     requireFields(req.body, ["title", "location", "salary", "type", "shift", "description"]);
-    const payload = pick(req.body, jobFields);
+    const payload = normaliseJobPayload(pick(req.body, jobFields));
+    assertSalaryLooksRight(payload.salary);
     const duplicate = await Job.findOne({ title: new RegExp(`^${escapeRegex(payload.title)}$`, "i"), location: new RegExp(`^${escapeRegex(payload.location)}$`, "i"), clientName: payload.clientName || "", vacancyStatus: { $in: ["Open", "Paused"] } });
     if (duplicate) return res.status(409).json({ message: `A matching live vacancy already exists (${duplicate.reference || duplicate._id}). Review it before creating another.` });
     payload.vacancyStatus = vacancyStatuses.includes(payload.vacancyStatus) ? payload.vacancyStatus : payload.isActive === false ? "Closed" : "Open";
@@ -109,6 +111,8 @@ router.put("/:id", protect, requirePermission("jobs.view"), async (req, res, nex
     const payload = pick(req.body, jobFields);
     const job = await Job.findById(req.params.id).select("+clientName +assignedRecruiters");
     if (!job) return res.status(404).json({ message: "Job not found" });
+    normaliseJobPayload(payload, job);
+    if (payload.salary !== undefined) assertSalaryLooksRight(payload.salary);
     const previousStatus = job.vacancyStatus || (job.isActive ? "Open" : "Closed");
     if (vacancyStatuses.includes(payload.vacancyStatus)) {
       payload.isActive = payload.vacancyStatus === "Open" && (job.publicationStatus === "Approved" || !job.publicationStatus);

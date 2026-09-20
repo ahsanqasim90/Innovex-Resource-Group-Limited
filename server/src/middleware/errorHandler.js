@@ -4,7 +4,19 @@ export function notFound(req, res, next) {
   next(error);
 }
 
+// Problems caused by the person uploading a file (too large, wrong type) are not server faults:
+// answer with a clear 4xx message and keep them out of the Operations error log.
+const uploadMessages = {
+  LIMIT_FILE_SIZE: "That file is too large. Please upload a file under the size limit shown on the form (5MB for CVs).",
+  LIMIT_FILE_COUNT: "Too many files were attached.",
+  LIMIT_UNEXPECTED_FILE: "That file could not be accepted. Please attach it using the upload box on the form."
+};
+
 export function errorHandler(error, req, res, next) {
+  if (error?.name === "MulterError") {
+    error.statusCode = error.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+    error.message = uploadMessages[error.code] || error.message;
+  }
   const status = error.statusCode || 500;
   if (status >= 500) {
     const fingerprint = crypto.createHash("sha256").update(`${req.method}:${req.route?.path || req.path}:${error.name}:${error.message}`).digest("hex").slice(0, 24);
