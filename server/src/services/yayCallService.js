@@ -84,6 +84,23 @@ function providerMessage(payload) {
   return JSON.stringify(payload).replace(/\s+/g, " ").trim().slice(0, 280);
 }
 
+// A slow or unreachable Yay API used to hang until the serverless function was killed,
+// so the user saw a generic failure. Give every request a clear time limit instead.
+const YAY_TIMEOUT_MS = Number(process.env.YAY_REQUEST_TIMEOUT_MS || 12000);
+
+async function yayFetch(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), YAY_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error(`Yay did not answer within ${Math.round(YAY_TIMEOUT_MS / 1000)} seconds`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function yayAuthHeaders() {
   return {
     "X-Auth-Reseller": compact(process.env.YAY_AUTH_RESELLER),
@@ -152,10 +169,14 @@ export async function testYayConnection() {
   }
 
   const url = `${config.apiBase}${config.authTestPath}`;
-  const response = await fetch(url, {
+  const response = await yayFetch(url, {
     method: "GET",
     headers: yayAuthHeaders()
-  });
+  }).catch((error) => ({ networkError: error.message }));
+
+  if (response.networkError) {
+    return { configured: true, ok: false, url, message: `Yay API connection test failed: ${response.networkError}` };
+  }
 
   const responsePayload = await parseYayResponse(response);
 
@@ -221,7 +242,7 @@ export async function startYayOutboundCall({ phone, targetName, callerId }) {
   for (const path of config.callPaths) {
     const url = `${config.apiBase}${path}`;
     try {
-      const response = await fetch(url, {
+      const response = await yayFetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -238,6 +259,10 @@ export async function startYayOutboundCall({ phone, targetName, callerId }) {
         responsePayload
       };
       attempts.push(attempt);
+
+      // 401/403 mean the credentials or the allowed IP ranges are wrong; trying the other
+      // call paths would fail the same way and only slow the user down.
+      if (!response.ok && (response.status === 401 || response.status === 403)) break;
 
       if (response.ok) {
         return {

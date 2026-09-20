@@ -177,7 +177,7 @@ export default function AdminContactMessages() {
                   <span className="enquiry-list-top"><strong>{item.name}</strong><time>{relativeTime(item.lastActivityAt || item.createdAt)}</time></span>
                   <span className="enquiry-list-subject">{item.subject}</span>
                   <span className="enquiry-list-preview">{item.message}</span>
-                  <span className="enquiry-list-meta"><i className={`enquiry-status ${statusClass(item.status)}`}>{item.status}</i><i className={`enquiry-priority ${statusClass(item.priority)}`}>{item.priority}</i><em>{item.inquiryType}</em></span>
+                  <span className="enquiry-list-meta"><i className={`enquiry-status ${statusClass(item.status)}`}>{item.status}</i>{item.status === "New" && Date.now() - new Date(item.createdAt).getTime() > 48 * 3600 * 1000 && <i className="enquiry-overdue" title="No reply for over 2 days">Overdue</i>}<i className={`enquiry-priority ${statusClass(item.priority)}`}>{item.priority}</i><em>{item.inquiryType}</em></span>
                 </span>
               </button>
             ))}

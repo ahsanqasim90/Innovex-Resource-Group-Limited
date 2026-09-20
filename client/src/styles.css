@@ -11576,7 +11576,7 @@ textarea:focus-visible {
 
 /* Healthcare compliance passport */
 .compliance-page { display: grid; gap: 1.2rem; }
-.compliance-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; }
+.compliance-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .8rem; }
 .compliance-metrics article { display: flex; align-items: center; gap: .8rem; padding: 1rem; border: 1px solid #dfe8e9; border-radius: 1rem; background: #fff; }
 .compliance-metrics svg { width: 40px; height: 40px; padding: .6rem; border-radius: .8rem; }
 .compliance-metrics article.green svg { color: #087568; background: #ddf5ef; }
@@ -12401,3 +12401,26 @@ textarea:focus-visible {
 /* Consent and public trust centre */
 .cookie-consent{position:fixed;z-index:1200;left:24px;bottom:24px;display:grid;grid-template-columns:44px minmax(250px,1fr);gap:13px;width:min(610px,calc(100vw - 48px));padding:20px;border:1px solid rgba(8,83,91,.16);border-radius:20px;background:rgba(255,255,255,.98);box-shadow:0 22px 70px rgba(3,32,39,.23);backdrop-filter:blur(14px)}.cookie-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:13px;background:#e4f5f2;color:#087e7a}.cookie-copy{display:grid;gap:4px;padding-right:25px}.cookie-copy strong{font-size:1.02rem;color:#073d45}.cookie-copy p{margin:0;color:#5e7478;font-size:.82rem;line-height:1.5}.cookie-copy a{color:#087c78;font-size:.75rem;font-weight:750}.cookie-close{position:absolute;right:12px;top:12px;border:0;background:transparent;color:#657a7e}.cookie-toggle{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;background:#f2f8f7}.cookie-toggle>span{display:flex;align-items:center;gap:9px}.cookie-toggle span span{display:grid}.cookie-toggle small{color:#708286}.cookie-toggle input{width:19px;height:19px}.cookie-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}.cookie-actions button{display:flex;align-items:center;gap:6px;padding:9px 12px;border:1px solid #d3e0e1;border-radius:9px;background:#fff;color:#34575d;font-weight:750}.cookie-actions .accept{border-color:#087f7c;background:#087f7c;color:#fff}.product-policy-page{width:min(1120px,calc(100% - 40px));margin:0 auto;padding:70px 0 90px}.product-policy-hero{max-width:820px;padding:62px 0}.product-policy-hero>span{display:inline-flex;align-items:center;gap:8px;color:#087f7b;font-size:.75rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}.product-policy-hero>span svg{width:18px}.product-policy-hero h1{max-width:760px;margin:18px 0;color:#063e48;font-size:clamp(2.7rem,6vw,5.5rem);letter-spacing:-.055em;line-height:.98}.product-policy-hero p{max-width:730px;color:#5d7478;font-size:1.15rem;line-height:1.7}.product-policy-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.product-policy-grid article{display:flex;gap:16px;min-height:170px;padding:25px;border:1px solid #dae6e7;border-radius:19px;background:#fff;box-shadow:0 10px 34px rgba(5,45,52,.055)}.product-policy-grid article>svg{flex:0 0 auto;width:23px;color:#0b968e}.product-policy-grid h2{margin:0 0 8px;color:#0a4149}.product-policy-grid p{margin:0;color:#62797d;line-height:1.65}.product-policy-cta{display:flex;justify-content:space-between;align-items:center;gap:25px;margin-top:24px;padding:30px;border-radius:20px;color:#fff;background:linear-gradient(135deg,#06454f,#087c7a)}.product-policy-cta small{color:#9fe4d9;text-transform:uppercase;font-weight:800}.product-policy-cta h2{margin:5px 0 0}.product-policy-cta a{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:10px;background:#f5be45;color:#193c40;font-weight:850}
 @media(max-width:700px){.cookie-consent{left:12px;bottom:12px;width:calc(100vw - 24px);grid-template-columns:38px 1fr;padding:16px}.cookie-icon{width:38px;height:38px}.cookie-actions{display:grid;grid-template-columns:1fr 1fr}.cookie-actions .accept{grid-column:1/-1}.product-policy-page{width:min(100% - 28px,1120px);padding-top:35px}.product-policy-hero{padding:42px 0}.product-policy-grid{grid-template-columns:1fr}.product-policy-cta{align-items:flex-start;flex-direction:column}}
+
+/* Candidate portal: expandable job description on the applications list */
+.portal-job-details { margin-top: .35rem; font-size: .8rem; color: #33494d; }
+.portal-job-details summary { cursor: pointer; color: #0f6b6b; font-weight: 600; }
+.portal-job-details p { margin: .5rem 0 0; white-space: pre-line; line-height: 1.5; }
+.portal-job-details ul { margin: .4rem 0 0 1.1rem; padding: 0; }
+
+/* Touch-friendly targets (WCAG 2.2 target size): on phones and tablets links and controls are at least 44px tall */
+@media (pointer: coarse) {
+  .footer-link-group a, .footer-bottom a, .footer-contact a { display: inline-flex; align-items: center; min-height: 44px; }
+  .button, button.button, .nav a, .nav button { min-height: 44px; }
+  .form input:not([type="checkbox"]):not([type="radio"]), .form select { min-height: 44px; }
+  .portal-job-details summary { display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+/* Enquiries still marked New after two days */
+.enquiry-overdue { font-style: normal; font-size: .68rem; font-weight: 700; padding: .12rem .5rem; border-radius: 999px; background: #fdecea; color: #b42318; }
+
+/* Collapsible tools panel above admin tables */
+.page-tools-toggle { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; padding: .85rem 1.1rem; margin: 0 0 1rem; border: 1px solid #dfe8e9; border-radius: 1rem; background: #fff; color: #163b40; font: inherit; cursor: pointer; text-align: left; min-height: 44px; }
+.page-tools-toggle span { font-size: .78rem; font-weight: 700; color: #0f6b6b; white-space: nowrap; }
+.page-tools-toggle:hover { border-color: #0f6b6b; }
+.talent-admin-grid[hidden] { display: none; }

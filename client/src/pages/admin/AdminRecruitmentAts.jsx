@@ -290,7 +290,7 @@ export default function AdminRecruitmentAts() {
         <Metric icon={Clock3} label="Awaiting review" value={data.stats.awaitingAdmin} note="Internal quality gate" tone="amber" />
         <Metric icon={UsersRound} label="With clients" value={data.stats.withClient} note="Awaiting feedback" tone="blue" />
         <Metric icon={CalendarDays} label="Interviews" value={data.stats.interviews} note="Requested or scheduled" tone="violet" />
-        <Metric icon={CheckCircle2} label="Hired" value={data.stats.hired} note="Successful placements" tone="green" />
+        <Metric icon={CheckCircle2} label="Hired" value={data.stats.hired} note="Marked Hired in this pipeline (interview outcomes are counted separately)" tone="green" />
       </section>
 
       <section className="ats-workspace">

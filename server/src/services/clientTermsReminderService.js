@@ -7,6 +7,11 @@ function isoDateOnly(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
+// Reminders used to go out every single day with no limit, which reads as spam to a client.
+// They are now spaced out and capped; both values can be tuned with environment variables.
+const REMINDER_GAP_DAYS = Math.max(1, Number(process.env.TERMS_REMINDER_GAP_DAYS || 3));
+const REMINDER_MAX = Math.max(1, Number(process.env.TERMS_REMINDER_MAX || 3));
+
 export function clientTermsReminderWindow(date = new Date()) {
   const todayStart = new Date(date);
   todayStart.setUTCHours(0, 0, 0, 0);
@@ -16,6 +21,7 @@ export function clientTermsReminderWindow(date = new Date()) {
 export async function processClientTermsReminders({ date = new Date(), limit = 40 } = {}) {
   const { reminderDate, sentBefore } = clientTermsReminderWindow(date);
   const result = { reminderDate, checked: 0, sent: 0, failed: 0, errors: [] };
+  const gapCutoff = new Date(date.getTime() - REMINDER_GAP_DAYS * 24 * 60 * 60 * 1000 + 60 * 60 * 1000);
 
   while (result.checked < limit) {
     const terms = await ClientTerms.findOneAndUpdate(
@@ -25,6 +31,10 @@ export async function processClientTermsReminders({ date = new Date(), limit = 4
         clientEmail: { $nin: ["", null] },
         sentAt: { $lt: sentBefore },
         lastUnsignedReminderDate: { $ne: reminderDate },
+        $and: [
+          { $or: [{ unsignedReminderCount: { $exists: false } }, { unsignedReminderCount: { $lt: REMINDER_MAX } }] },
+          { $or: [{ lastUnsignedReminderAt: { $exists: false } }, { lastUnsignedReminderAt: null }, { lastUnsignedReminderAt: { $lte: gapCutoff } }] }
+        ],
         unsignedReminderProcessingDate: { $ne: reminderDate }
       },
       {

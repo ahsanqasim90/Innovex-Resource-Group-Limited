@@ -8,8 +8,20 @@ import { secureComplianceDocumentMeta } from "../services/complianceDocumentServ
 import { assertDocumentReleased, scanRecruitmentDocument } from "../services/malwareScanService.js";
 import { runAutomations } from "../services/automationService.js";
 import { logActivity } from "../services/activityLogService.js";
+import { runComplianceExpiryChecks } from "../services/complianceExpiryScheduler.js";
+import { forEachActiveOrganization } from "../tenancy/tenantJobs.js";
+import { rejectUnlessCron } from "../utils/cronAuth.js";
 
 const router = express.Router();
+// Called daily by Vercel Cron (see vercel.json); the in-process scheduler in server.js does not run on serverless.
+router.get("/expiry/run", async (req, res, next) => {
+  try {
+    if (rejectUnlessCron(req, res)) return;
+    const results = await forEachActiveOrganization(() => runComplianceExpiryChecks());
+    res.json({ workspaces: results.length, results });
+  } catch (error) { next(error); }
+});
+
 router.use(protect, requirePermission("compliance.view"));
 const actor = (user) => ({ user: user._id, name: user.name, email: user.email });
 const escaped = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -45,18 +57,21 @@ router.get("/overview", async (req, res, next) => {
     const limit = Math.min(100, Math.max(10, Number(req.query.limit || 40)));
     const candidateFilter = {};
     if (req.query.search) { const search = new RegExp(escaped(req.query.search), "i"); candidateFilter.$or = [{ name: search }, { email: search }, { desiredRole: search }]; }
-    const [candidates, total, team, statusCounts, expiringDocuments] = await Promise.all([
+    const [candidates, total, team, statusCounts, expiringDocuments, allCandidates, redInProgress] = await Promise.all([
       Candidate.find(candidateFilter).select("name email phone desiredRole status updatedAt").sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       Candidate.countDocuments(candidateFilter),
       User.find({ isActive: true }).select("name email role").sort({ name: 1 }).lean(),
       CompliancePassport.aggregate([{ $group: { _id: "$overallStatus", count: { $sum: 1 } } }]),
-      CompliancePassport.countDocuments({ checks: { $elemMatch: { expiresAt: { $gte: new Date(), $lte: new Date(Date.now() + 30 * 86400000) }, status: "Verified" } } })
+      CompliancePassport.countDocuments({ checks: { $elemMatch: { expiresAt: { $gte: new Date(), $lte: new Date(Date.now() + 30 * 86400000) }, status: "Verified" } } }),
+      Candidate.countDocuments({}),
+      // "Not compliant" only makes sense for people whose file has actually been started.
+      CompliancePassport.countDocuments({ overallStatus: "Red", checks: { $elemMatch: { status: { $nin: ["Missing", null] } } } })
     ]);
     const passports = await CompliancePassport.find({ candidate: { $in: candidates.map((item) => item._id) } }).lean();
     const passportByCandidate = new Map(passports.map((item) => [String(item.candidate), item]));
     const items = candidates.map((candidate) => passportSummary(candidate, passportByCandidate.get(String(candidate._id))));
     const counts = Object.fromEntries(statusCounts.map((item) => [item._id, item.count]));
-    res.json({ items, team, total, page, pages: Math.max(1, Math.ceil(total / limit)), metrics: { green: counts.Green || 0, amber: counts.Amber || 0, red: Math.max(counts.Red || 0, total - (counts.Green || 0) - (counts.Amber || 0)), expiringDocuments } });
+    res.json({ items, team, total, page, pages: Math.max(1, Math.ceil(total / limit)), metrics: { green: counts.Green || 0, amber: counts.Amber || 0, red: redInProgress, notStarted: Math.max(0, allCandidates - (counts.Green || 0) - (counts.Amber || 0) - redInProgress), expiringDocuments } });
   } catch (error) { next(error); }
 });
 

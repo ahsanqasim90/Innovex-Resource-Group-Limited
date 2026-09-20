@@ -2,12 +2,13 @@ import express from "express";
 import Candidate from "../models/Candidate.js";
 import CandidateActivity from "../models/CandidateActivity.js";
 import EmailLog from "../models/EmailLog.js";
+import { dailyLimitReason, hasReachedDailyLimit, mailboxDailyLimit, mailboxSentToday } from "../services/mailboxLimitService.js";
 import Job from "../models/Job.js";
-import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
+import { allowedSenderAccountsForUser, canUseSender, findEmailAccount } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { uploadCandidateCsv, uploadCv } from "../middleware/upload.js";
 import { secureDocumentMeta } from "../services/documentIntelligenceService.js";
-import { sendCandidateOutreachEmail } from "../services/emailService.js";
+import { describeMailError, openSentArchive, sendCandidateOutreachEmail } from "../services/emailService.js";
 import { runAutomations } from "../services/automationService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
@@ -858,9 +859,18 @@ router.post("/import", uploadCandidateCsv.single("file"), async (req, res, next)
   }
 });
 
-router.post("/outreach", async (req, res, next) => {
+// Vercel stops a request after its maxDuration (60s in vercel.json). Each outreach request
+// therefore works against a time budget and hands back whatever it did not reach in
+// `remaining`, so the browser can continue with the next batch instead of the whole
+// request being killed part-way (which used to cause duplicate re-sends).
+const OUTREACH_TIME_BUDGET_MS = Number(process.env.OUTREACH_TIME_BUDGET_MS || 40000);
+const OUTREACH_DUPLICATE_WINDOW_DAYS = Number(process.env.OUTREACH_DUPLICATE_WINDOW_DAYS || 7);
+const OUTREACH_MAX_CONSECUTIVE_FAILURES = 3;
+
+router.post("/outreach", requirePermission("talentPool.send"), async (req, res, next) => {
+  let archiveSession = null;
   try {
-    const candidateIds = Array.isArray(req.body.candidateIds) ? req.body.candidateIds.slice(0, 100) : [];
+    const candidateIds = Array.isArray(req.body.candidateIds) ? [...new Set(req.body.candidateIds.map(String))].slice(0, 100) : [];
     requireFields(req.body, ["subject", "message"]);
     if (!candidateIds.length) return res.status(400).json({ message: "Select at least one candidate" });
     const allowedSenders = allowedSenderAccountsForUser(req.user);
@@ -871,23 +881,73 @@ router.post("/outreach", async (req, res, next) => {
     }
 
     const job = req.body.jobId ? await Job.findById(req.body.jobId).lean() : null;
-    const candidates = await Candidate.find({ _id: { $in: candidateIds }, email: { $ne: "" }, status: { $ne: "Do Not Contact" } }).select("-cv.data");
-    let sent = 0;
-    let archived = 0;
+    const found = await Candidate.find({ _id: { $in: candidateIds }, email: { $ne: "" }, status: { $ne: "Do Not Contact" } }).select("-cv.data");
+    // Keep the caller's order so a follow-up batch continues exactly where the last one stopped.
+    const foundById = new Map(found.map((candidate) => [String(candidate._id), candidate]));
+    const candidates = candidateIds.map((id) => foundById.get(id)).filter(Boolean);
+
+    const sent = { count: 0, archived: 0 };
     const failed = [];
     const archiveFailed = [];
+    const skipped = candidateIds
+      .filter((id) => !foundById.has(id))
+      .map((id) => ({ id, reason: "No email address, or marked Do Not Contact" }));
+    let remaining = [];
+    let stopReason = "";
 
-    for (const candidate of candidates) {
+    // Anyone who already received this exact email recently is skipped, so pressing Send
+    // again after an interrupted batch cannot email the same candidate twice.
+    const since = new Date(Date.now() - OUTREACH_DUPLICATE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const recentLogs = req.body.allowDuplicates === true || !candidates.length ? [] : await EmailLog.find({
+      targetType: "Candidate",
+      targetId: { $in: candidates.map((candidate) => candidate._id) },
+      status: "Sent",
+      createdAt: { $gte: since }
+    }).select("targetId subject").lean();
+    const recentlySent = new Set(recentLogs.map((log) => `${log.targetId}|${log.subject}`));
+
+    // One shared IMAP session files every Sent-folder copy, instead of a new login per email.
+    archiveSession = candidates.length ? await openSentArchive(findEmailAccount(fromEmail)) : null;
+    const deadline = Date.now() + OUTREACH_TIME_BUDGET_MS;
+    let consecutiveFailures = 0;
+    const mailboxUsed = candidates.length ? await mailboxSentToday(fromEmail).catch(() => 0) : 0;
+
+    for (let index = 0; index < candidates.length; index += 1) {
+      const candidate = candidates[index];
+      if (Date.now() > deadline) {
+        remaining = candidates.slice(index).map((item) => String(item._id));
+        break;
+      }
+      if (hasReachedDailyLimit(mailboxUsed, sent.count)) {
+        remaining = candidates.slice(index).map((item) => String(item._id));
+        stopReason = dailyLimitReason(fromEmail, mailboxUsed + sent.count, mailboxDailyLimit());
+        break;
+      }
       const subject = applyTemplate(req.body.subject, candidate, job || req.body);
       const message = applyTemplate(req.body.message, candidate, job || req.body);
+      if (recentlySent.has(`${candidate._id}|${subject}`)) {
+        skipped.push({ id: String(candidate._id), name: candidate.name, reason: `Already sent this email in the last ${OUTREACH_DUPLICATE_WINDOW_DAYS} days` });
+        continue;
+      }
+      const sentBy = {
+        user: req.user?._id,
+        name: req.user?.name || "Innovex Admin",
+        email: req.user?.email || "",
+        role: req.user?.role || ""
+      };
+      let delivered = false;
       try {
-        const result = await sendCandidateOutreachEmail({ candidate, subject, message, fromEmail });
+        const result = await sendCandidateOutreachEmail({ candidate, subject, message, fromEmail, archiveSession });
         if (result.sent) {
-          sent += 1;
-          if (result.sentFolderSaved) archived += 1;
+          delivered = true;
+          sent.count += 1;
+          consecutiveFailures = 0;
+          if (result.sentFolderSaved) sent.archived += 1;
           else archiveFailed.push({ id: candidate._id, name: candidate.name, reason: result.sentFolderError || "Sent-folder copy was not saved" });
+        } else {
+          consecutiveFailures += 1;
+          failed.push({ id: candidate._id, name: candidate.name, reason: result.reason });
         }
-        else failed.push({ id: candidate._id, reason: result.reason });
         await EmailLog.create({
           fromEmail: result.fromEmail || fromEmail,
           fromName: "Innovex Resource Group Limited",
@@ -898,38 +958,75 @@ router.post("/outreach", async (req, res, next) => {
           targetId: candidate._id,
           status: result.sent ? "Sent" : "Failed",
           error: result.sent ? result.sentFolderError || "" : result.reason || "Candidate outreach email was not sent",
-          sentBy: {
-            user: req.user?._id,
-            name: req.user?.name || "Innovex Admin",
-            email: req.user?.email || "",
-            role: req.user?.role || ""
-          }
+          sentBy
         });
-        candidate.status = candidate.status === "Available" ? "Contacted" : candidate.status;
-        candidate.lastContactedAt = new Date();
-        candidate.lastCommunicationAt = candidate.lastContactedAt;
-        candidate.outreachHistory.unshift({
-          job: job?._id,
-          jobTitle: job?.title || req.body.jobTitle,
+        if (result.sent) {
+          candidate.status = candidate.status === "Available" ? "Contacted" : candidate.status;
+          candidate.lastContactedAt = new Date();
+          candidate.lastCommunicationAt = candidate.lastContactedAt;
+          candidate.outreachHistory.unshift({
+            job: job?._id,
+            jobTitle: job?.title || req.body.jobTitle,
+            subject,
+            message,
+            status: "Emailed"
+          });
+          candidate.outreachHistory = candidate.outreachHistory.slice(0, 20);
+          await candidate.save();
+        }
+      } catch (error) {
+        if (delivered) {
+          // The email itself went out; only the follow-up bookkeeping failed. Do not log it as a failed send.
+          failed.push({ id: candidate._id, name: candidate.name, reason: `Email was sent, but the candidate record could not be updated (${error.message})` });
+          continue;
+        }
+        consecutiveFailures += 1;
+        const reason = describeMailError(error);
+        failed.push({ id: candidate._id, name: candidate.name, reason });
+        await EmailLog.create({
+          fromEmail,
+          fromName: "Innovex Resource Group Limited",
+          to: [candidate.email].filter(Boolean),
           subject,
           message,
-          status: "Emailed"
-        });
-        candidate.outreachHistory = candidate.outreachHistory.slice(0, 20);
-        await candidate.save();
-      } catch (error) {
-        failed.push({ id: candidate._id, reason: error.message });
+          targetType: "Candidate",
+          targetId: candidate._id,
+          status: "Failed",
+          error: reason,
+          sentBy
+        }).catch(() => undefined);
+      }
+      // A rejected mailbox login or a dead mail server fails every remaining email the same way.
+      // Stop early so staff see one clear error instead of a long run of identical failures.
+      if (consecutiveFailures >= OUTREACH_MAX_CONSECUTIVE_FAILURES) {
+        remaining = candidates.slice(index + 1).map((item) => String(item._id));
+        stopReason = failed[failed.length - 1]?.reason || "Repeated sending failures";
+        break;
       }
     }
 
-    const archiveMessage = sent
-      ? archived === sent
-        ? ` All ${archived} ${archived === 1 ? "copy was" : "copies were"} saved in ${fromEmail} Sent.`
-        : ` ${archived} of ${sent} sent ${sent === 1 ? "copy was" : "copies were"} archived; ${archiveFailed.length} need attention.`
+    const archiveMessage = sent.count
+      ? sent.archived === sent.count
+        ? ` All ${sent.archived} ${sent.archived === 1 ? "copy was" : "copies were"} saved in ${fromEmail} Sent.`
+        : ` ${sent.archived} of ${sent.count} sent ${sent.count === 1 ? "copy was" : "copies were"} archived; ${archiveFailed.length} need attention.`
       : "";
-    res.json({ sent, archived, failed, archiveFailed, fromEmail, message: sent ? `Sent ${sent} personalised email${sent === 1 ? "" : "s"}.${archiveMessage}` : "No emails were sent." });
+    const skippedMessage = skipped.length ? ` ${skipped.length} skipped (already emailed recently, no email address, or Do Not Contact).` : "";
+    const remainingMessage = remaining.length ? (stopReason ? ` Stopped early: ${stopReason}` : ` ${remaining.length} more are still waiting to be sent.`) : "";
+    res.json({
+      sent: sent.count,
+      archived: sent.archived,
+      failed,
+      archiveFailed,
+      skipped,
+      remaining,
+      stopReason,
+      fromEmail,
+      message: `${sent.count ? `Sent ${sent.count} personalised email${sent.count === 1 ? "" : "s"}.` : "No emails were sent."}${archiveMessage}${skippedMessage}${remainingMessage}`
+    });
   } catch (error) {
     next(error);
+  } finally {
+    if (archiveSession) await archiveSession.close();
   }
 });
 

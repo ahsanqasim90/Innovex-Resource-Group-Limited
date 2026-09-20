@@ -9,6 +9,11 @@ function hasSmtpConfig() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
+// One pooled transporter per mailbox is reused for the life of a warm serverless
+// instance, so bulk sends no longer pay a fresh TCP/TLS/auth handshake per email.
+// The explicit timeouts stop a slow mail server from hanging the whole request.
+const transporterCache = new Map();
+
 function makeTransporter(account = null) {
   const config = account || {
     host: process.env.SMTP_HOST,
@@ -17,16 +22,44 @@ function makeTransporter(account = null) {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
   };
+  const port = Number(config.port || 587);
+  const secure = config.secure === true || config.secure === "true";
+  const cacheKey = [config.host, port, secure, config.user].join("|");
+  const cached = transporterCache.get(cacheKey);
+  if (cached && cached.pass === config.pass) return cached.transporter;
+  if (cached) cached.transporter.close();
 
-  return nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
     host: config.host,
-    port: Number(config.port || 587),
-    secure: config.secure === true || config.secure === "true",
+    port,
+    secure,
     auth: {
       user: config.user,
       pass: config.pass
-    }
+    },
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 40000
   });
+  transporterCache.set(cacheKey, { transporter, pass: config.pass });
+  return transporter;
+}
+
+// Turns raw SMTP/network errors into a sentence staff can act on. Never include
+// credentials here; nodemailer errors only carry the server response.
+export function describeMailError(error) {
+  const code = error?.code || "";
+  const responseCode = Number(error?.responseCode || 0);
+  const detail = String(error?.response || error?.message || "").replace(/\s+/g, " ").trim().slice(0, 240);
+  if (code === "EAUTH" || responseCode === 535) return `The mail server rejected the mailbox login. Check the mailbox password in the server settings. (${detail})`;
+  if (["ETIMEDOUT", "ESOCKET", "ECONNECTION", "ECONNRESET", "EDNS"].includes(code)) return `The mail server did not respond in time (${code}). Please try again shortly. ${detail}`.trim();
+  if (code === "EENVELOPE") return `A recipient address was rejected: ${detail}`;
+  if (responseCode >= 400 && responseCode < 500) return `The mail server asked us to slow down or try later (${responseCode}). ${detail}`.trim();
+  if (responseCode >= 500) return `The mail server rejected this message (${responseCode}). ${detail}`.trim();
+  return detail || "Email could not be sent";
 }
 
 function formatSender(account = null) {
@@ -39,10 +72,55 @@ function senderAccountOrDefault(fromEmail) {
   return findEmailAccount(fromEmail);
 }
 
-async function sendAndArchive(transporter, account, mailOptions) {
+function findSentMailbox(mailboxes = []) {
+  return mailboxes.find((mailbox) => mailbox.specialUse === "\\Sent")
+    || mailboxes.find((mailbox) => /(^|[./])sent( items| mail| messages)?$/i.test(mailbox.path));
+}
+
+// Opens ONE IMAP connection that a bulk send can reuse to file every copy in the
+// Sent folder. Returns null when the mailbox cannot be reached; callers then fall
+// back to the per-email archive behaviour, so nothing is lost.
+export async function openSentArchive(account) {
+  if (!account?.imapHost || !account?.imapPort || !account?.user || !account?.pass) return null;
+  const client = new ImapFlow({
+    host: account.imapHost,
+    port: account.imapPort || 993,
+    secure: account.imapSecure !== false,
+    auth: { user: account.user, pass: account.pass },
+    logger: false,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 40000
+  });
+  try {
+    await client.connect();
+    const sentMailbox = findSentMailbox(await client.list());
+    if (!sentMailbox) throw new Error("Sent mailbox was not found");
+    return {
+      async append(raw) { await client.append(sentMailbox.path, raw, ["\\Seen"], new Date()); },
+      async close() { await client.logout().catch(() => undefined); }
+    };
+  } catch {
+    await client.logout().catch(() => undefined);
+    return null;
+  }
+}
+
+async function sendAndArchive(transporter, account, mailOptions, archiveSession = null) {
   const info = await transporter.sendMail(mailOptions);
   let sentFolderSaved = false;
   let sentFolderError = "";
+
+  if (archiveSession) {
+    try {
+      const raw = await new MailComposer(mailOptions).compile().build();
+      await archiveSession.append(raw);
+      sentFolderSaved = true;
+    } catch (error) {
+      sentFolderError = error.message || "Unable to save a copy in Sent";
+    }
+    return { info, sentFolderSaved, sentFolderError };
+  }
 
   try {
     const raw = await new MailComposer(mailOptions).compile().build();
@@ -51,13 +129,14 @@ async function sendAndArchive(transporter, account, mailOptions) {
       port: account.imapPort || 993,
       secure: account.imapSecure !== false,
       auth: { user: account.user, pass: account.pass },
-      logger: false
+      logger: false,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 40000
     });
     await client.connect();
     try {
-      const mailboxes = await client.list();
-      const sentMailbox = mailboxes.find((mailbox) => mailbox.specialUse === "\\Sent")
-        || mailboxes.find((mailbox) => /(^|[./])sent( items| mail| messages)?$/i.test(mailbox.path));
+      const sentMailbox = findSentMailbox(await client.list());
       if (!sentMailbox) throw new Error("Sent mailbox was not found");
       await client.append(sentMailbox.path, raw, ["\\Seen"], new Date());
       sentFolderSaved = true;
@@ -336,9 +415,9 @@ export function buildCandidateInterviewFollowUpEmail(interview) {
   };
 }
 
-async function deliverMail(transporter, account, mailOptions) {
+async function deliverMail(transporter, account, mailOptions, archiveSession = null) {
   if (account?.imapHost && account?.imapPort && account?.user && account?.pass) {
-    return sendAndArchive(transporter, account, mailOptions);
+    return sendAndArchive(transporter, account, mailOptions, archiveSession);
   }
   const info = await transporter.sendMail(mailOptions);
   return {
@@ -346,6 +425,18 @@ async function deliverMail(transporter, account, mailOptions) {
     sentFolderSaved: false,
     sentFolderError: account ? "IMAP Sent folder is not configured for this sender" : ""
   };
+}
+
+// Like deliverMail, but a failed SMTP send comes back as { sent: false, reason }
+// instead of throwing. That lets every caller record a "Failed" log entry with the
+// real cause instead of losing the failure entirely.
+async function safeDeliver(transporter, account, mailOptions, archiveSession = null) {
+  try {
+    const archive = await deliverMail(transporter, account, mailOptions, archiveSession);
+    return { sent: true, ...archive };
+  } catch (error) {
+    return { sent: false, reason: describeMailError(error), code: error?.code || error?.responseCode || "" };
+  }
 }
 
 export async function sendInterviewConfirmationEmail(interview, cc = interview.confirmationEmailCc || []) {
@@ -533,7 +624,7 @@ export async function sendTrainingEnquiryEmail(booking) {
   return { sent: true };
 }
 
-export async function sendCandidateOutreachEmail({ candidate, subject, message, replyTo, fromEmail }) {
+export async function sendCandidateOutreachEmail({ candidate, subject, message, replyTo, fromEmail, archiveSession = null }) {
   const account = senderAccountOrDefault(fromEmail);
   if (!account && !hasSmtpConfig()) {
     return { sent: false, reason: "SMTP is not configured" };
@@ -563,9 +654,7 @@ export async function sendCandidateOutreachEmail({ candidate, subject, message, 
       </div>
     `
   };
-  const archive = await deliverMail(transporter, account, mailOptions);
-
-  return { sent: true, ...archive };
+  return safeDeliver(transporter, account, mailOptions, archiveSession);
 }
 
 export async function sendSystemEmail({ to, subject, text, html }) {
@@ -575,7 +664,7 @@ export async function sendSystemEmail({ to, subject, text, html }) {
   return { skipped: false, messageId: info.messageId };
 }
 
-export async function sendCandidateVacancyEmail({ candidate, job, fromEmail, subject, introduction = "" }) {
+export async function sendCandidateVacancyEmail({ candidate, job, fromEmail, subject, introduction = "", archiveSession = null }) {
   const account = senderAccountOrDefault(fromEmail);
   if (!account && !hasSmtpConfig()) return { sent: false, reason: "SMTP is not configured" };
   if (!candidate?.email) return { sent: false, reason: "Candidate email is missing" };
@@ -619,11 +708,11 @@ export async function sendCandidateVacancyEmail({ candidate, job, fromEmail, sub
   const requirementHtml = mustHaves.length ? `<div style="margin:22px 0;padding:18px;border:1px solid #d7e9ed;border-radius:12px;background:#f7fbfc"><div style="margin-bottom:10px;color:#0b5f75;font-size:11px;font-weight:800;letter-spacing:.1em">KEY REQUIREMENTS</div>${mustHaves.map((item) => `<span style="display:inline-block;margin:3px;padding:7px 10px;border-radius:999px;background:#e2f3f5;color:#075668;font-size:12px;font-weight:700">${escapeHtml(item)}</span>`).join("")}</div>` : "";
   const html = `<div style="margin:0;padding:30px 12px;background:#eef5f6;font-family:Arial,sans-serif;color:#173840"><div style="max-width:660px;margin:auto;overflow:hidden;border:1px solid #d3e3e6;border-radius:16px;background:#fff;box-shadow:0 18px 45px rgba(6,63,79,.1)"><div style="height:7px;background:#f4b942"></div><div style="padding:26px 30px;background:linear-gradient(135deg,#063f4f,#0b5f75);color:#fff"><div style="color:#bde0e4;font-size:11px;font-weight:700;letter-spacing:.14em">INNOVEX RESOURCE GROUP LIMITED</div><div style="display:inline-block;margin-top:14px;padding:7px 11px;border-radius:999px;background:#f4b942;color:#173840;font-size:11px;font-weight:800">VACANCY OPPORTUNITY</div><h1 style="margin:14px 0 0;color:#fff;font-size:27px;line-height:1.25">${escapeHtml(job.title)}</h1></div><div style="padding:28px 30px"><p style="margin-top:0;font-size:16px">Dear ${escapeHtml(candidate.name)},</p><p style="line-height:1.7">${messageHtml(opening)}</p><table role="presentation" style="width:100%;margin:22px 0;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid #d7e9ed;border-radius:12px">${rows}</table>${requirementHtml}<div style="margin:22px 0;color:#304b54;line-height:1.7">${messageHtml(job.intelligence?.summary || String(job.description || "").slice(0, 900))}</div><div style="margin:24px 0;padding:20px;border:2px solid #f4b942;border-radius:12px;background:#fff8e8"><strong style="display:block;color:#8a5b00;font-size:12px;letter-spacing:.08em">INTERESTED IN THIS OPPORTUNITY?</strong><p style="margin:9px 0 0;color:#3f3217;line-height:1.65">Reply with your current availability and any questions. A recruiter will review your response before any submission is made.</p></div><p style="margin:26px 0 0;line-height:1.6">Kind regards,<br><strong>Recruitment Team</strong><br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; ${escapeHtml(account?.address || "info@innovexresourcegroup.co.uk")}</span></p>${crmComplianceFooterHtml("Innovex Vacancy Intelligence")}</div></div></div>`;
   const finalSubject = subject || `${job.title} opportunity in ${job.location} – Innovex Resource Group`;
-  const archive = await deliverMail(transporter, account, { from: formatSender(account), to: candidate.email, replyTo: account?.address || recipient, subject: finalSubject, text: `${message}\n\n${crmComplianceFooterText("Innovex Vacancy Intelligence")}`, html });
-  return { sent: true, subject: finalSubject, message, fromEmail: account?.address || fromEmail, ...archive };
+  const delivery = await safeDeliver(transporter, account, { from: formatSender(account), to: candidate.email, replyTo: account?.address || recipient, subject: finalSubject, text: `${message}\n\n${crmComplianceFooterText("Innovex Vacancy Intelligence")}`, html }, archiveSession);
+  return delivery.sent ? { ...delivery, subject: finalSubject, message, fromEmail: account?.address || fromEmail } : delivery;
 }
 
-export async function sendBusinessLeadOutreachEmail({ lead, subject, message, replyTo, fromEmail }) {
+export async function sendBusinessLeadOutreachEmail({ lead, subject, message, replyTo, fromEmail, archiveSession = null }) {
   const account = senderAccountOrDefault(fromEmail);
   if (!account && !hasSmtpConfig()) {
     return { sent: false, reason: "SMTP is not configured" };
@@ -655,9 +744,7 @@ export async function sendBusinessLeadOutreachEmail({ lead, subject, message, re
       </div>
     `
   };
-  const archive = await deliverMail(transporter, account, mailOptions);
-
-  return { sent: true, ...archive };
+  return safeDeliver(transporter, account, mailOptions, archiveSession);
 }
 
 export async function sendComposedEmail({ fromEmail, to = [], cc = [], bcc = [], subject, message, replyTo }) {
@@ -688,9 +775,7 @@ export async function sendComposedEmail({ fromEmail, to = [], cc = [], bcc = [],
       </div>
     `
   };
-  const archive = await deliverMail(transporter, account, mailOptions);
-
-  return { sent: true, ...archive };
+  return safeDeliver(transporter, account, mailOptions);
 }
 
 export async function sendProspectExportEmail({ fromEmail, to, subject, message, workbookBuffer, filename, recordCount }) {

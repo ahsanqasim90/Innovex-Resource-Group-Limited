@@ -47,6 +47,10 @@ const newsletterCampaignSchema = new mongoose.Schema(
     archivePublished: { type: Boolean, default: false, index: true },
     publishedAt: Date,
     sentAt: Date,
+    sendStartedAt: Date,
+    // While a batch is running this is set a short time ahead. If the request dies mid-send the lock
+    // simply expires and the campaign can be resumed, instead of being stuck in "Sending" forever.
+    sendLockUntil: Date,
     totals: {
       eligible: { type: Number, default: 0 },
       sent: { type: Number, default: 0 },

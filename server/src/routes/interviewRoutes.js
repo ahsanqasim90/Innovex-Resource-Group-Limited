@@ -6,6 +6,7 @@ import { logActivity } from "../services/activityLogService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 import { runInterviewReminders } from "../services/interviewReminderService.js";
 import { sendCandidateInterviewFollowUpEmail, sendInterviewConfirmationEmail } from "../services/emailService.js";
+import { rejectUnlessCron } from "../utils/cronAuth.js";
 
 const router = express.Router();
 const fields = [
@@ -116,10 +117,7 @@ async function dashboardStats() {
 
 router.get("/reminders/run", async (req, res, next) => {
   try {
-    const secret = process.env.CRON_SECRET;
-    if (secret && req.headers.authorization !== `Bearer ${secret}` && req.query.secret !== secret) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+    if (rejectUnlessCron(req, res)) return;
     res.json(await runInterviewReminders());
   } catch (error) {
     next(error);

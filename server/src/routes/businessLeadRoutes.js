@@ -1,10 +1,11 @@
 import express from "express";
 import BusinessLead from "../models/BusinessLead.js";
 import EmailLog from "../models/EmailLog.js";
-import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
+import { dailyLimitReason, hasReachedDailyLimit, mailboxDailyLimit, mailboxSentToday } from "../services/mailboxLimitService.js";
+import { allowedSenderAccountsForUser, canUseSender, findEmailAccount } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { uploadBusinessLeadCsv } from "../middleware/upload.js";
-import { sendBusinessLeadOutreachEmail } from "../services/emailService.js";
+import { describeMailError, openSentArchive, sendBusinessLeadOutreachEmail } from "../services/emailService.js";
 import { pick, requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
@@ -583,9 +584,17 @@ router.post("/import", uploadBusinessLeadCsv.single("file"), async (req, res, ne
   }
 });
 
-router.post("/outreach", async (req, res, next) => {
+// See candidateRoutes.js: each request works against a time budget (Vercel kills requests after
+// maxDuration), returns what it did not reach in `remaining`, skips leads that were already
+// emailed recently, and isolates failures per lead so one bad address cannot abort the batch.
+const OUTREACH_TIME_BUDGET_MS = Number(process.env.OUTREACH_TIME_BUDGET_MS || 40000);
+const OUTREACH_DUPLICATE_WINDOW_DAYS = Number(process.env.OUTREACH_DUPLICATE_WINDOW_DAYS || 7);
+const OUTREACH_MAX_CONSECUTIVE_FAILURES = 3;
+
+router.post("/outreach", requirePermission("businessLeads.send"), async (req, res, next) => {
+  let archiveSession = null;
   try {
-    const leadIds = Array.isArray(req.body.leadIds) ? req.body.leadIds.slice(0, 100) : [];
+    const leadIds = Array.isArray(req.body.leadIds) ? [...new Set(req.body.leadIds.map(String))].slice(0, 100) : [];
     requireFields(req.body, ["subject", "message"]);
     if (!leadIds.length) return res.status(400).json({ message: "Select at least one business lead" });
     const allowedSenders = allowedSenderAccountsForUser(req.user);
@@ -595,44 +604,113 @@ router.post("/outreach", async (req, res, next) => {
       return res.status(403).json({ message: "You are not allowed to send from this mailbox" });
     }
 
-    const leads = await BusinessLead.find({ _id: { $in: leadIds }, status: { $ne: "Do Not Contact" } });
+    const found = await BusinessLead.find({ _id: { $in: leadIds }, status: { $ne: "Do Not Contact" } });
+    const foundById = new Map(found.map((lead) => [String(lead._id), lead]));
+    const leads = leadIds.map((id) => foundById.get(id)).filter(Boolean);
+
     let sent = 0;
     let archived = 0;
     const failed = [];
     const archiveFailed = [];
+    const skipped = leadIds
+      .filter((id) => !foundById.has(id))
+      .map((id) => ({ id, reason: "Lead not found, or marked Do Not Contact" }));
+    let remaining = [];
+    let stopReason = "";
 
-    for (const lead of leads) {
+    const since = new Date(Date.now() - OUTREACH_DUPLICATE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const recentLogs = req.body.allowDuplicates === true || !leads.length ? [] : await EmailLog.find({
+      targetType: "BusinessLead",
+      targetId: { $in: leads.map((lead) => lead._id) },
+      status: "Sent",
+      createdAt: { $gte: since }
+    }).select("targetId subject").lean();
+    const recentlySent = new Set(recentLogs.map((log) => `${log.targetId}|${log.subject}`));
+
+    archiveSession = leads.length ? await openSentArchive(findEmailAccount(fromEmail)) : null;
+    const deadline = Date.now() + OUTREACH_TIME_BUDGET_MS;
+    let consecutiveFailures = 0;
+    const mailboxUsed = leads.length ? await mailboxSentToday(fromEmail).catch(() => 0) : 0;
+
+    for (let index = 0; index < leads.length; index += 1) {
+      const lead = leads[index];
+      if (Date.now() > deadline) {
+        remaining = leads.slice(index).map((item) => String(item._id));
+        break;
+      }
+      if (hasReachedDailyLimit(mailboxUsed, sent)) {
+        remaining = leads.slice(index).map((item) => String(item._id));
+        stopReason = dailyLimitReason(fromEmail, mailboxUsed + sent, mailboxDailyLimit());
+        break;
+      }
       const subject = applyTemplate(req.body.subject, lead);
       const message = applyTemplate(req.body.message, lead);
-      const result = await sendBusinessLeadOutreachEmail({ lead, subject, message, fromEmail });
+      if (recentlySent.has(`${lead._id}|${subject}`)) {
+        skipped.push({ id: String(lead._id), companyName: lead.companyName, reason: `Already sent this email in the last ${OUTREACH_DUPLICATE_WINDOW_DAYS} days` });
+        continue;
+      }
       const sentTo = lead.emails.map((item) => item.email).filter(Boolean);
-      await EmailLog.create({
-        fromEmail: result.fromEmail || fromEmail,
-        fromName: "Innovex Resource Group Limited",
-        to: sentTo,
-        subject,
-        message,
-        targetType: "BusinessLead",
-        targetId: lead._id,
-        status: result.sent ? "Sent" : "Failed",
-        error: result.sent ? result.sentFolderError || "" : result.reason || "Business lead outreach email was not sent",
-        sentBy: {
-          user: req.user?._id,
-          name: req.user?.name || "Innovex Admin",
-          email: req.user?.email || "",
-          role: req.user?.role || ""
+      const sentBy = {
+        user: req.user?._id,
+        name: req.user?.name || "Innovex Admin",
+        email: req.user?.email || "",
+        role: req.user?.role || ""
+      };
+      let delivered = false;
+      try {
+        const result = await sendBusinessLeadOutreachEmail({ lead, subject, message, fromEmail, archiveSession });
+        delivered = Boolean(result.sent);
+        await EmailLog.create({
+          fromEmail: result.fromEmail || fromEmail,
+          fromName: "Innovex Resource Group Limited",
+          to: sentTo,
+          subject,
+          message,
+          targetType: "BusinessLead",
+          targetId: lead._id,
+          status: result.sent ? "Sent" : "Failed",
+          error: result.sent ? result.sentFolderError || "" : result.reason || "Business lead outreach email was not sent",
+          sentBy
+        });
+        if (result.sent) {
+          consecutiveFailures = 0;
+          if (result.sentFolderSaved) archived += 1;
+          else archiveFailed.push({ id: lead._id, companyName: lead.companyName, reason: result.sentFolderError || "Sent-folder copy was not saved" });
+          lead.status = "Contacted";
+          lead.lastContactedAt = new Date();
+          lead.outreachHistory.push({ service: req.body.service || "", subject, message, sentTo });
+          await lead.save();
+          sent += 1;
+        } else {
+          consecutiveFailures += 1;
+          failed.push({ id: lead._id, companyName: lead.companyName, reason: result.reason });
         }
-      });
-      if (result.sent) {
-        if (result.sentFolderSaved) archived += 1;
-        else archiveFailed.push({ id: lead._id, companyName: lead.companyName, reason: result.sentFolderError || "Sent-folder copy was not saved" });
-        lead.status = "Contacted";
-        lead.lastContactedAt = new Date();
-        lead.outreachHistory.push({ service: req.body.service || "", subject, message, sentTo });
-        await lead.save();
-        sent += 1;
-      } else {
-        failed.push({ id: lead._id, companyName: lead.companyName, reason: result.reason });
+      } catch (error) {
+        if (delivered) {
+          sent += 1;
+          failed.push({ id: lead._id, companyName: lead.companyName, reason: `Email was sent, but the lead record could not be updated (${error.message})` });
+          continue;
+        }
+        consecutiveFailures += 1;
+        const reason = describeMailError(error);
+        failed.push({ id: lead._id, companyName: lead.companyName, reason });
+        await EmailLog.create({
+          fromEmail,
+          fromName: "Innovex Resource Group Limited",
+          to: sentTo,
+          subject,
+          message,
+          targetType: "BusinessLead",
+          targetId: lead._id,
+          status: "Failed",
+          error: reason,
+          sentBy
+        }).catch(() => undefined);
+      }
+      if (consecutiveFailures >= OUTREACH_MAX_CONSECUTIVE_FAILURES) {
+        remaining = leads.slice(index + 1).map((item) => String(item._id));
+        stopReason = failed[failed.length - 1]?.reason || "Repeated sending failures";
+        break;
       }
     }
 
@@ -641,9 +719,23 @@ router.post("/outreach", async (req, res, next) => {
         ? ` All ${archived} ${archived === 1 ? "copy was" : "copies were"} saved in ${fromEmail} Sent.`
         : ` ${archived} of ${sent} sent ${sent === 1 ? "copy was" : "copies were"} archived; ${archiveFailed.length} need attention.`
       : "";
-    res.json({ sent, archived, failed, archiveFailed, fromEmail, message: `Sent ${sent} business lead email${sent === 1 ? "" : "s"}.${archiveMessage}` });
+    const skippedMessage = skipped.length ? ` ${skipped.length} skipped (already emailed recently, or Do Not Contact).` : "";
+    const remainingMessage = remaining.length ? (stopReason ? ` Stopped early: ${stopReason}` : ` ${remaining.length} more are still waiting to be sent.`) : "";
+    res.json({
+      sent,
+      archived,
+      failed,
+      archiveFailed,
+      skipped,
+      remaining,
+      stopReason,
+      fromEmail,
+      message: `Sent ${sent} business lead email${sent === 1 ? "" : "s"}.${archiveMessage}${skippedMessage}${remainingMessage}`
+    });
   } catch (error) {
     next(error);
+  } finally {
+    if (archiveSession) await archiveSession.close();
   }
 });
 

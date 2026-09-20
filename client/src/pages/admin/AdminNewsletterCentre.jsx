@@ -149,6 +149,39 @@ export default function AdminNewsletterCentre() {
     finally { setBusy(false); }
   }
 
+  // The server sends in time-limited batches (serverless requests stop after about a minute),
+  // so the browser keeps asking until the campaign is complete, paused or stops making progress.
+  async function releaseCampaign(campaignId, { retryFailed = false } = {}) {
+    setBusy(true);
+    let released = 0;
+    let stalled = 0;
+    try {
+      for (let round = 0; round < 80; round += 1) {
+        // Only the first request retries earlier failures; later batches carry on with the untouched recipients.
+        const result = await api(`/newsletters/campaigns/${campaignId}/send`, { method: "POST", body: { retryFailed: retryFailed && round === 0 } });
+        released += Number(result.sent || 0);
+        if (result.done || result.stopReason) {
+          setStatus({ type: result.stopReason ? "error" : undefined, message: result.message });
+          break;
+        }
+        stalled = result.sent || result.failed ? 0 : stalled + 1;
+        if (stalled >= 2) {
+          setStatus({ type: "error", message: `Sending stopped making progress after ${released} email(s). Use Resume sending in Campaign history to continue.` });
+          break;
+        }
+        setStatus({ message: `Sending… ${result.campaign?.totals?.sent ?? released} sent so far, ${result.remaining} still to go. Please keep this page open.` });
+      }
+    } catch (error) {
+      setStatus({ type: "error", message: `${error.message} Open Campaign history and use Resume sending to continue; anyone already emailed is not emailed again.` });
+    } finally {
+      setCampaign({ ...blankCampaign, senderEmail: senders[0]?.address || "" });
+      setAudience(null);
+      await loadAll().catch(() => undefined);
+      setTab("history");
+      setBusy(false);
+    }
+  }
+
   async function sendCampaign() {
     const saved = campaign._id ? campaign : await saveCampaign();
     if (!saved) return;
@@ -156,16 +189,12 @@ export default function AdminNewsletterCentre() {
     setAudience(estimate);
     if (!estimate.eligible) return setStatus({ type: "error", message: "No legally eligible recipients match this audience." });
     if (!window.confirm(`Release this newsletter to ${estimate.eligible} eligible recipient(s)? ${estimate.blocked} non-compliant record(s) will be suppressed automatically.`)) return;
-    setBusy(true);
-    try {
-      const result = await api(`/newsletters/campaigns/${saved._id}/send`, { method: "POST" });
-      setStatus({ message: result.message });
-      setCampaign({ ...blankCampaign, senderEmail: senders[0]?.address || "" });
-      setAudience(null);
-      await loadAll();
-      setTab("history");
-    } catch (error) { setStatus({ type: "error", message: error.message }); }
-    finally { setBusy(false); }
+    await releaseCampaign(saved._id);
+  }
+
+  async function resumeCampaign(item) {
+    if (!window.confirm(`Resume sending "${item.internalName}"? Recipients who already received it will not be emailed again.`)) return;
+    await releaseCampaign(item._id, { retryFailed: true });
   }
 
   function editCampaign(item) {
@@ -287,7 +316,7 @@ export default function AdminNewsletterCentre() {
 
       {tab === "history" && <section className="card newsletter-history">
         <div className="newsletter-section-title"><div><span className="eyebrow"><Archive size={15} /> Campaign register</span><h2>Drafts and released newsletters</h2></div><span className="status-chip soft">{campaigns.length} records</span></div>
-        <div className="table-wrap"><table><thead><tr><th>Campaign</th><th>Status</th><th>Audience result</th><th>Public archive</th><th>Sent</th><th>Action</th></tr></thead><tbody>{campaigns.map((item) => <tr key={item._id}><td><strong>{item.internalName}</strong><br /><span className="muted">{item.campaignId} · {item.subject}</span></td><td><span className={`status-chip ${item.status === "Sent" ? "success" : item.status === "Partially sent" ? "warning" : "soft"}`}>{item.status}</span></td><td>{item.totals?.sent || 0} sent · {item.totals?.failed || 0} failed<br /><span className="muted">{item.totals?.suppressed || 0} suppressed</span></td><td>{item.archivePublished && item.status !== "Draft" ? <a href={`/newsletters/${item.slug}`} target="_blank" rel="noreferrer">View page</a> : "—"}</td><td>{dateTime(item.sentAt)}</td><td>{item.status === "Draft" ? <button className="button small secondary" onClick={() => editCampaign(item)}>Edit</button> : <span className="muted">Locked audit</span>}</td></tr>)}{!campaigns.length && <tr><td colSpan="6">No campaigns yet.</td></tr>}</tbody></table></div>
+        <div className="table-wrap"><table><thead><tr><th>Campaign</th><th>Status</th><th>Audience result</th><th>Public archive</th><th>Sent</th><th>Action</th></tr></thead><tbody>{campaigns.map((item) => <tr key={item._id}><td><strong>{item.internalName}</strong><br /><span className="muted">{item.campaignId} · {item.subject}</span></td><td><span className={`status-chip ${item.status === "Sent" ? "success" : item.status === "Partially sent" || item.status === "Sending" ? "warning" : "soft"}`}>{item.status}</span></td><td>{item.totals?.sent || 0} sent · {item.totals?.failed || 0} failed<br /><span className="muted">{item.totals?.suppressed || 0} suppressed</span></td><td>{item.archivePublished && item.status !== "Draft" ? <a href={`/newsletters/${item.slug}`} target="_blank" rel="noreferrer">View page</a> : "—"}</td><td>{dateTime(item.sentAt)}</td><td>{item.status === "Draft" ? <button className="button small secondary" onClick={() => editCampaign(item)}>Edit</button> : item.status === "Sending" ? <button className="button small" disabled={busy || !canManage} onClick={() => resumeCampaign(item)}>Resume sending</button> : <span className="muted">Locked audit</span>}</td></tr>)}{!campaigns.length && <tr><td colSpan="6">No campaigns yet.</td></tr>}</tbody></table></div>
       </section>}
     </div>
   );
