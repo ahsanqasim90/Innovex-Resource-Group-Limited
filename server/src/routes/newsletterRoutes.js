@@ -7,7 +7,8 @@ import EmailLog from "../models/EmailLog.js";
 import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { logActivity } from "../services/activityLogService.js";
-import { buildNewsletterEmail, sendNewsletterEmail } from "../services/emailService.js";
+import { buildNewsletterEmail, describeMailError, sendNewsletterEmail } from "../services/emailService.js";
+import { dailyLimitReason, hasReachedDailyLimit, mailboxDailyLimit, mailboxSentToday } from "../services/mailboxLimitService.js";
 import { validateEmail } from "../utils.js";
 
 const router = express.Router();
@@ -325,47 +326,109 @@ router.post("/campaigns/:id/test", requirePermission("newsletters.manage"), asyn
   } catch (error) { next(error); }
 });
 
-router.post("/campaigns/:id/send", requirePermission("newsletters.manage"), async (req, res, next) => {
-  let campaign;
-  try {
-    campaign = await NewsletterCampaign.findOneAndUpdate({ _id: req.params.id, status: "Draft" }, { $set: { status: "Sending" } }, { new: true });
-    if (!campaign) return res.status(409).json({ message: "Only a draft campaign can be sent, or this campaign is already being processed." });
-    if (!canUseSender(req.user, campaign.senderEmail)) throw Object.assign(new Error("You cannot use this sender mailbox."), { statusCode: 403 });
-    const candidates = await NewsletterSubscriber.find(audienceFilter(campaign));
-    const eligible = candidates.filter((item) => eligibility(item).eligible);
-    const blocked = candidates.filter((item) => !eligibility(item).eligible);
-    if (!eligible.length) throw Object.assign(new Error("No legally eligible subscribers match this audience. Review the compliance records first."), { statusCode: 400 });
-    if (eligible.length > 250) throw Object.assign(new Error("This release is limited to 250 recipients per campaign. Narrow the audience before sending."), { statusCode: 400 });
+// A campaign is sent in resumable batches. Each request works against a time budget (Vercel stops
+// requests after maxDuration), records every delivery as it happens, and reports whether more
+// recipients remain so the browser can call again. If a request is killed part-way, the lock
+// expires and sending resumes without re-emailing anyone who already received it.
+const NEWSLETTER_TIME_BUDGET_MS = Number(process.env.NEWSLETTER_TIME_BUDGET_MS || 40000);
+const NEWSLETTER_LOCK_MS = 90000;
+const NEWSLETTER_MAX_RECIPIENTS = Number(process.env.NEWSLETTER_MAX_RECIPIENTS || 250);
+const NEWSLETTER_MAX_CONSECUTIVE_FAILURES = 3;
 
-    const deliveries = blocked.map((item) => ({ subscriber: item._id, email: item.email, status: "Suppressed", reason: eligibility(item).reason }));
-    let sent = 0;
-    let failed = 0;
-    for (const subscriber of eligible) {
+router.post("/campaigns/:id/send", requirePermission("newsletters.manage"), async (req, res, next) => {
+  let campaign = null;
+  let sentThisCall = 0;
+  try {
+    const now = new Date();
+    const lockUntil = () => new Date(Date.now() + NEWSLETTER_LOCK_MS);
+    const previous = await NewsletterCampaign.findById(req.params.id).select("status").lean();
+    campaign = await NewsletterCampaign.findOneAndUpdate(
+      { _id: req.params.id, $or: [{ status: "Draft" }, { status: "Sending", $or: [{ sendLockUntil: null }, { sendLockUntil: { $lt: now } }] }] },
+      { $set: { status: "Sending", sendLockUntil: lockUntil(), ...(previous?.status === "Draft" ? { sendStartedAt: now } : {}) } },
+      { new: true }
+    );
+    if (!campaign) return res.status(409).json({ message: "Only a draft campaign, or one whose earlier send was interrupted, can be sent. If a batch is still running, wait a minute and try again." });
+    if (!canUseSender(req.user, campaign.senderEmail)) throw Object.assign(new Error("You cannot use this sender mailbox."), { statusCode: 403 });
+
+    const previouslySent = new Set((campaign.deliveries || []).filter((item) => item.status === "Sent").map((item) => String(item.subscriber)));
+    const audience = await NewsletterSubscriber.find(audienceFilter(campaign));
+    const eligible = audience.filter((item) => eligibility(item).eligible);
+    const blocked = audience.filter((item) => !eligibility(item).eligible);
+    if (!eligible.length && !previouslySent.size) throw Object.assign(new Error("No legally eligible subscribers match this audience. Review the compliance records first."), { statusCode: 400 });
+    if (eligible.length > NEWSLETTER_MAX_RECIPIENTS) throw Object.assign(new Error(`This release is limited to ${NEWSLETTER_MAX_RECIPIENTS} recipients per campaign. Narrow the audience before sending.`), { statusCode: 400 });
+    // A recipient that already failed during this send is not retried on every following batch (a
+    // permanently bad address would waste time in each one). "Resume sending" passes retryFailed to try them again.
+    const retryFailed = req.body?.retryFailed === true;
+    const previouslyFailed = new Set((campaign.deliveries || []).filter((item) => item.status === "Failed").map((item) => String(item.subscriber)));
+    const pending = eligible.filter((item) => !previouslySent.has(String(item._id)) && (retryFailed || !previouslyFailed.has(String(item._id))));
+
+    // Suppressed rows are rebuilt on every batch; failed rows are cleared only when they are about to be retried.
+    await NewsletterCampaign.updateOne({ _id: campaign._id }, { $pull: { deliveries: { status: { $in: retryFailed ? ["Suppressed", "Failed"] : ["Suppressed"] } } } });
+    if (blocked.length) {
+      await NewsletterCampaign.updateOne({ _id: campaign._id }, { $push: { deliveries: { $each: blocked.slice(0, 250).map((item) => ({ subscriber: item._id, email: item.email, status: "Suppressed", reason: eligibility(item).reason })) } } });
+    }
+
+    const deadline = Date.now() + NEWSLETTER_TIME_BUDGET_MS;
+    let handled = 0;
+    let failedThisCall = 0;
+    let consecutiveFailures = 0;
+    let stopReason = "";
+    const mailboxUsed = pending.length ? await mailboxSentToday(campaign.senderEmail).catch(() => 0) : 0;
+    for (const subscriber of pending) {
+      if (Date.now() > deadline) break;
+      if (hasReachedDailyLimit(mailboxUsed, sentThisCall)) { stopReason = dailyLimitReason(campaign.senderEmail, mailboxUsed + sentThisCall, mailboxDailyLimit()); break; }
+      handled += 1;
+      const logBase = { fromEmail: campaign.senderEmail, fromName: req.user.name, to: [subscriber.email], subject: campaign.subject, message: campaign.introduction, targetType: "Newsletter", targetId: campaign._id, sentBy: actor(req) };
       try {
         const delivery = await sendNewsletterEmail({ campaign, subscriber, unsubscribeUrl: unsubscribeUrl(subscriber) });
         if (!delivery.sent) throw new Error(delivery.reason || "Newsletter could not be sent");
-        sent += 1;
-        deliveries.push({ subscriber: subscriber._id, email: subscriber.email, status: "Sent", sentAt: new Date() });
-        subscriber.lastSentAt = new Date();
-        await subscriber.save();
-        await EmailLog.create({ fromEmail: campaign.senderEmail, fromName: req.user.name, to: [subscriber.email], subject: campaign.subject, message: campaign.introduction, targetType: "Newsletter", targetId: campaign._id, status: "Sent", sentBy: actor(req) });
       } catch (error) {
-        failed += 1;
-        deliveries.push({ subscriber: subscriber._id, email: subscriber.email, status: "Failed", reason: error.message });
-        await EmailLog.create({ fromEmail: campaign.senderEmail, fromName: req.user.name, to: [subscriber.email], subject: campaign.subject, message: campaign.introduction, targetType: "Newsletter", targetId: campaign._id, status: "Failed", error: error.message, sentBy: actor(req) });
+        const reason = describeMailError(error);
+        failedThisCall += 1;
+        consecutiveFailures += 1;
+        await NewsletterCampaign.updateOne({ _id: campaign._id }, { $push: { deliveries: { subscriber: subscriber._id, email: subscriber.email, status: "Failed", reason } }, $set: { sendLockUntil: lockUntil() } }).catch(() => undefined);
+        await EmailLog.create({ ...logBase, status: "Failed", error: reason }).catch(() => undefined);
+        if (consecutiveFailures >= NEWSLETTER_MAX_CONSECUTIVE_FAILURES) { stopReason = reason; break; }
+        continue;
       }
+      // The email is out. Record it straight away so an interrupted request never re-sends it.
+      consecutiveFailures = 0;
+      sentThisCall += 1;
+      const sentAt = new Date();
+      await NewsletterCampaign.updateOne({ _id: campaign._id }, { $push: { deliveries: { subscriber: subscriber._id, email: subscriber.email, status: "Sent", sentAt } }, $set: { sendLockUntil: lockUntil() } }).catch(() => undefined);
+      try {
+        subscriber.lastSentAt = sentAt;
+        await subscriber.save();
+        await EmailLog.create({ ...logBase, status: "Sent" });
+      } catch { /* bookkeeping only; the delivery itself is already recorded */ }
     }
-    campaign.status = failed ? "Partially sent" : "Sent";
-    campaign.sentAt = new Date();
-    campaign.sentBy = actor(req);
-    campaign.publishedAt = campaign.archivePublished ? new Date() : undefined;
-    campaign.totals = { eligible: eligible.length, sent, failed, suppressed: blocked.length };
-    campaign.deliveries = deliveries.slice(-500);
-    await campaign.save();
-    await logActivity(req, { module: "Newsletter Centre", action: "Send", entityType: "NewsletterCampaign", entityId: campaign._id, summary: `Sent ${campaign.campaignId} to ${sent} recipients`, metadata: campaign.totals });
-    res.json({ message: `Campaign complete: ${sent} sent, ${failed} failed, ${blocked.length} suppressed.`, campaign });
+
+    const done = !stopReason && handled === pending.length;
+    const remaining = pending.length - handled + (stopReason ? 0 : 0);
+    const fresh = await NewsletterCampaign.findById(campaign._id);
+    const counts = (fresh.deliveries || []).reduce((result, item) => { result[item.status] = (result[item.status] || 0) + 1; return result; }, {});
+    fresh.totals = { eligible: eligible.length, sent: counts.Sent || 0, failed: counts.Failed || 0, suppressed: counts.Suppressed || 0 };
+    fresh.sendLockUntil = null;
+    if (done) {
+      fresh.status = fresh.totals.failed ? "Partially sent" : "Sent";
+      fresh.sentAt = new Date();
+      fresh.sentBy = actor(req);
+      fresh.publishedAt = fresh.archivePublished ? new Date() : undefined;
+    }
+    await fresh.save();
+    if (done) await logActivity(req, { module: "Newsletter Centre", action: "Send", entityType: "NewsletterCampaign", entityId: fresh._id, summary: `Sent ${fresh.campaignId} to ${fresh.totals.sent} recipients`, metadata: fresh.totals });
+
+    const message = done
+      ? `Campaign complete: ${fresh.totals.sent} sent, ${fresh.totals.failed} failed, ${fresh.totals.suppressed} suppressed.`
+      : stopReason
+        ? `Sending paused: ${stopReason} ${fresh.totals.sent} sent so far. Once that is resolved, use Resume sending.`
+        : `${fresh.totals.sent} sent so far; ${remaining} still to send.`;
+    res.json({ message, done, remaining, stopReason, sent: sentThisCall, failed: failedThisCall, campaign: fresh });
   } catch (error) {
-    if (campaign?.status === "Sending") { campaign.status = "Draft"; await campaign.save().catch(() => undefined); }
+    if (campaign) {
+      const hadProgress = sentThisCall > 0 || (campaign.deliveries || []).some((item) => item.status === "Sent");
+      await NewsletterCampaign.updateOne({ _id: campaign._id, status: "Sending" }, { $set: { sendLockUntil: null, ...(hadProgress ? {} : { status: "Draft" }) } }).catch(() => undefined);
+    }
     next(error);
   }
 });

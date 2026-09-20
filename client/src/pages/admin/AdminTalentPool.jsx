@@ -22,6 +22,9 @@ import {
   UsersRound
 } from "lucide-react";
 import { api } from "../../api/client.js";
+import { outreachHadProblems, sendOutreachInBatches, summariseOutreach } from "../../utils/bulkOutreach.js";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { hasPermission } from "../../auth/permissions.js";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
 
@@ -133,6 +136,8 @@ function fromCandidate(candidate) {
 }
 
 export default function AdminTalentPool() {
+  const { user: currentUser } = useAuth();
+  const canSend = hasPermission(currentUser, "talentPool.send");
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState([]);
   const [stats, setStats] = useState({});
@@ -167,6 +172,11 @@ export default function AdminTalentPool() {
   const [loadingPostcodeRoles, setLoadingPostcodeRoles] = useState(false);
 
   const selectedCount = selectedIds.length;
+  // The add / import / outreach tools sit above the table, so they start collapsed to keep the
+  // list in view. They open by themselves when a record is being edited or rows are selected.
+  const [toolsOpen, setToolsOpen] = useState(false);
+  useEffect(() => { if (editing) setToolsOpen(true); }, [editing]);
+  useEffect(() => { if (selectedCount > 0) setToolsOpen(true); }, [selectedCount > 0]);
   const selectedJob = useMemo(() => jobs.find((job) => job._id === selectedJobId), [jobs, selectedJobId]);
   const selectedSender = useMemo(() => senderAccounts.find((sender) => sender.address === selectedSenderEmail), [senderAccounts, selectedSenderEmail]);
 
@@ -366,22 +376,27 @@ export default function AdminTalentPool() {
 
   async function sendOutreach(event) {
     event.preventDefault();
+    if (sending) return;
     setSending(true);
     try {
-      const result = await api("/candidates/outreach", {
-        method: "POST",
+      // Sent in small batches so a slow mail server cannot exceed the serverless time limit,
+      // and already-emailed candidates are skipped if a batch has to be repeated.
+      const result = await sendOutreachInBatches({
+        path: "/candidates/outreach",
+        idsKey: "candidateIds",
+        ids: selectedIds,
         body: {
-          candidateIds: selectedIds,
           jobId: selectedJobId || undefined,
           jobTitle: selectedJob?.title || matchRole,
           location: selectedJob?.location || matchPostcode,
           subject: outreach.subject,
           message: outreach.message,
           fromEmail: selectedSenderEmail
-        }
+        },
+        onProgress: ({ done, total, sent }) => setStatus({ message: `Sending… ${done} of ${total} processed (${sent} sent). Please keep this page open.` })
       });
-      setStatus({ type: result.archiveFailed?.length ? "error" : undefined, message: `${result.message}${result.failed?.length ? ` Failed: ${result.failed.length}.` : ""}` });
-      setSelectedIds([]);
+      setStatus({ type: outreachHadProblems(result) ? "error" : undefined, message: summariseOutreach(result) });
+      setSelectedIds(result.unsent);
       await load(pagination.page);
       loadStats();
     } catch (error) {
@@ -568,7 +583,8 @@ export default function AdminTalentPool() {
         </button>
       </section>
 
-      <div className="talent-admin-grid">
+      <button type="button" className="page-tools-toggle" aria-expanded={toolsOpen} onClick={() => setToolsOpen((value) => !value)}><strong>Add candidate · Import CSV · Personalised email outreach</strong><span aria-hidden="true">{toolsOpen ? "Hide ▲" : "Show ▼"}</span></button>
+      <div className="talent-admin-grid" hidden={!toolsOpen}>
         <form className="card form talent-form-card" onSubmit={saveCandidate}>
           <div className="admin-form-title">
             <span><UserPlus size={18} /> Candidate profile</span>
@@ -709,7 +725,7 @@ export default function AdminTalentPool() {
             </div>
             <div className="outreach-compose-footer">
               <span>{selectedCount ? `Ready to email ${selectedCount} candidate${selectedCount === 1 ? "" : "s"}.` : "Select candidates from the table to enable sending."}</span>
-              <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !selectedCount || !selectedSenderEmail}>{sending && <span className="button-spinner" aria-hidden="true" />}<Send size={17} /><span>{sending ? "Sending emails..." : "Send Personalised Emails"}</span></button>
+              <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !canSend || !selectedCount || !selectedSenderEmail} title={canSend ? undefined : "Your account does not have permission to send bulk emails"}>{sending && <span className="button-spinner" aria-hidden="true" />}<Send size={17} /><span>{sending ? "Sending emails..." : "Send Personalised Emails"}</span></button>
             </div>
           </form>
         </aside>

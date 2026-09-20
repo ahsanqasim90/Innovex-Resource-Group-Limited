@@ -7,6 +7,7 @@ import { sendComposedEmail } from "../services/emailService.js";
 import { requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
+const MAX_RECIPIENTS_PER_MESSAGE = 100;
 router.use(protect, requirePermission("emails.view"));
 
 function splitRecipients(value = []) {
@@ -80,6 +81,10 @@ router.post("/send", async (req, res, next) => {
     validateRecipients(bcc, "BCC recipient");
 
     if (!to.length) return res.status(400).json({ message: "At least one recipient is required" });
+    // Hostinger (and most SMTP hosts) reject a single message with more than 100 recipients in total.
+    if (to.length + cc.length + bcc.length > MAX_RECIPIENTS_PER_MESSAGE) {
+      return res.status(400).json({ message: `A single email can have at most ${MAX_RECIPIENTS_PER_MESSAGE} recipients in To, CC and BCC combined. Split this into smaller emails, or use candidate outreach for one-to-one messages.` });
+    }
 
     const payload = {
       fromEmail,
