@@ -36,8 +36,7 @@ const footerGroups = [
       ["/dpa", "DPA"],
       ["/subprocessors", "Subprocessors"],
       ["/status", "System status"],
-      ["/support", "Support"],
-      ["/admin/login", "Admin login"]
+      ["/support", "Support"]
     ]
   }
 ];

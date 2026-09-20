@@ -91,7 +91,7 @@ export default function Dashboard() {
         ["Active jobs", stats.activeJobs],
         ["Applications", stats.applications],
         ["New CVs", stats.newCvs],
-        ["Placements", stats.placements]
+        ["Placements (interview outcomes)", stats.placements]
       ]
     },
     {
