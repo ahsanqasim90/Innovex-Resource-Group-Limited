@@ -64,6 +64,7 @@ app.use("/api/archive", lazyRoute(() => import("./routes/archiveRoutes.js")));
 app.use("/api/portal-notifications", lazyRoute(() => import("./routes/portalNotificationRoutes.js")));
 app.use("/api/admin-badges", lazyRoute(() => import("./routes/adminBadgeRoutes.js")));
 app.use("/api/candidate-match", lazyRoute(() => import("./routes/candidateMatchRoutes.js")));
+app.use("/api/social", lazyRoute(() => import("./routes/socialRoutes.js")));
 app.use("/api/portal", lazyRoute(() => import("./routes/portalRoutes.js")));
 app.use("/api/portal-admin", lazyRoute(() => import("./routes/portalAdminRoutes.js")));
 app.use("/api/recruitment-workflow", lazyRoute(() => import("./routes/recruitmentWorkflowRoutes.js")));
