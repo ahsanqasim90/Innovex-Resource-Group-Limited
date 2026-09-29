@@ -182,14 +182,15 @@ export function generateSalarySlipPdf(slip) {
       ["Net pay", money(slip.netPay, currency)]
     ], y + 16);
 
-    const exchangeText = slip.exchangeRateValue
+    const showExchangeRate = currency === "GBP";
+    const exchangeText = showExchangeRate && slip.exchangeRateValue
       ? `${slip.exchangeRateLabel || "Currency rate at issue"}: ${slip.exchangeRateValue}`
       : "Currency rate at issue: not provided";
     const paymentNotice = slip.paymentNotice || "Full payment may take additional time to be received because payment is processed through a broker. Payments may also be received partially before the remaining balance is completed.";
     doc.roundedRect(LEFT, y + 92, CONTENT_WIDTH, 76, 10).fill("#fffaf0").strokeColor("#f4d48c").stroke();
-    doc.fillColor(teal).font("Helvetica-Bold").fontSize(7.8).text("PAYMENT AND CURRENCY NOTE", 58, y + 106, { lineBreak: false });
-    doc.fillColor(ink).font("Helvetica-Bold").fontSize(8).text(exchangeText, 58, y + 123, { width: 470, lineBreak: false, ellipsis: true });
-    doc.fillColor(ink).font("Helvetica").fontSize(7.8).text(paymentNotice, 58, y + 140, { width: 470, lineGap: 1 });
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(7.8).text(showExchangeRate ? "PAYMENT AND CURRENCY NOTE" : "PAYMENT NOTE", 58, y + 106, { lineBreak: false });
+    if (showExchangeRate) doc.fillColor(ink).font("Helvetica-Bold").fontSize(8).text(exchangeText, 58, y + 123, { width: 470, lineBreak: false, ellipsis: true });
+    doc.fillColor(ink).font("Helvetica").fontSize(7.8).text(paymentNotice, 58, showExchangeRate ? y + 140 : y + 123, { width: 470, lineGap: 1 });
 
     const attestationY = y + 184;
     doc.roundedRect(LEFT, attestationY, CONTENT_WIDTH, 88, 12).fill("#ffffff").strokeColor(line).stroke();

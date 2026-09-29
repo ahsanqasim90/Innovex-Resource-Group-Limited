@@ -100,6 +100,15 @@ export default function AdminSalarySlips() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateCurrency(currency) {
+    setForm((current) => ({
+      ...current,
+      currency,
+      exchangeRateLabel: currency === "PKR" ? "" : current.exchangeRateLabel || "GBP exchange rate at issue",
+      exchangeRateValue: currency === "PKR" ? "" : current.exchangeRateValue
+    }));
+  }
+
   function updateDirectorName(value) {
     const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
     const presetTitle = normalized === "muhammad ahsan qasim"
@@ -143,7 +152,11 @@ export default function AdminSalarySlips() {
     setError("");
     setMessage("");
     try {
-      const payload = { ...form, cc: splitCc(form.cc) };
+      const payload = {
+        ...form,
+        ...(form.currency === "PKR" ? { exchangeRateLabel: "", exchangeRateValue: "" } : {}),
+        cc: splitCc(form.cc)
+      };
       const saved = editingId
         ? await api(`/hr/salary-slips/${editingId}`, { method: "PUT", body: payload })
         : await api("/hr/salary-slips", { method: "POST", body: payload });
@@ -284,9 +297,9 @@ export default function AdminSalarySlips() {
             <label>Pay period end<input type="date" value={form.payPeriodEnd} onChange={(e) => update("payPeriodEnd", e.target.value)} required /></label>
             <label>Payment date<input type="date" value={form.paymentDate} onChange={(e) => update("paymentDate", e.target.value)} required /></label>
             <label>Payment method<input value={form.paymentMethod} onChange={(e) => update("paymentMethod", e.target.value)} /></label>
-            <label>Salary currency<select value={form.currency} onChange={(e) => update("currency", e.target.value)} required><option value="GBP">Pounds (GBP)</option><option value="PKR">Pakistani Rupees (PKR)</option></select></label>
-            <label>Currency rate label<input value={form.exchangeRateLabel} onChange={(e) => update("exchangeRateLabel", e.target.value)} placeholder="GBP exchange rate at issue" /></label>
-            <label>Currency rate<input value={form.exchangeRateValue} onChange={(e) => update("exchangeRateValue", e.target.value)} placeholder="e.g. 1 GBP = 355 PKR" /></label>
+            <label>Salary currency<select value={form.currency} onChange={(e) => updateCurrency(e.target.value)} required><option value="GBP">Pounds (GBP)</option><option value="PKR">Pakistani Rupees (PKR)</option></select></label>
+            {form.currency === "GBP" && <label>Currency rate label<input value={form.exchangeRateLabel} onChange={(e) => update("exchangeRateLabel", e.target.value)} placeholder="GBP exchange rate at issue" /></label>}
+            {form.currency === "GBP" && <label>Currency rate<input value={form.exchangeRateValue} onChange={(e) => update("exchangeRateValue", e.target.value)} placeholder="e.g. 1 GBP = 355 PKR" /></label>}
             <label>Basic salary<input type="number" step="0.01" value={form.basicSalary} onChange={(e) => update("basicSalary", e.target.value)} /></label>
             <label>Overtime<input type="number" step="0.01" value={form.overtime} onChange={(e) => update("overtime", e.target.value)} /></label>
             <label>Bonus<input type="number" step="0.01" value={form.bonus} onChange={(e) => update("bonus", e.target.value)} /></label>
