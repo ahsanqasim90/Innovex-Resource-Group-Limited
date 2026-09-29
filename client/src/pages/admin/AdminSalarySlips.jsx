@@ -12,6 +12,7 @@ const initialForm = {
   payPeriodEnd: "",
   paymentDate: "",
   paymentMethod: "Bank transfer",
+  currency: "GBP",
   exchangeRateLabel: "GBP exchange rate at issue",
   exchangeRateValue: "",
   paymentNotice: "Full payment may take additional time to be received because payment is processed through a broker. Payments may also be received partially before the remaining balance is completed.",
@@ -33,7 +34,10 @@ const initialForm = {
   notes: ""
 };
 
-const money = (value) => `£${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (value, currency = "GBP") => {
+  const amount = Number(value || 0).toLocaleString(currency === "PKR" ? "en-PK" : "en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return currency === "PKR" ? `PKR ${amount}` : `£${amount}`;
+};
 const dateLabel = (value) => (value ? new Date(value).toLocaleDateString("en-GB") : "-");
 
 function splitCc(value) {
@@ -147,7 +151,11 @@ export default function AdminSalarySlips() {
     total: slips.length,
     sent: slips.filter((slip) => slip.status === "Sent").length,
     drafts: slips.filter((slip) => slip.status === "Draft").length,
-    net: slips.reduce((sum, slip) => sum + Number(slip.netPay || 0), 0)
+    netByCurrency: slips.reduce((currencyTotals, slip) => {
+      const currency = slip.currency === "PKR" ? "PKR" : "GBP";
+      currencyTotals[currency] += Number(slip.netPay || 0);
+      return currencyTotals;
+    }, { GBP: 0, PKR: 0 })
   }), [slips]);
 
   return (
@@ -170,7 +178,7 @@ export default function AdminSalarySlips() {
         <div><span>Total drafts</span><strong>{stats.total}</strong></div>
         <div><span>Sent</span><strong>{stats.sent}</strong></div>
         <div><span>Draft</span><strong>{stats.drafts}</strong></div>
-        <div><span>Visible net pay</span><strong>{money(stats.net)}</strong></div>
+        <div><span>Visible net pay</span><strong>{money(stats.netByCurrency.GBP, "GBP")}{stats.netByCurrency.PKR > 0 ? ` · ${money(stats.netByCurrency.PKR, "PKR")}` : ""}</strong></div>
       </div>
 
       <div className="hr-grid">
@@ -190,6 +198,7 @@ export default function AdminSalarySlips() {
             <label>Pay period end<input type="date" value={form.payPeriodEnd} onChange={(e) => update("payPeriodEnd", e.target.value)} required /></label>
             <label>Payment date<input type="date" value={form.paymentDate} onChange={(e) => update("paymentDate", e.target.value)} required /></label>
             <label>Payment method<input value={form.paymentMethod} onChange={(e) => update("paymentMethod", e.target.value)} /></label>
+            <label>Salary currency<select value={form.currency} onChange={(e) => update("currency", e.target.value)} required><option value="GBP">Pounds (GBP)</option><option value="PKR">Pakistani Rupees (PKR)</option></select></label>
             <label>Currency rate label<input value={form.exchangeRateLabel} onChange={(e) => update("exchangeRateLabel", e.target.value)} placeholder="GBP exchange rate at issue" /></label>
             <label>Currency rate<input value={form.exchangeRateValue} onChange={(e) => update("exchangeRateValue", e.target.value)} placeholder="e.g. 1 GBP = 355 PKR" /></label>
             <label>Basic salary<input type="number" step="0.01" value={form.basicSalary} onChange={(e) => update("basicSalary", e.target.value)} /></label>
@@ -211,9 +220,9 @@ export default function AdminSalarySlips() {
             <label className="full">Internal notes<textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} /></label>
           </div>
           <div className="hr-totals">
-            <span>Gross <strong>{money(totals.gross)}</strong></span>
-            <span>Deductions <strong>{money(totals.deductions)}</strong></span>
-            <span className="net">Net pay <strong>{money(totals.net)}</strong></span>
+            <span>Gross <strong>{money(totals.gross, form.currency)}</strong></span>
+            <span>Deductions <strong>{money(totals.deductions, form.currency)}</strong></span>
+            <span className="net">Net pay <strong>{money(totals.net, form.currency)}</strong></span>
           </div>
           <div className="hr-actions">
             {editingId && <button type="button" className="secondary" onClick={resetForm}>Cancel edit</button>}
@@ -231,7 +240,8 @@ export default function AdminSalarySlips() {
                 <span>Email <strong>{selected.employeeEmail}</strong></span>
                 <span>Period <strong>{dateLabel(selected.payPeriodStart)} - {dateLabel(selected.payPeriodEnd)}</strong></span>
                 <span>Status <strong>{selected.status}</strong></span>
-                <span>Net pay <strong>{money(selected.netPay)}</strong></span>
+                <span>Currency <strong>{selected.currency === "PKR" ? "Pakistani Rupees (PKR)" : "Pounds (GBP)"}</strong></span>
+                <span>Net pay <strong>{money(selected.netPay, selected.currency)}</strong></span>
                 {selected.exchangeRateValue && <span>Currency rate <strong>{selected.exchangeRateValue}</strong></span>}
               </div>
               <div className="hr-preview-actions">
@@ -268,7 +278,7 @@ export default function AdminSalarySlips() {
                   <td><strong>{slip.slipNumber}</strong><br /><span>{dateLabel(slip.paymentDate)}</span></td>
                   <td><strong>{slip.employeeName}</strong><br /><span>{slip.employeeEmail}</span></td>
                   <td>{dateLabel(slip.payPeriodStart)}<br />{dateLabel(slip.payPeriodEnd)}</td>
-                  <td><strong>{money(slip.netPay)}</strong></td>
+                  <td><strong>{money(slip.netPay, slip.currency)}</strong></td>
                   <td><span className={`hr-status ${slip.status.toLowerCase()}`}>{slip.status}</span></td>
                   <td className="action-row">
                     <button type="button" className="secondary" onClick={() => setSelected(slip)}>View</button>

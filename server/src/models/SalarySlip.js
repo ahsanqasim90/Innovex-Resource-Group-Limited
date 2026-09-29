@@ -25,7 +25,7 @@ const salarySlipSchema = new mongoose.Schema(
     payPeriodEnd: { type: Date, required: true },
     paymentDate: { type: Date, required: true },
     paymentMethod: { type: String, trim: true, default: "Bank transfer" },
-    currency: { type: String, trim: true, default: "GBP" },
+    currency: { type: String, enum: ["GBP", "PKR"], trim: true, default: "GBP" },
     exchangeRateLabel: { type: String, trim: true, default: "GBP exchange rate at issue" },
     exchangeRateValue: { type: String, trim: true },
     basicSalary: moneyField,

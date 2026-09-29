@@ -24,6 +24,7 @@ const salaryFields = [
   "payPeriodEnd",
   "paymentDate",
   "paymentMethod",
+  "currency",
   "exchangeRateLabel",
   "exchangeRateValue",
   "basicSalary",
