@@ -13,8 +13,11 @@ const muted = "#667d84";
 const line = "#d7e5e7";
 const soft = "#f4f9f9";
 
-function money(value) {
-  return `\u00A3${Number(value || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const PAKISTAN_ADDRESS = "Second Floor, Building No. 37, Groove Block, Paragon City, Lahore, Pakistan";
+
+function money(value, currency = "GBP") {
+  const amount = Number(value || 0).toLocaleString(currency === "PKR" ? "en-PK" : "en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return currency === "PKR" ? `PKR ${amount}` : `\u00A3${amount}`;
 }
 
 function dateLabel(value) {
@@ -61,24 +64,30 @@ function salarySignatureAsset(directorName) {
   return "";
 }
 
-function drawHeader(doc, title, reference) {
+function drawHeader(doc, title, reference, includePakistanAddress = false) {
   doc.rect(0, 0, PAGE_WIDTH, 10).fill(gold);
   doc.rect(0, 10, PAGE_WIDTH, 105).fill(deepTeal);
   const hasLogo = drawLogo(doc, LEFT, 32);
   const brandX = hasLogo ? 125 : LEFT;
   doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(12).text("INNOVEX RESOURCE GROUP LIMITED", brandX, 39, { width: 260, lineBreak: false });
   doc.fillColor("#b9d8dc").font("Helvetica").fontSize(8).text("Recruitment | Training | Website Development | SEO", brandX, 60, { width: 285, lineBreak: false });
-  doc.fillColor("#d8eaec").fontSize(7.2).text("33 Forsythia Drive, Cardiff, CF23 7HP", brandX, 76, { width: 285, lineBreak: false });
+  doc.fillColor("#d8eaec").fontSize(includePakistanAddress ? 6.8 : 7.2).text(`${includePakistanAddress ? "UK: " : ""}33 Forsythia Drive, Cardiff, CF23 7HP`, brandX, includePakistanAddress ? 75 : 76, { width: 285, lineBreak: false });
+  if (includePakistanAddress) doc.fillColor("#d8eaec").fontSize(6.8).text(`Pakistan: ${PAKISTAN_ADDRESS}`, brandX, 87, { width: 310, lineBreak: false, ellipsis: true });
   doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(23).text(title, 345, 37, { width: 208, align: "right", lineBreak: false });
   doc.fillColor(gold).fontSize(10).text(reference, 345, 70, { width: 208, align: "right", lineBreak: false });
 }
 
-function drawFooter(doc, pageNumber, totalPages) {
+function drawFooter(doc, pageNumber, totalPages, includePakistanAddress = false) {
   doc.moveTo(LEFT, 784).lineTo(LEFT + CONTENT_WIDTH, 784).strokeColor(line).lineWidth(0.8).stroke();
   doc.fillColor(muted).font("Helvetica").fontSize(6.5)
-    .text("Innovex Resource Group Limited | Company No. 15975820 | Registered in England and Wales", LEFT, 793, { width: CONTENT_WIDTH, align: "center", lineBreak: false })
-    .text("info@innovexresourcegroup.co.uk | 0330 0435 830", LEFT, 804, { width: CONTENT_WIDTH, align: "center", lineBreak: false });
-  doc.fillColor(teal).font("Helvetica-Bold").fontSize(6.5).text(`PAGE ${pageNumber} OF ${totalPages}`, 470, 819, { width: 83, align: "right", lineBreak: false });
+    .text("Innovex Resource Group Limited | Company No. 15975820 | Registered in England and Wales", LEFT, includePakistanAddress ? 792 : 793, { width: CONTENT_WIDTH, align: "center", lineBreak: false });
+  if (includePakistanAddress) {
+    doc.text(`Pakistan: ${PAKISTAN_ADDRESS}`, LEFT, 802, { width: CONTENT_WIDTH, align: "center", lineBreak: false })
+      .text("info@innovexresourcegroup.co.uk | 0330 0435 830", LEFT, 812, { width: CONTENT_WIDTH, align: "center", lineBreak: false });
+  } else {
+    doc.text("info@innovexresourcegroup.co.uk | 0330 0435 830", LEFT, 804, { width: CONTENT_WIDTH, align: "center", lineBreak: false });
+  }
+  doc.fillColor(teal).font("Helvetica-Bold").fontSize(6.5).text(`PAGE ${pageNumber} OF ${totalPages}`, 470, includePakistanAddress ? 825 : 819, { width: 83, align: "right", lineBreak: false });
 }
 
 function metaBox(doc, items, y) {
@@ -99,24 +108,25 @@ function tableHeader(doc, y, columns) {
   return y + 28;
 }
 
-function finish(doc, resolve, chunks) {
+function finish(doc, resolve, chunks, includePakistanAddress = false) {
   const range = doc.bufferedPageRange();
   for (let page = range.start; page < range.start + range.count; page += 1) {
     doc.switchToPage(page);
-    drawFooter(doc, page + 1, range.count);
+    drawFooter(doc, page + 1, range.count, includePakistanAddress);
   }
   doc.end();
 }
 
 export function generateSalarySlipPdf(slip) {
   return new Promise((resolve, reject) => {
+    const currency = slip.currency === "PKR" ? "PKR" : "GBP";
     const doc = new PDFDocument({ size: "A4", margin: 0, bufferPages: true, info: { Title: `Salary Slip ${slip.slipNumber}`, Author: "Innovex Resource Group Limited" } });
     const chunks = [];
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    drawHeader(doc, "Salary Slip", slip.slipNumber);
+    drawHeader(doc, "Salary Slip", slip.slipNumber, true);
     doc.roundedRect(LEFT, 134, CONTENT_WIDTH, 72, 12).fill("#ffffff").strokeColor(line).stroke();
     drawLogo(doc, LEFT + 16, 149, 68, 40);
     doc.fillColor(teal).font("Helvetica-Bold").fontSize(7.6).text("EMPLOYEE PAY STATEMENT", LEFT + 102, 149, { lineBreak: false });
@@ -124,13 +134,13 @@ export function generateSalarySlipPdf(slip) {
     doc.fillColor(muted).font("Helvetica").fontSize(7.8).text([slip.jobTitle, slip.department, slip.employeeEmail].filter(Boolean).join(" | "), LEFT + 102, 187, { width: 275, lineBreak: false, ellipsis: true });
     doc.roundedRect(438, 151, 86, 36, 9).fill("#fff7df").strokeColor("#f2d58a").stroke();
     doc.fillColor(muted).font("Helvetica-Bold").fontSize(6.6).text("NET PAY", 451, 160, { width: 60, align: "center", lineBreak: false });
-    doc.fillColor(teal).font("Helvetica-Bold").fontSize(11.5).text(money(slip.netPay), 446, 173, { width: 70, align: "center", lineBreak: false });
+    doc.fillColor(teal).font("Helvetica-Bold").fontSize(currency === "PKR" ? 8.7 : 11.5).text(money(slip.netPay, currency), 442, 173, { width: 78, align: "center", lineBreak: false });
 
     metaBox(doc, [
       ["Pay period", `${dateLabel(slip.payPeriodStart)} - ${dateLabel(slip.payPeriodEnd)}`],
       ["Payment date", dateLabel(slip.paymentDate)],
       ["Payment method", slip.paymentMethod || "Bank transfer"],
-      ["Net pay", money(slip.netPay)]
+      ["Net pay", money(slip.netPay, currency)]
     ], 224);
 
     const columns = [
@@ -159,17 +169,17 @@ export function generateSalarySlipPdf(slip) {
       const deduction = deductions[index] || ["", ""];
       if (index % 2 === 0) doc.rect(LEFT, y, CONTENT_WIDTH, 24).fill(soft);
       doc.fillColor(ink).font("Helvetica").fontSize(8).text(earning[0], 56, y + 8, { width: 210, lineBreak: false, ellipsis: true });
-      doc.fillColor(teal).font("Helvetica-Bold").text(earning[0] ? money(earning[1]) : "", 285, y + 8, { width: 90, align: "right", lineBreak: false });
+      doc.fillColor(teal).font("Helvetica-Bold").fontSize(currency === "PKR" ? 6.7 : 8).text(earning[0] ? money(earning[1], currency) : "", 285, y + 8, { width: 90, align: "right", lineBreak: false });
       doc.fillColor(ink).font("Helvetica").text(deduction[0], 398, y + 8, { width: 85, lineBreak: false });
-      doc.fillColor(teal).font("Helvetica-Bold").text(deduction[0] ? money(deduction[1]) : "", 482, y + 8, { width: 58, align: "right", lineBreak: false });
+      doc.fillColor(teal).font("Helvetica-Bold").fontSize(currency === "PKR" ? 6.7 : 8).text(deduction[0] ? money(deduction[1], currency) : "", 482, y + 8, { width: 58, align: "right", lineBreak: false });
       doc.moveTo(LEFT, y + 24).lineTo(LEFT + CONTENT_WIDTH, y + 24).strokeColor(line).stroke();
       y += 24;
     }
 
     metaBox(doc, [
-      ["Gross pay", money(slip.grossPay)],
-      ["Total deductions", money(slip.totalDeductions)],
-      ["Net pay", money(slip.netPay)]
+      ["Gross pay", money(slip.grossPay, currency)],
+      ["Total deductions", money(slip.totalDeductions, currency)],
+      ["Net pay", money(slip.netPay, currency)]
     ], y + 16);
 
     const exchangeText = slip.exchangeRateValue
@@ -198,7 +208,7 @@ export function generateSalarySlipPdf(slip) {
     doc.fillColor(muted).font("Helvetica").fontSize(6.8).text(safe(slip.directorTitle, "Co-Founder & Director"), 350, attestationY + 77, { width: 140, align: "center", lineBreak: false, ellipsis: true });
     doc.fillColor(muted).font("Helvetica").fontSize(6.2).text("Authorised signatory", 495, attestationY + 65, { width: 53, align: "center" });
 
-    finish(doc, resolve, chunks);
+    finish(doc, resolve, chunks, true);
   });
 }
 
