@@ -103,6 +103,29 @@ const headerMap = {
   notes: "notes"
 };
 
+// Talent Pool search box. MongoDB $text search split an email such as "name@gmail.com" into the
+// words "name", "gmail" and "com" and returned anyone matching ANY of them, and it never matched
+// part of a name. These rules match what staff actually type: a full email, a phone number,
+// or one or more words that must all appear in the candidate's details.
+const SEARCH_FIELDS = ["name", "email", "phone", "postcode", "city", "desiredRole", "experience", "visaStatus", "tags"];
+
+export function candidateSearchConditions(value = "") {
+  const search = String(value || "").trim().slice(0, 200);
+  if (!search) return [];
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(search)) {
+    return [{ email: new RegExp(`^\\s*${escapeRegex(search.toLowerCase())}\\s*$`, "i") }];
+  }
+  const digits = search.replace(/\D/g, "");
+  if (digits.length >= 6 && /^[\d\s()+.-]+$/.test(search)) {
+    const core = digits.replace(/^(44|0)/, "").slice(-10);
+    return [{ phone: new RegExp(core.split("").join("\\D*")) }];
+  }
+  return search.split(/\s+/).filter(Boolean).slice(0, 8).map((term) => {
+    const pattern = new RegExp(escapeRegex(term), "i");
+    return { $or: SEARCH_FIELDS.map((field) => ({ [field]: pattern })) };
+  });
+}
+
 function escapeRegex(value = "") {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -506,7 +529,8 @@ router.get("/", async (req, res, next) => {
     let radiusOutcodeDistances = new Map();
     let radiusAreaFallback = [];
 
-    if (req.query.search) filter.$text = { $search: req.query.search };
+    const searchConditions = candidateSearchConditions(req.query.search);
+    if (searchConditions.length) filter.$and = [...(filter.$and || []), ...searchConditions];
     const roles = selectedRoles(req.query.roles);
     if (roles.length) {
       filter.desiredRole = { $in: roles.map((role) => new RegExp(`^\\s*${escapeRegex(role)}\\s*$`, "i")) };
