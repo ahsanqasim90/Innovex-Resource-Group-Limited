@@ -484,3 +484,20 @@
 .mailbox-warn { display: inline-flex; align-items: center; gap: 5px; color: #c5501f; font-weight: 600; }
 .mailbox-test-result { display: grid; gap: 6px; margin-top: 4px; padding: 12px 14px; border-radius: 12px; background: #f6fbfb; border: 1px solid #e0edef; font-size: .86rem; }
 @media (max-width: 640px) { .mailbox-row { grid-template-columns: 1fr; justify-items: start; } }
+
+.outreach-send-report { margin: 14px 0 4px; padding: 14px; border: 1px solid #cfe3e6; border-left: 4px solid #0f7a8a; border-radius: 12px; background: #f4fafa; display: grid; gap: 10px; }
+.outreach-send-report.done { border-left-color: #1fa971; }
+.outreach-send-report.problems { border-left-color: #c0392b; background: #fdf5f4; }
+.outreach-send-report-head { display: flex; align-items: center; gap: 10px; }
+.outreach-send-report-head strong { color: #064f5e; }
+.outreach-send-report-head span { color: #50676d; font-size: 13px; margin-left: auto; }
+.outreach-send-report-head button { border: 0; background: transparent; color: #50676d; cursor: pointer; padding: 2px; display: inline-flex; }
+.outreach-send-report-bar { height: 6px; border-radius: 99px; background: #dcebed; overflow: hidden; }
+.outreach-send-report-bar i { display: block; height: 100%; background: #0f7a8a; transition: width .3s ease; }
+.outreach-send-report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.outreach-send-report-grid > div { display: grid; gap: 4px; padding: 9px 10px; background: #fff; border: 1px solid #dce8ea; border-radius: 9px; }
+.outreach-send-report-grid span { font-size: 11.5px; color: #50676d; }
+.outreach-send-report-grid strong { font-size: 18px; color: #064f5e; }
+.outreach-send-report-grid .ok strong { color: #1a8f5f; }
+.outreach-send-report-grid .bad strong { color: #b03025; }
+.outreach-send-report p { margin: 0; font-size: 13px; color: #3d565c; }

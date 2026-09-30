@@ -64,7 +64,7 @@ function cleanRole(label = "") {
 
 function TalentToast({ status, onClose }) {
   useEffect(() => {
-    if (!status || status.progress || status.type === "error") return undefined;
+    if (!status || status.progress || status.sticky || status.type === "error") return undefined;
     const timer = window.setTimeout(onClose, 12000);
     return () => window.clearTimeout(timer);
   }, [status]);
@@ -192,6 +192,7 @@ export default function AdminTalentPool() {
   const [campaignPreset, setCampaignPreset] = useState(candidateTemplatePresets[0].label);
   const [bulkStatus, setBulkStatus] = useState("Contacted");
   const [sending, setSending] = useState(false);
+  const [sendReport, setSendReport] = useState(null);
   const [callConfig, setCallConfig] = useState({ allowedCallerIds: [] });
   const [selectedOutboundCallerId, setSelectedOutboundCallerId] = useState("");
   const [senderAccounts, setSenderAccounts] = useState([]);
@@ -411,6 +412,8 @@ export default function AdminTalentPool() {
     event.preventDefault();
     if (sending) return;
     setSending(true);
+    const startedAt = new Date();
+    setSendReport({ running: true, done: 0, total: selectedIds.length, sent: 0, startedAt });
     try {
       // Sent in small batches so a slow mail server cannot exceed the serverless time limit,
       // and already-emailed candidates are skipped if a batch has to be repeated.
@@ -426,9 +429,13 @@ export default function AdminTalentPool() {
           message: outreach.message,
           fromEmail: selectedSenderEmail
         },
-        onProgress: ({ done, total, sent }) => setStatus({ message: `Sending emails: ${done} of ${total} processed (${sent} sent). Please keep this page open.`, progress: { done, total } })
+        onProgress: ({ done, total, sent }) => {
+          setStatus({ message: `Sending emails: ${done} of ${total} processed (${sent} sent). Please keep this page open.`, progress: { done, total } });
+          setSendReport({ running: true, done, total, sent, startedAt });
+        }
       });
-      setStatus({ type: outreachHadProblems(result) ? "error" : undefined, message: summariseOutreach(result) });
+      setStatus({ type: outreachHadProblems(result) ? "error" : undefined, message: summariseOutreach(result), sticky: true });
+      setSendReport({ running: false, startedAt, finishedAt: new Date(), total: result.total, sent: result.sent, archived: result.archived, skipped: result.skipped.length, failed: result.failed.length, unsent: result.unsent.length, problems: outreachHadProblems(result), summary: summariseOutreach(result) });
       setSelectedIds(result.unsent);
       await load(pagination.page);
       loadStats();
@@ -764,6 +771,25 @@ export default function AdminTalentPool() {
               <label><span>Email subject</span><input placeholder="A clear, professional subject" value={outreach.subject} onChange={(e) => setOutreach({ ...outreach, subject: e.target.value })} required /></label>
               <label><span>Email message</span><textarea rows="8" value={outreach.message} onChange={(e) => setOutreach({ ...outreach, message: e.target.value })} required /><small>{outreach.message.length.toLocaleString()} characters</small></label>
             </div>
+            {sendReport && (
+              <div className={`outreach-send-report${sendReport.running ? " running" : sendReport.problems ? " problems" : " done"}`} aria-live="polite">
+                <div className="outreach-send-report-head">
+                  <strong>{sendReport.running ? "Sending in progress" : "Last send report"}</strong>
+                  <span>{sendReport.running ? `${sendReport.done} of ${sendReport.total} processed` : `${new Date(sendReport.finishedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}</span>
+                  {!sendReport.running && <button type="button" aria-label="Hide send report" onClick={() => setSendReport(null)}><X size={14} /></button>}
+                </div>
+                {sendReport.running && <div className="outreach-send-report-bar"><i style={{ width: `${sendReport.total ? Math.round((sendReport.done / sendReport.total) * 100) : 0}%` }} /></div>}
+                <div className="outreach-send-report-grid">
+                  <div><span>Selected</span><strong>{sendReport.total}</strong></div>
+                  <div className="ok"><span>Sent</span><strong>{sendReport.sent}</strong></div>
+                  {!sendReport.running && <div><span>Saved to Sent folder</span><strong>{sendReport.archived}</strong></div>}
+                  {!sendReport.running && <div><span>Skipped</span><strong>{sendReport.skipped}</strong></div>}
+                  {!sendReport.running && <div className={sendReport.failed ? "bad" : ""}><span>Failed</span><strong>{sendReport.failed}</strong></div>}
+                  {!sendReport.running && <div className={sendReport.unsent ? "bad" : ""}><span>Still selected</span><strong>{sendReport.unsent}</strong></div>}
+                </div>
+                {!sendReport.running && <p>{sendReport.summary}</p>}
+              </div>
+            )}
             <div className="outreach-compose-footer">
               <span>{selectedCount ? `Ready to email ${selectedCount} candidate${selectedCount === 1 ? "" : "s"}.` : "Select candidates from the table to enable sending."}</span>
               <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !canSend || !selectedCount || !selectedSenderEmail} title={canSend ? undefined : "Your account does not have permission to send bulk emails"}>{sending && <span className="button-spinner" aria-hidden="true" />}<Send size={17} /><span>{sending ? "Sending emails..." : "Send Personalised Emails"}</span></button>
