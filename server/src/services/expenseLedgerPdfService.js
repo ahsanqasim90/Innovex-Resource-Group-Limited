@@ -51,7 +51,7 @@ function calculateTotals(expenses) {
   }), { net: 0, vat: 0, gross: 0, unpaid: 0 });
 }
 
-function drawHeader(doc, { financialYear, totals, generatedAt }) {
+function drawHeader(doc, { financialYear, periodLabel, totals, generatedAt }) {
   doc.rect(0, 0, PAGE.width, 10).fill(gold);
   doc.rect(0, 10, PAGE.width, 92).fill(deepTeal);
   const hasLogo = drawLogo(doc, MARGIN, 27, 70, 44);
@@ -60,7 +60,7 @@ function drawHeader(doc, { financialYear, totals, generatedAt }) {
   doc.fillColor("#b9d8dc").font("Helvetica").fontSize(8).text("Expense ledger prepared for UK bookkeeping and accountant review", brandX, 49, { width: 340, lineBreak: false });
   doc.fillColor("#d8eaec").fontSize(7.5).text("33 Forsythia Drive, Cardiff, CF23 7HP | info@innovexresourcegroup.co.uk | 0330 0435 830", brandX, 66, { width: 430, lineBreak: false });
   doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(25).text("EXPENSE LEDGER", 575, 27, { width: 230, align: "right", lineBreak: false });
-  doc.fillColor(gold).fontSize(11).text(`Financial year ${financialYear}`, 575, 60, { width: 230, align: "right", lineBreak: false });
+  doc.fillColor(gold).fontSize(11).text(periodLabel || `Financial year ${financialYear}`, 575, 60, { width: 230, align: "right", lineBreak: false });
 
   const cards = [
     ["Records", String(totals.count)],
@@ -121,7 +121,7 @@ function drawFooter(doc, pageNumber, totalPages) {
   doc.fillColor(teal).font("Helvetica-Bold").fontSize(7).text(`PAGE ${pageNumber} OF ${totalPages}`, 705, 578, { width: 100, align: "right", lineBreak: false });
 }
 
-export function generateExpenseLedgerPdf({ expenses = [], financialYear = "All" }) {
+export function generateExpenseLedgerPdf({ expenses = [], financialYear = "All", periodLabel = "" }) {
   return new Promise((resolve, reject) => {
     const generatedAt = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/London" });
     const totals = { ...calculateTotals(expenses), count: expenses.length };
@@ -142,7 +142,7 @@ export function generateExpenseLedgerPdf({ expenses = [], financialYear = "All" 
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    drawHeader(doc, { financialYear, totals, generatedAt });
+    drawHeader(doc, { financialYear, periodLabel, totals, generatedAt });
     let y = drawTableHeader(doc, 204);
 
     if (!expenses.length) {
@@ -153,7 +153,7 @@ export function generateExpenseLedgerPdf({ expenses = [], financialYear = "All" 
     expenses.forEach((expense, index) => {
       if (y + 54 > 545) {
         doc.addPage({ size: "A4", layout: "landscape", margin: 0 });
-        drawHeader(doc, { financialYear, totals, generatedAt });
+        drawHeader(doc, { financialYear, periodLabel, totals, generatedAt });
         y = drawTableHeader(doc, 204);
       }
       y = drawExpenseRow(doc, expense, y, index);

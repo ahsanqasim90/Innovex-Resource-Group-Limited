@@ -1,5 +1,8 @@
 import express from "express";
 import Application from "../models/Application.js";
+// Registers the Job schema so populate("job") below works even when this route is the
+// first one a cold serverless instance loads (see Operations & Audit error log).
+import "../models/Job.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { extractDocumentText, structureDocumentReviewText } from "../services/documentIntelligenceService.js";
 import { assertDocumentReleased, scanRecruitmentDocument } from "../services/malwareScanService.js";

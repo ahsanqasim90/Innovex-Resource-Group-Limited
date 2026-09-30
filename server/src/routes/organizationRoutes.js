@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import express from "express";
+import rateLimit from "express-rate-limit";
+import ActivityLog from "../models/ActivityLog.js";
 import Organization from "../models/Organization.js";
 import OrganizationInvitation from "../models/OrganizationInvitation.js";
 import User from "../models/User.js";
@@ -11,6 +13,18 @@ import { runWithTenant } from "../tenancy/tenantContext.js";
 import { assertActiveSeatAvailable, assertSeatAvailable, subscriptionUsage } from "../services/subscriptionService.js";
 
 const router = express.Router();
+
+// Self-serve workspace creation is public (no login yet - there is nothing to log in
+// to), so it is rate-limited per IP to stop someone scripting mass workspace creation.
+const signupLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 8, standardHeaders: true, legacyHeaders: false, message: { message: "Too many workspace signups from this connection. Please try again later." } });
+
+export function slugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 60);
+}
 
 function publicOrganization(organization, usage = null) {
   return {
@@ -34,6 +48,76 @@ function publicOrganization(organization, usage = null) {
 
 router.get("/public/current", (req, res) => {
   res.json({ id: req.organization._id, name: req.organization.name, slug: req.organization.slug, branding: req.organization.branding });
+});
+
+// A brand-new agency creates its own workspace here - no invitation and no existing
+// login required. This is deliberately the ONLY way a workspace gets created outside
+// of the super_admin-gated POST "/" below, so every self-serve tenant starts on a
+// Trial plan rather than inheriting anything from whoever happened to be signed in.
+router.post("/signup", signupLimiter, async (req, res, next) => {
+  try {
+    requireFields(req.body, ["companyName", "name", "email", "password"]);
+    validateEmail(req.body.email);
+    if (String(req.body.password).length < 12) return res.status(400).json({ message: "Password must be at least 12 characters" });
+
+    const companyName = String(req.body.companyName).trim();
+    if (companyName.length < 2) return res.status(400).json({ message: "Enter your company or agency name" });
+
+    let slug = slugify(req.body.slug || companyName);
+    if (!slug) return res.status(400).json({ message: "Enter a workspace name we can use to build your workspace code" });
+    if (await Organization.findOne({ slug })) slug = `${slug}-${crypto.randomBytes(2).toString("hex")}`;
+
+    const email = String(req.body.email).trim().toLowerCase();
+    const trialDays = 14;
+
+    const organization = await Organization.create({
+      name: companyName,
+      slug,
+      legalName: companyName,
+      status: "Trial",
+      contact: { email },
+      subscription: {
+        plan: "Trial",
+        status: "Trial",
+        trialEndsAt: new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000),
+        seatLimit: 5,
+        storageLimitMb: 2048
+      }
+    });
+
+    // Passing organization explicitly (rather than relying on request tenant context,
+    // which at this point is still whichever workspace resolved for this request - not
+    // the one we just created) is what keeps this new admin correctly scoped to their
+    // own brand-new workspace from the very first document.
+    const user = await User.create({
+      name: String(req.body.name).trim(),
+      email,
+      password: req.body.password,
+      role: "admin",
+      permissions: rolePresets.admin,
+      organization: organization._id
+    });
+
+    organization.createdBy = user._id;
+    await organization.save();
+
+    await ActivityLog.create({
+      organization: organization._id,
+      actor: { user: user._id, name: user.name, email: user.email, role: user.role },
+      module: "Organisation",
+      action: "Workspace created",
+      entityType: "Organization",
+      entityId: organization._id,
+      summary: `${user.name} created the ${organization.name} workspace via self-serve signup`,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") || ""
+    }).catch(() => null);
+
+    res.status(201).json({ organization: { id: organization._id, name: organization.name, slug: organization.slug }, message: "Workspace created" });
+  } catch (error) {
+    if (error?.code === 11000) return res.status(409).json({ message: "That workspace name or email is already in use" });
+    next(error);
+  }
 });
 
 router.get("/invitations/verify/:token", async (req, res, next) => {

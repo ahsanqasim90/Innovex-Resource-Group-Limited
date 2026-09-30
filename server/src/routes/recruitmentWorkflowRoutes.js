@@ -1,7 +1,10 @@
 import crypto from "crypto";
 import express from "express";
 import Candidate from "../models/Candidate.js";
+import ClientAccount from "../models/ClientAccount.js";
 import Job from "../models/Job.js";
+import PortalAccount from "../models/PortalAccount.js";
+import PortalSession from "../models/PortalSession.js";
 import RecruitmentSubmission, { RECRUITMENT_STAGES } from "../models/RecruitmentSubmission.js";
 import { hasPermission } from "../config/permissions.js";
 import { protect, requirePermission } from "../middleware/auth.js";
@@ -9,6 +12,8 @@ import { uploadCv } from "../middleware/upload.js";
 import { logActivity } from "../services/activityLogService.js";
 import { extractDocumentText, secureDocumentMeta, structureDocumentReviewText } from "../services/documentIntelligenceService.js";
 import { assertDocumentReleased, scanRecruitmentDocument } from "../services/malwareScanService.js";
+import { sendCandidateSubmissionEmail } from "../services/emailService.js";
+import { tokenHash } from "../utils/authSecurity.js";
 import { requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
@@ -44,7 +49,84 @@ function submissionReference() {
 async function visibleSubmission(id, user, includeCv = false) {
   const query = RecruitmentSubmission.findOne({ _id: id, ...accessFilter(user) });
   if (includeCv) query.select("+cv.data +cv.extractedText");
-  return query.populate("job", "title location salary type shift isActive closingDate reference clientName priority openings");
+  return query.populate("job", "title location salary type shift isActive closingDate reference clientName priority openings clientAccount");
+}
+
+// Fires the first time a candidate reaches "Client review" - emails the client's
+// contact with the CV attached and a secure client-portal link, provisioning that
+// portal account on the fly if the contact has never had one. Failure here never
+// blocks the stage change itself; the outcome is written to the submission's own
+// timeline so it stays the single record of who a CV was sent to and when.
+async function notifyClientAboutSubmission(req, submission) {
+  const job = submission.job;
+  if (!job?.clientAccount) {
+    return { type: "Client notification skipped", note: "This vacancy has no linked client account, so the CV was not auto-sent. Please notify the client manually or link the vacancy to a client account." };
+  }
+
+  const clientAccount = await ClientAccount.findById(job.clientAccount).select("name email contacts");
+  if (!clientAccount) {
+    return { type: "Client notification skipped", note: "The linked client account could not be found, so the CV was not auto-sent." };
+  }
+
+  const contacts = clientAccount.contacts || [];
+  const contact = contacts.find((entry) => entry.decisionMaker && entry.email && entry.consentToContact !== false)
+    || contacts.find((entry) => entry.primary && entry.email && entry.consentToContact !== false)
+    || contacts.find((entry) => entry.email && entry.consentToContact !== false);
+  const contactEmail = contact?.email || clientAccount.email;
+  if (!contactEmail) {
+    return { type: "Client notification skipped", note: `No contact email is on file for ${clientAccount.name}, so the CV was not auto-sent. Add a client contact email and resend.` };
+  }
+
+  const cvDoc = await RecruitmentSubmission.findById(submission._id).select("+cv.data");
+  if (!cvDoc?.cv?.data) {
+    return { type: "Client notification skipped", note: "No CV file is attached to this submission, so nothing could be sent to the client." };
+  }
+  try {
+    assertDocumentReleased(cvDoc.cv);
+  } catch (error) {
+    return { type: "Client notification skipped", note: `The CV could not be released for sending: ${error.message}` };
+  }
+
+  const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+  const workspaceSlug = encodeURIComponent(req.organization.slug);
+  let portalAccount = await PortalAccount.findOne({ type: "Client", email: contactEmail }).select("+invitationTokenHash");
+  let portalUrl = `${clientUrl}/portal/login?workspace=${workspaceSlug}`;
+  let isNewInvite = false;
+
+  if (!portalAccount || portalAccount.status === "Invited") {
+    const token = crypto.randomBytes(32).toString("hex");
+    if (!portalAccount) {
+      portalAccount = new PortalAccount({ type: "Client", name: contact?.name || clientAccount.name, email: contactEmail, clientAccount: clientAccount._id });
+    }
+    portalAccount.status = "Invited";
+    portalAccount.invitationTokenHash = tokenHash(token);
+    portalAccount.invitationExpiresAt = new Date(Date.now() + 7 * 86400000);
+    portalAccount.invitedBy = req.user._id;
+    portalAccount.sessionVersion = Number(portalAccount.sessionVersion || 1) + 1;
+    await portalAccount.save();
+    await PortalSession.updateMany({ account: portalAccount._id, revokedAt: null }, { revokedAt: new Date() });
+    portalUrl = `${clientUrl}/portal/activate?workspace=${workspaceSlug}&token=${token}`;
+    isNewInvite = true;
+  }
+  // A Suspended portal account is left alone (not silently reactivated) - the email
+  // still goes out with the CV attached and a plain login link.
+
+  const result = await sendCandidateSubmissionEmail({
+    submission,
+    job,
+    contactName: contact?.name || clientAccount.name,
+    contactEmail,
+    portalUrl,
+    isNewInvite,
+    cvBuffer: cvDoc.cv.data,
+    cvFilename: cvDoc.cv.originalName || `CV - ${submission.candidateName}`,
+    cvMimetype: cvDoc.cv.mimetype
+  });
+
+  if (!result.sent) {
+    return { type: "Client notification failed", note: result.reason || "Could not send the client notification email." };
+  }
+  return { type: "Client notified", note: `Emailed ${clientAccount.name} (${contactEmail})${isNewInvite ? " and set up their client portal access" : ""}.` };
 }
 
 router.get("/overview", async (req, res, next) => {
@@ -207,13 +289,14 @@ router.patch("/:id/stage", async (req, res, next) => {
     }
 
     const previousStage = submission.stage;
+    const justEnteredClientReview = nextStage === "Client review" && !submission.clientSubmittedAt;
     submission.stage = nextStage;
     submission.outcomeReason = note || submission.outcomeReason;
     if (["Changes requested", "Admin rejected", "Client review"].includes(nextStage)) {
       submission.adminReviewedBy = actor(req.user);
       submission.adminReviewedAt = new Date();
     }
-    if (nextStage === "Client review" && !submission.clientSubmittedAt) submission.clientSubmittedAt = new Date();
+    if (justEnteredClientReview) submission.clientSubmittedAt = new Date();
     if (["Interview requested", "Interview scheduled"].includes(nextStage)) {
       submission.interview = {
         date: req.body.interviewDate || submission.interview?.date,
@@ -224,6 +307,10 @@ router.patch("/:id/stage", async (req, res, next) => {
       };
     }
     submission.timeline.push({ type: "Stage changed", fromStage: previousStage, toStage: nextStage, note, actor: actor(req.user) });
+    if (justEnteredClientReview) {
+      const outcome = await notifyClientAboutSubmission(req, submission).catch((error) => ({ type: "Client notification failed", note: (error.message || "Unexpected error notifying the client").slice(0, 500) }));
+      submission.timeline.push({ type: outcome.type, toStage: nextStage, note: outcome.note, actor: actor(req.user) });
+    }
     await submission.save();
     await logActivity(req, { module: "Recruitment ATS", action: "Pipeline updated", entityType: "RecruitmentSubmission", entityId: submission._id, summary: `${submission.candidateName} moved from ${previousStage} to ${nextStage}` });
     res.json(await visibleSubmission(submission._id, req.user));

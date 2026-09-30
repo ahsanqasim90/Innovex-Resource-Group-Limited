@@ -1,4 +1,5 @@
 import Organization from "../models/Organization.js";
+import EmailAccount from "../models/EmailAccount.js";
 import { workspaceAccessState } from "../services/subscriptionService.js";
 import { getDefaultOrganization, getDefaultOrganizationId, runWithTenant, setDefaultOrganization } from "../tenancy/tenantContext.js";
 
@@ -27,7 +28,16 @@ export async function resolveTenant(req, res, next) {
     const access = workspaceAccessState(organization);
     if (!access.allowed) return res.status(access.statusCode).json({ message: access.message, workspaceStatus: organization.status, subscriptionStatus: organization.subscription?.status });
     req.organization = organization;
-    return runWithTenant({ organizationId: String(organization._id), organizationSlug: organization.slug }, next);
+    return runWithTenant({ organizationId: String(organization._id), organizationSlug: organization.slug }, async () => {
+      // Each organisation can connect its own mailbox (Settings > Email accounts).
+      // Loaded once per request here so config/emailAccounts.js can read it
+      // synchronously everywhere else, with zero changes to existing call sites.
+      const emailAccounts = await EmailAccount.find({}).select("+passEncrypted").then(
+        (accounts) => accounts.map((account) => account.toRuntimeAccount()),
+        () => []
+      );
+      return runWithTenant({ emailAccounts }, next);
+    });
   } catch (error) {
     next(error);
   }

@@ -8,6 +8,7 @@ import { canViewFinance } from "../config/permissions.js";
 import { allowedSenderAccountsForUser, canUseSender } from "../config/emailAccounts.js";
 import { logActivity } from "../services/activityLogService.js";
 import { generateInvoicePdf } from "../services/invoicePdfService.js";
+import { invoiceSummaryRange, buildInvoiceSummary, generateInvoiceSummaryPdf } from "../services/invoiceSummaryService.js";
 import { generateExpenseLedgerPdf } from "../services/expenseLedgerPdfService.js";
 import { sendInvoiceEmail, sendInvoiceReminderEmail } from "../services/emailService.js";
 import { processInvoiceReminders } from "../services/invoiceReminderService.js";
@@ -101,6 +102,27 @@ function attachLedgerNumbers(expenses) {
   }));
 }
 
+async function expenseExportSet(query = {}) {
+  const { dateFrom, dateTo } = query;
+  if (dateFrom || dateTo) {
+    const expenseDate = invoiceSummaryRange(dateFrom, dateTo);
+    const years = await Expense.distinct("financialYear", { expenseDate });
+    const all = years.length ? await Expense.find({ financialYear: { $in: years } }).sort({ expenseDate: 1, createdAt: 1 }) : [];
+    const numbered = years.flatMap((year) => attachLedgerNumbers(all.filter((item) => item.financialYear === year)));
+    const from = expenseDate.$gte.getTime();
+    const to = expenseDate.$lte.getTime();
+    const expenses = numbered
+      .filter((item) => { const time = new Date(item.expenseDate).getTime(); return time >= from && time <= to; })
+      .sort((a, b) => (new Date(a.expenseDate) - new Date(b.expenseDate)) || (new Date(a.createdAt || 0) - new Date(b.createdAt || 0)));
+    const label = (value) => new Date(`${value}T00:00:00.000Z`).toLocaleDateString("en-GB", { timeZone: "UTC" });
+    return { expenses, financialYear: `${dateFrom}-to-${dateTo}`, periodLabel: `${label(dateFrom)} - ${label(dateTo)}` };
+  }
+  const filter = query.financialYear ? { financialYear: query.financialYear } : {};
+  const financialYear = query.financialYear || "All";
+  const expenses = attachLedgerNumbers(await Expense.find(filter).sort({ expenseDate: 1, createdAt: 1 }));
+  return { expenses, financialYear, periodLabel: `Financial year ${financialYear}` };
+}
+
 function escapeHtml(value = "") {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -156,6 +178,53 @@ router.get("/dashboard", async (req, res, next) => {
     const invoice = invoiceTotals[0] || { invoiced: 0, paid: 0, outstanding: 0, count: 0 };
     const expense = expenseTotals[0] || { net: 0, vat: 0, total: 0, count: 0 };
     res.json({ financialYear, invoice, expense, netPosition: invoice.paid - expense.total, overdueCount, draftCount, dueSoon, recentInvoices, recentExpenses: recentExpenses.map(expenseSummary), financialYears: Array.from(new Set(years.flat().concat(financialYear))).sort().reverse() });
+  } catch (error) { next(error); }
+});
+
+router.get(["/invoices/summary", "/invoices/summary.pdf", "/invoices/summary.xls"], async (req, res, next) => {
+  try {
+    const { dateFrom, dateTo } = req.query;
+    const issueDate = invoiceSummaryRange(dateFrom, dateTo);
+    const invoices = await Invoice.find({ issueDate })
+      .select("invoiceNumber clientName issueDate dueDate status currency subtotal vatAmount total amountPaid balanceDue")
+      .sort({ issueDate: 1, invoiceNumber: 1 }).lean();
+    const summary = buildInvoiceSummary(invoices, dateFrom, dateTo);
+    res.setHeader("Cache-Control", "no-store");
+    if (req.path.endsWith(".pdf")) {
+      const pdf = await generateInvoiceSummaryPdf(summary);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=Invoice-Summary-${dateFrom}-to-${dateTo}.pdf`);
+      return res.send(pdf);
+    }
+    if (req.path.endsWith(".xls")) {
+      const fmt = (value) => new Date(value).toLocaleDateString("en-GB", { timeZone: "UTC" });
+      const rows = summary.invoices.map((item) => `
+        <tr><td>${escapeHtml(item.invoiceNumber)}</td><td>${escapeHtml(item.clientName)}</td><td>${escapeHtml(fmt(item.issueDate))}</td><td>${escapeHtml(fmt(item.dueDate))}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.currency || "GBP")}</td><td class="money">${moneyCell(item.subtotal)}</td><td class="money">${moneyCell(item.vatAmount)}</td><td class="money">${moneyCell(item.total)}</td><td class="money">${moneyCell(item.amountPaid)}</td><td class="money">${moneyCell(item.balanceDue)}</td></tr>`).join("");
+      const totalsRows = summary.totals.map((group) => `
+        <tr><td>${escapeHtml(group.currency)}</td><td>${group.count}</td><td class="money">${moneyCell(group.subtotal)}</td><td class="money">${moneyCell(group.vatAmount)}</td><td class="money">${moneyCell(group.total)}</td><td class="money">${moneyCell(group.amountPaid)}</td><td class="money">${moneyCell(group.balanceDue)}</td></tr>`).join("");
+      const html = `<!doctype html><html><head><meta charset="utf-8" /><style>
+        body { font-family: Arial, sans-serif; color: #073f4c; }
+        .title { font-size: 24px; font-weight: 700; } .subtle { color: #60757b; }
+        table { border-collapse: collapse; width: 100%; }
+        th { padding: 9px; color: #fff; background: #064f5e; border: 1px solid #064f5e; text-align: left; }
+        td { padding: 8px; border: 1px solid #d9e7e9; vertical-align: top; }
+        tr:nth-child(even) td { background: #f8fbfb; }
+        .money { mso-number-format: "0.00"; text-align: right; }
+      </style></head><body>
+        <p class="title">Innovex Resource Group Limited - Invoice Summary</p>
+        <p class="subtle">Issue dates: ${escapeHtml(fmt(dateFrom))} to ${escapeHtml(fmt(dateTo))} (inclusive) | Generated: ${escapeHtml(new Date().toLocaleString("en-GB", { timeZone: "Europe/London" }))}</p>
+        <p class="subtle">${summary.count} invoices | ${summary.statuses.Draft || 0} drafts | ${summary.statuses.Cancelled || 0} cancelled. Totals exclude drafts and cancelled invoices; paid and outstanding are current balances.</p>
+        <table><thead><tr><th>Currency</th><th>Issued invoices</th><th>Net</th><th>VAT</th><th>Total</th><th>Paid</th><th>Outstanding</th></tr></thead>
+        <tbody>${totalsRows || '<tr><td colspan="7">No issued invoices in this period.</td></tr>'}</tbody></table>
+        <br />
+        <table><thead><tr><th>Invoice</th><th>Client</th><th>Issued</th><th>Due</th><th>Status</th><th>CCY</th><th>Net</th><th>VAT</th><th>Total</th><th>Paid</th><th>Outstanding</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="11">No invoices found for this date range.</td></tr>'}</tbody></table>
+      </body></html>`;
+      res.setHeader("Content-Type", "application/vnd.ms-excel; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename=Invoice-Summary-${dateFrom}-to-${dateTo}.xls`);
+      return res.send(`\uFEFF${html}`);
+    }
+    res.json(summary);
   } catch (error) { next(error); }
 });
 
@@ -381,33 +450,28 @@ router.delete("/invoices/:id", async (req, res, next) => {
 
 router.get("/expenses/export.pdf", async (req, res, next) => {
   try {
-    const filter = req.query.financialYear ? { financialYear: req.query.financialYear } : {};
-    const financialYear = req.query.financialYear || "All";
-    const expenses = attachLedgerNumbers(await Expense.find(filter).sort({ expenseDate: 1, createdAt: 1 }));
-    const pdf = await generateExpenseLedgerPdf({ expenses, financialYear });
+    const { expenses, financialYear, periodLabel } = await expenseExportSet(req.query);
+    const pdf = await generateExpenseLedgerPdf({ expenses, financialYear, periodLabel });
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename=Innovex-Expense-Ledger-${financialYear}.pdf`);
+    res.setHeader("Content-Disposition", `attachment; filename=Innovex-Expense-Ledger-${financialYear.replace("/", "-")}.pdf`);
     res.send(pdf);
   } catch (error) { next(error); }
 });
 
 router.get("/expenses/export.csv", async (req, res, next) => {
   try {
-    const filter = req.query.financialYear ? { financialYear: req.query.financialYear } : {};
-    const expenses = attachLedgerNumbers(await Expense.find(filter).sort({ expenseDate: 1, createdAt: 1 }));
+    const { expenses, financialYear } = await expenseExportSet(req.query);
     const rows = [["Ledger Number", "Audit ID", "Date", "Financial Year", "Supplier", "Category", "Description", "Reference", "Net", "VAT Rate", "VAT", "Gross", "Payment Status", "Payment Method"]];
     expenses.forEach((item) => rows.push([item.ledgerNumber, item.expenseNumber, new Date(item.expenseDate).toLocaleDateString("en-GB"), item.financialYear, item.supplier, item.category, item.description, item.reference, moneyCell(item.netAmount), item.vatRate, moneyCell(item.vatAmount), moneyCell(item.totalAmount), item.paymentStatus, item.paymentMethod]));
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename=Innovex-Expenses-${req.query.financialYear || "All"}.csv`);
+    res.setHeader("Content-Disposition", `attachment; filename=Innovex-Expenses-${financialYear.replace("/", "-")}.csv`);
     res.send(`\uFEFF${rows.map((row) => row.map(csvEscape).join(",")).join("\n")}`);
   } catch (error) { next(error); }
 });
 
 router.get("/expenses/export.xls", async (req, res, next) => {
   try {
-    const filter = req.query.financialYear ? { financialYear: req.query.financialYear } : {};
-    const financialYear = req.query.financialYear || "All";
-    const expenses = attachLedgerNumbers(await Expense.find(filter).sort({ expenseDate: 1, createdAt: 1 }));
+    const { expenses, financialYear, periodLabel } = await expenseExportSet(req.query);
     const totals = expenses.reduce((sum, item) => ({
       net: sum.net + Number(item.netAmount || 0),
       vat: sum.vat + Number(item.vatAmount || 0),
@@ -448,7 +512,7 @@ router.get("/expenses/export.xls", async (req, res, next) => {
         </head>
         <body>
           <p class="title">Innovex Resource Group Limited - Expense Ledger</p>
-          <p class="subtle">Financial year: ${escapeHtml(financialYear)} | Generated: ${escapeHtml(new Date().toLocaleString("en-GB", { timeZone: "Europe/London" }))}</p>
+          <p class="subtle">${escapeHtml(periodLabel)} | Generated: ${escapeHtml(new Date().toLocaleString("en-GB", { timeZone: "Europe/London" }))}</p>
           <table class="summary">
             <tr><td>Total records</td><td>${expenses.length}</td><td>Net</td><td class="money">${moneyCell(totals.net)}</td><td>VAT</td><td class="money">${moneyCell(totals.vat)}</td><td>Gross</td><td class="money">${moneyCell(totals.gross)}</td></tr>
           </table>
@@ -461,7 +525,7 @@ router.get("/expenses/export.xls", async (req, res, next) => {
       </html>`;
 
     res.setHeader("Content-Type", "application/vnd.ms-excel; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename=Innovex-Expense-Ledger-${financialYear}.xls`);
+    res.setHeader("Content-Disposition", `attachment; filename=Innovex-Expense-Ledger-${financialYear.replace("/", "-")}.xls`);
     res.send(`\uFEFF${html}`);
   } catch (error) { next(error); }
 });

@@ -12424,3 +12424,4 @@ textarea:focus-visible {
 .page-tools-toggle span { font-size: .78rem; font-weight: 700; color: #0f6b6b; white-space: nowrap; }
 .page-tools-toggle:hover { border-color: #0f6b6b; }
 .talent-admin-grid[hidden] { display: none; }
+.auth-recovery-card-wide{width:min(620px,100%)}.workspace-toggle-link{display:block;margin:2px 0 14px;background:none;border:0;padding:0;color:#087d79;font-weight:750;font-size:.82rem;text-align:left;cursor:pointer}

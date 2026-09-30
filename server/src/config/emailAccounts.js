@@ -1,3 +1,5 @@
+import { currentOrganizationId, currentTenant, isDefaultOrganization } from "../tenancy/tenantContext.js";
+
 function bool(value, fallback = false) {
   if (value === undefined || value === null || value === "") return fallback;
   return String(value).toLowerCase() === "true";
@@ -62,7 +64,12 @@ function extraAccountsFromEnv() {
   }
 }
 
-export function configuredEmailAccounts() {
+// The legacy platform-wide mailboxes, configured via env vars. These only ever
+// belong to the default organisation (Innovex itself) - a new tenant with no
+// mailbox connected yet must not see, or be able to send as, Innovex's own
+// mailboxes, so this list is skipped entirely for every other organisation.
+function legacyEnvAccounts() {
+  if (!isDefaultOrganization(currentOrganizationId())) return [];
   const defaults = [
     accountFromEnv("SMTP_INFO", {
       address: process.env.SMTP_INFO_ADDRESS || "info@innovexresourcegroup.co.uk",
@@ -91,10 +98,20 @@ export function configuredEmailAccounts() {
       secure: process.env.SMTP_SECURE
     })
   ].filter(Boolean);
+  return [...defaults, ...extraAccountsFromEnv()];
+}
 
+// Every mailbox available to the CURRENT organisation (from the AsyncLocalStorage
+// tenant context set up in middleware/tenant.js): the org's own connected
+// mailboxes (Settings > Email accounts) plus, only for the default organisation,
+// the legacy env-var mailboxes kept for backwards compatibility. Org-connected
+// accounts win on an address clash, since they're the ones an admin can actually
+// update from the UI.
+export function configuredEmailAccounts() {
+  const orgAccounts = currentTenant().emailAccounts || [];
   const unique = new Map();
-  [...defaults, ...extraAccountsFromEnv()].forEach((account) => {
-    if (!unique.has(account.address)) unique.set(account.address, account);
+  [...legacyEnvAccounts(), ...orgAccounts].forEach((account) => {
+    if (account) unique.set(account.address, account);
   });
   return Array.from(unique.values());
 }

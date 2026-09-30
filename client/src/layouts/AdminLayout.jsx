@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpRight, BarChart3, BookOpenCheck, BookOpenText, BrainCircuit, Briefcase, Building2,
   CalendarCheck, CalendarClock, ChevronDown, ChevronRight, ClipboardCheck, DatabaseBackup, FileArchive, FileText,
-  GraduationCap, Inbox, KeyRound, LayoutDashboard, Lightbulb, LogOut, MailPlus, MailSearch, Menu, MessageSquare, NotebookPen,
+  GraduationCap, Inbox, KeyRound, LayoutDashboard, Lightbulb, LogOut, MailPlus, MailSearch, Megaphone, Menu, MessageSquare, NotebookPen,
   PanelLeftClose, PanelLeftOpen, PhoneCall, ReceiptPoundSterling, Search, SearchCheck, Settings, ShieldCheck,
   Star, ListTodo, AlignJustify, Store, Upload, UserCheck, UserCog, UsersRound, X, ServerCog, Workflow
 } from "lucide-react";
@@ -36,6 +36,7 @@ const navigationGroups = [
       item("/admin/cv-uploads", "CV Uploads", Upload, "cvs.view"),
       item("/admin/vacancy-intelligence", "Vacancy Intelligence", BrainCircuit, "vacancyIntelligence.view"),
       item("/admin/candidate-match", "CV to Vacancy Match", SearchCheck, "vacancyIntelligence.view"),
+      item("/admin/social-posting", "Social Posting", Megaphone, "jobs.approve"),
       item("/admin/candidate-communications", "Candidate Comms", MessageSquare, "talentPool.view"),
       item("/admin/interviews", "Interviews", CalendarCheck, "interviews.view"),
       item("/admin/scheduling", "Self-Scheduling", CalendarClock, "interviews.view")

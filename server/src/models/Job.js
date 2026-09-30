@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { extractPostcode } from "../utils/jobQuality.js";
 
 const sourceDocumentSchema = new mongoose.Schema(
   {
@@ -165,6 +166,13 @@ jobSchema.pre("validate", function normalizeVacancy() {
   this.title = String(this.title || "").replace(/\s+/g, " ").trim();
   this.location = String(this.location || "").replace(/\s*,\s*/g, ", ").replace(/\s+/g, " ").replace(/\b([a-z])/g, (match) => match.toUpperCase()).trim();
   if (this.postcode) this.postcode = this.postcode.toUpperCase().replace(/\s+/g, " ").replace(/^([A-Z]{1,2}\d[A-Z\d]?)(\d[A-Z]{2})$/, "$1 $2");
+  if (!this.postcode) {
+    // Some creation paths (e.g. the Vacancy Intelligence document-upload flow) don't
+    // go through jobQuality's normaliseJobPayload, so recover a postcode/outward code
+    // from the free-text Location here too - distance matching depends on it.
+    const derived = extractPostcode(this.location);
+    if (derived) this.postcode = derived;
+  }
   let salary = String(this.salary || "").replace(/\s+/g, " ").trim();
   if (/^\d[\d,]*(?:\.\d+)?$/.test(salary)) salary = `£${salary} per annum`;
   salary = salary.replace(/\bper annum\b/i, "per annum").replace(/\bper hour\b/i, "per hour").replace(/\bpa\b/i, "per annum");

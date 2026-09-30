@@ -32,6 +32,7 @@ const ProductPolicyPage = React.lazy(() => import("./pages/ProductPolicyPage.jsx
 const PortalAccess = React.lazy(() => import("./pages/PortalAccess.jsx"));
 const PortalDashboard = React.lazy(() => import("./pages/PortalDashboard.jsx"));
 const Login = React.lazy(() => import("./pages/admin/Login.jsx"));
+const Signup = React.lazy(() => import("./pages/Signup.jsx"));
 const Dashboard = React.lazy(() => import("./pages/admin/Dashboard.jsx"));
 const AdminBlogs = React.lazy(() => import("./pages/admin/AdminBlogs.jsx"));
 const AdminCourses = React.lazy(() => import("./pages/admin/AdminCourses.jsx"));
@@ -47,6 +48,7 @@ const AdminCandidateCommunications = React.lazy(() => import("./pages/admin/Admi
 const AdminCvLibrary = React.lazy(() => import("./pages/admin/AdminCvLibrary.jsx"));
 const AdminVacancyIntelligence = React.lazy(() => import("./pages/admin/AdminVacancyIntelligence.jsx"));
 const AdminCandidateMatch = React.lazy(() => import("./pages/admin/AdminCandidateMatch.jsx"));
+const AdminSocialPosting = React.lazy(() => import("./pages/admin/AdminSocialPosting.jsx"));
 const AdminBusinessLeads = React.lazy(() => import("./pages/admin/AdminBusinessLeads.jsx"));
 const AdminCalls = React.lazy(() => import("./pages/admin/AdminCalls.jsx"));
 const AdminInterviews = React.lazy(() => import("./pages/admin/AdminInterviews.jsx"));
@@ -158,6 +160,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="*" element={<NotFound />} />
           </Route>
           <Route path="/admin/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<PasswordRecovery mode="request" />} />
           <Route path="/reset-password" element={<PasswordRecovery mode="reset" />} />
           <Route path="/accept-invitation" element={<AcceptInvitation />} />
@@ -182,6 +185,7 @@ createRoot(document.getElementById("root")).render(
             <Route path="cv-library" element={<RequirePermission permission="candidateCvs.view"><AdminCvLibrary /></RequirePermission>} />
             <Route path="vacancy-intelligence" element={<RequirePermission permission="vacancyIntelligence.view"><AdminVacancyIntelligence /></RequirePermission>} />
             <Route path="candidate-match" element={<RequirePermission permission="vacancyIntelligence.view"><AdminCandidateMatch /></RequirePermission>} />
+            <Route path="social-posting" element={<RequirePermission permission="jobs.approve"><AdminSocialPosting /></RequirePermission>} />
             <Route path="talent-pool" element={<RequirePermission permission="talentPool.view"><AdminTalentPool /></RequirePermission>} />
             <Route path="candidate-communications" element={<RequirePermission permission="talentPool.view"><AdminCandidateCommunications /></RequirePermission>} />
             <Route path="business-leads" element={<RequirePermission permission="businessLeads.view"><AdminBusinessLeads /></RequirePermission>} />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CheckCircle2,
@@ -25,7 +25,7 @@ import { api } from "../../api/client.js";
 import { outreachHadProblems, sendOutreachInBatches, summariseOutreach } from "../../utils/bulkOutreach.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { hasPermission } from "../../auth/permissions.js";
-import StatusMessage from "../../components/StatusMessage.jsx";
+import { CircleAlert, LoaderCircle, X } from "lucide-react";
 import SubmitButton from "../../components/SubmitButton.jsx";
 
 const emptyCandidate = {
@@ -53,6 +53,34 @@ const emptyFilters = { search: "", role: "", postcode: "", radiusMiles: "", stat
 
 function validPostcodePrefixes(value = "") {
   return [...new Set(String(value).split(/[,;\n]+/).map((item) => item.toUpperCase().replace(/\s+/g, "").slice(0, 4)).filter((item) => item.length >= 2))];
+}
+
+// Imported role names sometimes end with stray separators (for example "Senior Care Assistant |").
+// Only the displayed label is tidied; the stored value is untouched so filtering still matches.
+function cleanRole(label = "") {
+  const tidy = String(label).replace(/[\s|,;:/\\-]+$/g, "").trim();
+  return tidy || String(label);
+}
+
+function TalentToast({ status, onClose }) {
+  useEffect(() => {
+    if (!status || status.progress || status.type === "error") return undefined;
+    const timer = window.setTimeout(onClose, 12000);
+    return () => window.clearTimeout(timer);
+  }, [status]);
+  if (!status?.message) return null;
+  const tone = status.type === "error" ? "error" : status.progress ? "progress" : "info";
+  const percent = status.progress?.total ? Math.round((status.progress.done / status.progress.total) * 100) : 0;
+  return (
+    <div className={`talent-toast ${tone}`} role="status" aria-live="polite">
+      <div className="talent-toast-body">
+        {tone === "progress" ? <LoaderCircle size={18} className="talent-toast-spin" /> : tone === "error" ? <CircleAlert size={18} /> : <CheckCircle2 size={18} />}
+        <p>{status.message}</p>
+        {!status.progress && <button type="button" aria-label="Dismiss message" onClick={onClose}><X size={16} /></button>}
+      </div>
+      {status.progress && <div className="talent-toast-bar"><i style={{ width: `${percent}%` }} /></div>}
+    </div>
+  );
 }
 
 const emailTemplate = {
@@ -150,6 +178,8 @@ export default function AdminTalentPool() {
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0, limit: 25, radiusMeta: null });
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const loadSeq = useRef(0);
+  const [roleQuery, setRoleQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importReport, setImportReport] = useState(null);
@@ -180,11 +210,11 @@ export default function AdminTalentPool() {
   const selectedJob = useMemo(() => jobs.find((job) => job._id === selectedJobId), [jobs, selectedJobId]);
   const selectedSender = useMemo(() => senderAccounts.find((sender) => sender.address === selectedSenderEmail), [senderAccounts, selectedSenderEmail]);
 
-  function queryString(page = pagination.page, nextFilters = filters) {
+  function queryString(page = pagination.page, nextFilters = filters, roles = selectedPostcodeRoles) {
     const effectiveFilters = {
       ...nextFilters,
-      ...(selectedPostcodeRoles.length
-        ? { role: "", roles: JSON.stringify(selectedPostcodeRoles) }
+      ...(roles.length
+        ? { role: "", roles: JSON.stringify(roles) }
         : {})
     };
     const query = new URLSearchParams({
@@ -195,17 +225,20 @@ export default function AdminTalentPool() {
     return query.toString();
   }
 
-  async function load(page = 1, nextFilters = filters) {
+  async function load(page = 1, nextFilters = filters, roles = selectedPostcodeRoles) {
+    // Ticking several roles quickly starts several searches; only the newest one may update the page.
+    const seq = ++loadSeq.current;
     setLoading(true);
     try {
-      const data = await api(`/candidates?${queryString(page, nextFilters)}`);
+      const data = await api(`/candidates?${queryString(page, nextFilters, roles)}`);
+      if (seq !== loadSeq.current) return;
       setCandidates(data.items || []);
       setPagination({ page: data.page, pages: data.pages || 1, total: data.total || 0, limit: data.limit || 25, radiusMeta: data.radiusMeta || null });
       setSelectedIds([]);
     } catch (error) {
-      setStatus({ type: "error", message: error.message });
+      if (seq === loadSeq.current) setStatus({ type: "error", message: error.message });
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }
 
@@ -393,7 +426,7 @@ export default function AdminTalentPool() {
           message: outreach.message,
           fromEmail: selectedSenderEmail
         },
-        onProgress: ({ done, total, sent }) => setStatus({ message: `Sending… ${done} of ${total} processed (${sent} sent). Please keep this page open.` })
+        onProgress: ({ done, total, sent }) => setStatus({ message: `Sending emails: ${done} of ${total} processed (${sent} sent). Please keep this page open.`, progress: { done, total } })
       });
       setStatus({ type: outreachHadProblems(result) ? "error" : undefined, message: summariseOutreach(result) });
       setSelectedIds(result.unsent);
@@ -490,14 +523,22 @@ export default function AdminTalentPool() {
     setFilters(emptyFilters);
     setPostcodeRoles([]);
     setSelectedPostcodeRoles([]);
-    load(1, emptyFilters);
+    setRoleQuery("");
+    load(1, emptyFilters, []);
+  }
+
+  function applyRoles(next) {
+    setSelectedPostcodeRoles(next);
+    load(1, filters, next);
   }
 
   function togglePostcodeRole(role) {
-    setSelectedPostcodeRoles((current) => current.includes(role)
-      ? current.filter((item) => item !== role)
-      : [...current, role]);
+    applyRoles(selectedPostcodeRoles.includes(role)
+      ? selectedPostcodeRoles.filter((item) => item !== role)
+      : [...selectedPostcodeRoles, role]);
   }
+
+  const visibleRoles = postcodeRoles.filter((item) => !roleQuery.trim() || cleanRole(item.label).toLowerCase().includes(roleQuery.trim().toLowerCase()));
 
   const summaryCards = [
     { label: "Total candidates", value: stats.total || 0, Icon: Database, tone: "primary" },
@@ -534,7 +575,7 @@ export default function AdminTalentPool() {
         </div>
       </section>
 
-      <StatusMessage status={status} />
+      <TalentToast status={status} onClose={() => setStatus(null)} />
 
       {callConfig.allowedCallerIds?.length > 0 && (
         <section className="call-number-toolbar">
@@ -779,7 +820,7 @@ export default function AdminTalentPool() {
             <span className="eyebrow"><Filter size={15} /> Candidate search</span>
             <h2>Search and segment the pool</h2>
           </div>
-          <strong>{Number(pagination.total || 0).toLocaleString()} records</strong>
+          <strong className={loading ? "talent-count is-loading" : "talent-count"}>{Number(pagination.total || 0).toLocaleString()} matching records</strong>
         </div>
         <form className="form-grid talent-filter-form" onSubmit={applyFilters}>
           <label className="filter-field">
@@ -825,35 +866,44 @@ export default function AdminTalentPool() {
                   <strong>
                     {postcodeRoleMeta?.enabled
                       ? `Roles within ${postcodeRoleMeta.radiusMiles} miles of ${postcodeRoleMeta.postcode}`
-                      : `Roles available in ${validPostcodePrefixes(filters.postcode).join(", ")}`}
+                      : `Roles in ${validPostcodePrefixes(filters.postcode).join(", ")}`}
                   </strong>
                   <span>
                     {loadingPostcodeRoles
                       ? "Checking candidate roles..."
-                      : `${postcodeRoles.length} unique role${postcodeRoles.length === 1 ? "" : "s"} found${postcodeRoleMeta?.enabled ? " in this radius" : ""}. Select the roles you want to display.`}
+                      : `${postcodeRoles.length} role${postcodeRoles.length === 1 ? "" : "s"} in this area. ${selectedPostcodeRoles.length ? `${selectedPostcodeRoles.length} selected, the list below is filtered.` : "Tick the roles you want and the list below updates straight away."}`}
                   </span>
                 </div>
                 {!!postcodeRoles.length && (
                   <div className="postcode-role-picker-actions">
-                    <button type="button" onClick={() => setSelectedPostcodeRoles(postcodeRoles.map((item) => item.label))}>Select all</button>
-                    <button type="button" onClick={() => setSelectedPostcodeRoles([])}>Clear</button>
+                    {postcodeRoles.length > 8 && (
+                      <label className="postcode-role-find">
+                        <Search size={14} />
+                        <input placeholder="Find a role" value={roleQuery} onChange={(event) => setRoleQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} />
+                      </label>
+                    )}
+                    <button type="button" onClick={() => applyRoles(visibleRoles.map((item) => item.label))}>{roleQuery.trim() ? "Select shown" : "Select all"}</button>
+                    <button type="button" disabled={!selectedPostcodeRoles.length} onClick={() => applyRoles([])}>Clear</button>
                   </div>
                 )}
               </div>
-              {!loadingPostcodeRoles && postcodeRoles.length > 0 && (
+              {!loadingPostcodeRoles && visibleRoles.length > 0 && (
                 <div className="postcode-role-options">
-                  {postcodeRoles.map((item) => (
-                    <label className={selectedPostcodeRoles.includes(item.label) ? "selected" : ""} key={item.key}>
+                  {visibleRoles.map((item) => (
+                    <label className={selectedPostcodeRoles.includes(item.label) ? "selected" : ""} key={item.key} title={item.label}>
                       <input
                         type="checkbox"
                         checked={selectedPostcodeRoles.includes(item.label)}
                         onChange={() => togglePostcodeRole(item.label)}
                       />
-                      <span>{item.label}</span>
-                      <small>{Number(item.count).toLocaleString()}</small>
+                      <span>{cleanRole(item.label)}</span>
+                      <small title="Candidates with this role in the area">{Number(item.count).toLocaleString()}</small>
                     </label>
                   ))}
                 </div>
+              )}
+              {!loadingPostcodeRoles && postcodeRoles.length > 0 && !visibleRoles.length && (
+                <p className="postcode-role-empty">No role matches "{roleQuery}".</p>
               )}
               {!loadingPostcodeRoles && !postcodeRoles.length && (
                 <p className="postcode-role-empty">
@@ -878,9 +928,7 @@ export default function AdminTalentPool() {
           )}
           <div className="talent-filter-actions">
             <button className="button">
-              {selectedPostcodeRoles.length
-                ? `Show ${selectedPostcodeRoles.length} selected role${selectedPostcodeRoles.length === 1 ? "" : "s"}`
-                : "Apply Filters"}
+              Apply filters
             </button>
             <button className="button secondary" type="button" onClick={resetFilters}>Reset filters</button>
           </div>

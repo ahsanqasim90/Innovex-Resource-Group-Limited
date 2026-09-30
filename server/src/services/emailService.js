@@ -1,12 +1,21 @@
 import nodemailer from "nodemailer";
 import MailComposer from "nodemailer/lib/mail-composer/index.js";
 import { ImapFlow } from "imapflow";
-import { findEmailAccount } from "../config/emailAccounts.js";
+import { configuredEmailAccounts, findEmailAccount } from "../config/emailAccounts.js";
 
 const recipient = process.env.CONTACT_TO_EMAIL || "info@innovexresourcegroup.co.uk";
 
+// The organisation's own default connected mailbox (Settings > Email accounts),
+// when it has one - this is what every "no specific sender chosen" email uses,
+// so a new tenant's automated mail (interview reminders, contact notifications,
+// etc.) goes out from THEIR mailbox rather than failing or borrowing Innovex's.
+function defaultOrganizationAccount() {
+  const accounts = configuredEmailAccounts();
+  return accounts.find((account) => account.isDefault) || accounts[0] || null;
+}
+
 function hasSmtpConfig() {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  return Boolean(defaultOrganizationAccount()) || Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
 // One pooled transporter per mailbox is reused for the life of a warm serverless
@@ -15,7 +24,7 @@ function hasSmtpConfig() {
 const transporterCache = new Map();
 
 function makeTransporter(account = null) {
-  const config = account || {
+  const config = account || defaultOrganizationAccount() || {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: process.env.SMTP_SECURE === "true",
@@ -63,8 +72,9 @@ export function describeMailError(error) {
 }
 
 function formatSender(account = null) {
-  if (!account) return process.env.MAIL_FROM || process.env.SMTP_USER;
-  return account.name ? `"${account.name}" <${account.address}>` : account.address;
+  const resolved = account || defaultOrganizationAccount();
+  if (!resolved) return process.env.MAIL_FROM || process.env.SMTP_USER;
+  return resolved.name ? `"${resolved.name}" <${resolved.address}>` : resolved.address;
 }
 
 function senderAccountOrDefault(fromEmail) {
@@ -501,7 +511,7 @@ export async function sendContactEmail(message) {
   `;
 
   await transporter.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    from: formatSender(),
     to: recipient,
     replyTo: message.email,
     subject,
@@ -529,7 +539,7 @@ export async function sendInterviewReminderEmail(interview) {
   `;
 
   await transporter.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    from: formatSender(),
     to: recipient,
     subject,
     text,
@@ -560,7 +570,7 @@ export async function sendMeetingReminderEmail(meeting) {
   `;
 
   await transporter.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    from: formatSender(),
     to: recipient,
     subject,
     text,
@@ -613,7 +623,7 @@ export async function sendTrainingEnquiryEmail(booking) {
   `;
 
   await transporter.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    from: formatSender(),
     to: recipient,
     replyTo: booking.email,
     subject,
@@ -710,6 +720,70 @@ export async function sendCandidateVacancyEmail({ candidate, job, fromEmail, sub
   const finalSubject = subject || `${job.title} opportunity in ${job.location} – Innovex Resource Group`;
   const delivery = await safeDeliver(transporter, account, { from: formatSender(account), to: candidate.email, replyTo: account?.address || recipient, subject: finalSubject, text: `${message}\n\n${crmComplianceFooterText("Innovex Vacancy Intelligence")}`, html }, archiveSession);
   return delivery.sent ? { ...delivery, subject: finalSubject, message, fromEmail: account?.address || fromEmail } : delivery;
+}
+
+// Emailed automatically the first time a candidate reaches the "Client review" stage
+// in the Recruitment ATS - the client gets the CV attached plus a link into their
+// secure client portal (recruitmentWorkflowRoutes.js decides the portal link/invite
+// state and calls this once per submission; see notifyClientAboutSubmission there).
+export async function sendCandidateSubmissionEmail({ submission, job, contactName, contactEmail, portalUrl, isNewInvite, cvBuffer, cvFilename, cvMimetype, fromEmail }) {
+  const account = senderAccountOrDefault(fromEmail);
+  if (!account && !hasSmtpConfig()) return { sent: false, reason: "SMTP is not configured" };
+  if (!contactEmail) return { sent: false, reason: "Client contact email is missing" };
+
+  const transporter = makeTransporter(account);
+  const source = "Innovex Recruitment ATS";
+  const reference = job.reference ? ` (Ref: ${job.reference})` : "";
+  const subject = `New candidate for ${job.title}${reference} | Innovex Resource Group Limited`;
+  const greeting = contactName || "there";
+  const summary = submission.recruiterSummary || "";
+  const stats = [
+    ["EXPERIENCE", submission.experienceYears ? `${submission.experienceYears} years` : "Not specified"],
+    ["CURRENT ROLE", submission.currentRole || "Not specified"],
+    ["NOTICE PERIOD", submission.noticePeriod || "Not specified"],
+    ["RIGHT TO WORK", submission.rightToWork || "Not specified"]
+  ];
+  const portalAction = isNewInvite
+    ? "We've also set up your secure client portal - activate it below to review this candidate, request an interview, or decline with a note, all in one place."
+    : "You can review this candidate, request an interview, or decline with a note directly in your secure client portal.";
+  const portalCta = isNewInvite ? "Activate your client portal" : "Open your client portal";
+
+  const text = [
+    `Dear ${greeting},`,
+    "",
+    `We'd like to submit a candidate for your review against ${job.title}${reference}.`,
+    "",
+    ...stats.map(([label, value]) => `${label}: ${value}`),
+    "",
+    "Recruiter summary:",
+    summary,
+    "",
+    `The candidate's CV is attached to this email${cvFilename ? ` as ${cvFilename}` : ""}.`,
+    "",
+    portalAction,
+    portalUrl,
+    "",
+    "Kind regards,",
+    "Innovex Resource Group Limited",
+    account?.address || "info@innovexresourcegroup.co.uk"
+  ].join("\n");
+
+  const statsHtml = stats.map(([label, value], index) => `<tr><td style="width:38%;padding:11px 15px;${index < stats.length - 1 ? "border-bottom:1px solid #d7e9ed;" : ""}background:#f7fbfc;color:#60777e;font-size:11px;font-weight:700;letter-spacing:.05em">${label}</td><td style="padding:11px 15px;${index < stats.length - 1 ? "border-bottom:1px solid #d7e9ed;" : ""}color:#173840;font-weight:700">${escapeHtml(value)}</td></tr>`).join("");
+
+  const html = `<div style="margin:0;padding:30px 12px;background:#eef5f6;font-family:Arial,sans-serif;color:#173840"><div style="max-width:660px;margin:auto;overflow:hidden;border:1px solid #d3e3e6;border-radius:16px;background:#fff;box-shadow:0 18px 45px rgba(6,63,79,.1)"><div style="height:7px;background:#f4b942"></div><div style="padding:26px 30px;background:linear-gradient(135deg,#063f4f,#0b5f75);color:#fff"><div style="color:#bde0e4;font-size:11px;font-weight:700;letter-spacing:.14em">INNOVEX RESOURCE GROUP LIMITED</div><div style="display:inline-block;margin-top:14px;padding:7px 11px;border-radius:999px;background:#f4b942;color:#173840;font-size:11px;font-weight:800">NEW CANDIDATE SUBMISSION</div><h1 style="margin:14px 0 0;color:#fff;font-size:25px;line-height:1.3">${escapeHtml(job.title)}${escapeHtml(reference)}</h1></div><div style="padding:28px 30px"><p style="margin-top:0;font-size:16px">Dear ${escapeHtml(greeting)},</p><p style="line-height:1.7">We would like to submit a candidate for your review.</p><table role="presentation" style="width:100%;margin:20px 0;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid #d7e9ed;border-radius:12px">${statsHtml}</table><div style="margin:20px 0;padding:18px;border:1px solid #d7e9ed;border-left:4px solid #f4b942;border-radius:10px;background:#f7fbfc"><div style="color:#60777e;font-size:11px;font-weight:800;letter-spacing:.08em;margin-bottom:8px">RECRUITER SUMMARY</div><div style="line-height:1.65;color:#304b54">${messageHtml(summary)}</div></div><p style="line-height:1.65">The candidate's CV is attached to this email${cvFilename ? ` as ${escapeHtml(cvFilename)}` : ""}.</p><div style="margin:24px 0;padding:20px;border:2px solid #f4b942;border-radius:12px;background:#fff8e8;text-align:center"><p style="margin:0 0 14px;color:#3f3217;line-height:1.6">${escapeHtml(portalAction)}</p><a href="${portalUrl}" style="display:inline-block;padding:12px 24px;border-radius:9px;background:#0b5f75;color:#fff;font-weight:800;text-decoration:none">${escapeHtml(portalCta)}</a></div><p style="margin:26px 0 0;line-height:1.6">Kind regards,<br><strong>Innovex Resource Group Limited</strong><br><span style="color:#60777e">0330 0435 830 &nbsp;|&nbsp; ${escapeHtml(account?.address || "info@innovexresourcegroup.co.uk")}</span></p>${crmComplianceFooterHtml(source, true)}</div></div></div>`;
+
+  const mailOptions = {
+    from: formatSender(account),
+    to: contactEmail,
+    replyTo: account?.address,
+    subject,
+    text: `${text}\n\n${crmComplianceFooterText(source, true)}`,
+    html,
+    attachments: cvBuffer ? [{ filename: cvFilename || "Candidate-CV.pdf", content: cvBuffer, contentType: cvMimetype || "application/octet-stream" }] : []
+  };
+
+  const delivery = await safeDeliver(transporter, account, mailOptions);
+  return delivery.sent ? { ...delivery, subject, fromEmail: account?.address } : delivery;
 }
 
 export async function sendBusinessLeadOutreachEmail({ lead, subject, message, replyTo, fromEmail, archiveSession = null }) {

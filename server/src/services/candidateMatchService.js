@@ -1,6 +1,7 @@
 import Job from "../models/Job.js";
 import { analyseJobDescription, rankCandidateForJob } from "./documentIntelligenceService.js";
 import { haversineMiles, outwardCode } from "./postcodeIntelligenceService.js";
+import { extractPostcode } from "../utils/jobQuality.js";
 
 // Free, rule-based CV-to-vacancy matching. No paid AI service is used:
 // text comes from the CV itself, distances come from the free postcodes.io lookup,
@@ -57,6 +58,13 @@ function pointFor(value, geo) {
   return geo.get(key) || geo.get(outwardCode(key)) || null;
 }
 
+// A job's dedicated Postcode field is often blank (older records, or created before that
+// field existed); fall back to whatever postcode/outward code can be recovered from its
+// free-text Location so distance still gets calculated instead of "recruiter review".
+function jobPostcode(job) {
+  return job.postcode || extractPostcode(job.location);
+}
+
 function reasonsFor(match) {
   const reasons = [];
   if (Number.isFinite(match.distanceMiles)) reasons.push(`${match.distanceMiles} miles from the candidate (${match.distanceSource || "postcode"})`);
@@ -77,7 +85,7 @@ export async function matchCandidateToVacancies(candidateInput, { limit = 15, mi
     $or: [{ closingDate: null }, { closingDate: { $exists: false } }, { closingDate: { $gte: now } }]
   }).select("-sourceDocument.data +clientName").limit(600).lean();
 
-  const geo = await geocodePostcodes([candidateInput.postcode, ...jobs.map((job) => job.postcode)]);
+  const geo = await geocodePostcodes([candidateInput.postcode, ...jobs.map((job) => jobPostcode(job))]);
   const candidatePoint = pointFor(candidateInput.postcode, geo);
   const candidate = {
     _id: "manual-match",
@@ -91,7 +99,7 @@ export async function matchCandidateToVacancies(candidateInput, { limit = 15, mi
 
   const matches = jobs.map((job) => {
     const prepared = job.intelligence?.analysedAt ? job : { ...job, intelligence: analyseJobDescription(job.description, { title: job.title, location: job.location }) };
-    const origin = pointFor(job.postcode, geo);
+    const origin = pointFor(jobPostcode(job), geo);
     const context = { origin, outcodeDistances: new Map(), haversineMiles };
     const ranked = rankCandidateForJob(prepared, candidate, context);
     return {

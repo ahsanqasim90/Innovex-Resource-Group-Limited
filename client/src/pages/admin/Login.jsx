@@ -1,22 +1,25 @@
 import { useEffect, useState } from "react";
 import {
-  ArrowRight, BriefcaseBusiness, ChartNoAxesCombined, Check, Eye, EyeOff,
+  ArrowRight, BriefcaseBusiness, Building2, ChartNoAxesCombined, Check, Eye, EyeOff,
   KeyRound, LockKeyhole, Mail, ShieldCheck, Sparkles, UsersRound
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import SEO from "../../components/SEO.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { getWorkspaceSlug, setWorkspaceSlug } from "../../api/client.js";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [status, setStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mfaRequired, setMfaRequired] = useState(false);
   const [credentials, setCredentials] = useState(null);
+  const [workspaceFieldOpen, setWorkspaceFieldOpen] = useState(false);
 
   useEffect(() => {
     const preloadWorkspace = () => Promise.allSettled([
@@ -33,12 +36,21 @@ export default function Login() {
     };
   }, []);
 
+  // A bookmarked link like /admin/login?workspace=acme-recruitment (the kind we hand
+  // a new agency after signup) silently sets their workspace code - existing Innovex
+  // staff never see or need this, since their links never carry the parameter.
+  useEffect(() => {
+    const fromLink = params.get("workspace");
+    if (fromLink) { setWorkspaceSlug(fromLink); setWorkspaceFieldOpen(true); }
+  }, [params]);
+
   async function submit(event) {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(event.currentTarget));
     setStatus(null);
     setSubmitting(true);
     try {
+      if (String(data.workspace || "").trim()) setWorkspaceSlug(data.workspace);
       const email = data.email || credentials?.email;
       const password = data.password || credentials?.password;
       const result = await login(email, password, data.mfaCode || "");
@@ -94,6 +106,8 @@ export default function Login() {
               {!mfaRequired && <>
                 <label className="login-field"><span>Email address</span><div><Mail size={18} /><input name="email" type="email" placeholder="name@innovexresourcegroup.co.uk" autoComplete="email" inputMode="email" required /></div></label>
                 <label className="login-field"><span>Password</span><div><LockKeyhole size={18} /><input name="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" autoComplete="current-password" required /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></label>
+                {!workspaceFieldOpen && <button type="button" className="workspace-toggle-link" onClick={() => setWorkspaceFieldOpen(true)}>Signing in to a different agency workspace?</button>}
+                {workspaceFieldOpen && <label className="login-field"><span>Workspace code</span><div><Building2 size={18} /><input name="workspace" defaultValue={params.get("workspace") || getWorkspaceSlug()} placeholder="Leave blank for Innovex" autoCapitalize="none" /></div></label>}
               </>}
               {mfaRequired && <label className="login-field"><span>Authentication code</span><div><KeyRound size={18} /><input name="mfaCode" inputMode="numeric" autoComplete="one-time-code" placeholder="000000 or recovery code" required autoFocus /></div></label>}
               <div className="login-form-meta"><span><Check size={13} /> Encrypted sign-in</span><small>Authorised personnel only</small></div>
@@ -101,6 +115,7 @@ export default function Login() {
               {mfaRequired && <button className="login-secondary-action" type="button" onClick={() => { setMfaRequired(false); setCredentials(null); setStatus(null); }}>Use another account</button>}
             </form>
             <div className="login-help"><span>Having trouble accessing your workspace?</span><Link to="/forgot-password">Reset your password securely</Link></div>
+            <div className="login-help"><span>New agency?</span><Link to="/signup">Create your own workspace</Link></div>
           </div>
           <footer className="login-access-footer"><span>© {new Date().getFullYear()} Innovex Resource Group Limited</span><span>Protected workspace • Authorised access</span></footer>
         </section>

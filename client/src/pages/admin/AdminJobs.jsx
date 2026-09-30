@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { BriefcaseBusiness, CheckCircle2, RadioTower, ShieldCheck, XCircle } from "lucide-react";
+import { BriefcaseBusiness, CheckCircle2, ExternalLink, Eye, RadioTower, ShieldCheck, X, XCircle } from "lucide-react";
 import { api } from "../../api/client.js";
 import { hasPermission } from "../../auth/permissions.js";
 import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { company } from "../../data/content.js";
 
-const empty = { reference: "", clientName: "", title: "", location: "", salary: "", type: "Temporary", shift: "", description: "", priority: "Medium", openings: 1, closingDate: "", vacancyStatus: "Open", isActive: true };
+const empty = { reference: "", clientName: "", title: "", location: "", postcode: "", salary: "", type: "Temporary", shift: "", description: "", priority: "Medium", openings: 1, closingDate: "", vacancyStatus: "Open", isActive: true };
 const lifecycleStatuses = ["Open", "Paused", "Closed", "Filled"];
 
 function lifecycleStatus(job) {
@@ -18,6 +19,7 @@ const toJobPayload = (job) => ({
   clientName: job.clientName || "",
   title: job.title,
   location: job.location,
+  postcode: job.postcode || "",
   salary: job.salary,
   type: job.type,
   shift: job.shift,
@@ -42,6 +44,7 @@ export default function AdminJobs() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [status, setStatus] = useState(null);
+  const [viewing, setViewing] = useState(null);
 
   const load = () => api("/jobs?admin=true").then(setJobs).catch((error) => setStatus({ type: "error", message: error.message }));
 
@@ -151,6 +154,10 @@ export default function AdminJobs() {
             <input placeholder="e.g. Cardiff" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} required />
           </label>
           <label>
+            <span>Postcode <small>(important for distance matching)</small></span>
+            <input placeholder="e.g. SN25 1UZ" value={form.postcode} onChange={(e) => setForm({ ...form, postcode: e.target.value })} />
+          </label>
+          <label>
             <span>Salary</span>
             <input placeholder="e.g. £18 - £22 per hour" value={form.salary} onChange={(e) => setForm({ ...form, salary: e.target.value })} required />
           </label>
@@ -215,7 +222,7 @@ export default function AdminJobs() {
               {filteredJobs.map((job) => (
                 <tr key={job._id}>
                   <td><strong>{job.title}</strong><br /><span className="muted">{job.reference || "No reference"} • {job.priority || "Medium"} priority</span></td>
-                  <td>{job.clientName || <span className="muted">Confidential</span>}</td>
+                  <td>{job.clientName || <span className="muted">Not set</span>}</td>
                   <td>{job.location}</td>
                   <td>{job.openings || 1}</td>
                   <td>{dateLabel(job.closingDate)}</td>
@@ -226,6 +233,8 @@ export default function AdminJobs() {
                   <td><span className={`job-status-pill ${lifecycleStatus(job).toLowerCase()}`}>{lifecycleStatus(job)}</span>{job.closedAt && <><br /><span className="muted">{dateLabel(job.closedAt)}</span></>}</td>
                   <td className="admin-job-actions">
                     {hasPermission(user, "jobs.approve") && job.publicationStatus === "Pending Approval" && <div className="publication-actions"><button className="icon-action approve" title="Approve and publish" onClick={() => updatePublication(job, "Approved")}><CheckCircle2 size={16} /></button><button className="icon-action reject" title="Return for changes" onClick={() => updatePublication(job, "Rejected")}><XCircle size={16} /></button></div>}
+                    <button className="button small secondary" type="button" onClick={() => setViewing(job)}><Eye size={14} /> View</button>
+                    <a className="icon-action" href={`${company.siteUrl}/jobs/${job._id}`} target="_blank" rel="noreferrer" title="Open the live listing on the website"><ExternalLink size={16} /></a>
                     {hasPermission(user, "jobs.edit") && <button className="button small" onClick={() => edit(job)}>Edit</button>}
                     {hasPermission(user, "jobs.edit") && <select className="job-lifecycle-select" aria-label={`Update ${job.title} status`} value={lifecycleStatus(job)} onChange={(event) => updateLifecycle(job, event.target.value)}>{lifecycleStatuses.map((value) => <option key={value}>{value}</option>)}</select>}
                     {hasPermission(user, "jobs.delete") && <button className="button small danger-lite" onClick={() => remove(job._id)}>Archive</button>}
@@ -237,6 +246,43 @@ export default function AdminJobs() {
           {!filteredJobs.length && <div className="admin-jobs-empty">No jobs match your current search or filter.</div>}
         </div>
       </section>
+
+      {viewing && (
+        <div className="job-view-overlay" role="dialog" aria-modal="true" aria-labelledby="job-view-title" onClick={(event) => { if (event.target === event.currentTarget) setViewing(null); }}>
+          <div className="job-view-modal">
+            <header>
+              <div>
+                <span className="eyebrow"><BriefcaseBusiness size={15} /> {viewing.reference || "No reference"} • {viewing.priority || "Medium"} priority</span>
+                <h2 id="job-view-title">{viewing.title}</h2>
+                <p>{[viewing.location, viewing.postcode].filter(Boolean).join(", ")}{viewing.salary ? ` · ${viewing.salary}` : ""}{viewing.type ? ` · ${viewing.type}` : ""}{viewing.shift ? ` · ${viewing.shift}` : ""}</p>
+              </div>
+              <button type="button" onClick={() => setViewing(null)} aria-label="Close"><X size={21} /></button>
+            </header>
+            <div className="job-view-meta">
+              <div><span>Client</span><strong>{viewing.clientName || "Not set"}</strong></div>
+              <div><span>Openings</span><strong>{viewing.openings || 1}</strong></div>
+              <div><span>Closing date</span><strong>{dateLabel(viewing.closingDate)}</strong></div>
+              <div><span>Status</span><strong>{lifecycleStatus(viewing)}</strong></div>
+              <div><span>Publication</span><strong>{viewing.publicationStatus || "Approved (legacy)"}</strong></div>
+            </div>
+            <a className="job-view-link" href={`${company.siteUrl}/jobs/${viewing._id}`} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Open the live listing on the website</a>
+            <section className="job-view-description">
+              <span className="eyebrow">Description</span>
+              <p>{viewing.description || "No description added yet."}</p>
+            </section>
+            {!!viewing.requirements?.length && (
+              <section className="job-view-requirements">
+                <span className="eyebrow">Requirements</span>
+                <ul>{viewing.requirements.map((item, index) => <li key={index}>{item}</li>)}</ul>
+              </section>
+            )}
+            <footer>
+              {hasPermission(user, "jobs.edit") && <button className="button" type="button" onClick={() => { edit(viewing); setViewing(null); }}>Edit this vacancy</button>}
+              <button className="button secondary" type="button" onClick={() => setViewing(null)}>Close</button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

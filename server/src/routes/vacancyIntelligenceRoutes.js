@@ -9,6 +9,7 @@ import { uploadCv } from "../middleware/upload.js";
 import { analyseJobDescription, buildCriteriaReview, defaultScoreProfile, rankCandidateForJob, secureDocumentMeta } from "../services/documentIntelligenceService.js";
 import { sendCandidateVacancyEmail } from "../services/emailService.js";
 import { vacancyLocationContext } from "../services/postcodeIntelligenceService.js";
+import { extractPostcode } from "../utils/jobQuality.js";
 import { logActivity } from "../services/activityLogService.js";
 import { notifyPortalMembersOfVacancy } from "../services/portalNotificationService.js";
 
@@ -221,7 +222,7 @@ router.get("/:id/matches", async (req, res, next) => {
     const minimumScore = Math.min(Math.max(Number(req.query.minimumScore || 0), 0), 100);
     const limit = Math.min(Math.max(Number(req.query.limit || 100), 1), 300);
     const pipelineByCandidate = new Map((job.pipeline || []).map((entry) => [String(entry.candidate), entry]));
-    const locationContext = await vacancyLocationContext(job.postcode, job.radiusMiles);
+    const locationContext = await vacancyLocationContext(job.postcode || extractPostcode(job.location), job.radiusMiles);
     const feedbackByCandidate = new Map((job.matchFeedback || []).map((entry) => [String(entry.candidate), entry]));
     const matches = candidates
       .map((candidate) => ({ ...rankCandidateForJob(job, candidate, locationContext), pipeline: pipelineByCandidate.get(String(candidate._id)) || null, recruiterFeedback: feedbackByCandidate.get(String(candidate._id)) || null }))
