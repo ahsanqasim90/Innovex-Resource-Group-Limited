@@ -436,11 +436,20 @@ export default function AdminTalentPool() {
       });
       setStatus({ type: outreachHadProblems(result) ? "error" : undefined, message: summariseOutreach(result), sticky: true });
       setSendReport({ running: false, startedAt, finishedAt: new Date(), total: result.total, sent: result.sent, archived: result.archived, skipped: result.skipped.length, failed: result.failed.length, unsent: result.unsent.length, problems: outreachHadProblems(result), summary: summariseOutreach(result) });
-      setSelectedIds(result.unsent);
       await load(pagination.page);
+      // Keep failed/unprocessed recipients selected after the table refresh so
+      // the administrator can retry them without rebuilding the selection.
+      setSelectedIds(result.unsent);
       loadStats();
     } catch (error) {
       setStatus({ type: "error", message: error.message });
+      setSendReport((current) => current ? {
+        ...current,
+        running: false,
+        problems: true,
+        summary: error.message,
+        finishedAt: new Date()
+      } : null);
     } finally {
       setSending(false);
     }
@@ -782,6 +791,7 @@ export default function AdminTalentPool() {
                 <div className="outreach-send-report-grid">
                   <div><span>Selected</span><strong>{sendReport.total}</strong></div>
                   <div className="ok"><span>Sent</span><strong>{sendReport.sent}</strong></div>
+                  {sendReport.running && <div className={sendReport.total - sendReport.done ? "pending" : ""}><span>Remaining</span><strong>{Math.max(sendReport.total - sendReport.done, 0)}</strong></div>}
                   {!sendReport.running && <div><span>Saved to Sent folder</span><strong>{sendReport.archived}</strong></div>}
                   {!sendReport.running && <div><span>Skipped</span><strong>{sendReport.skipped}</strong></div>}
                   {!sendReport.running && <div className={sendReport.failed ? "bad" : ""}><span>Failed</span><strong>{sendReport.failed}</strong></div>}

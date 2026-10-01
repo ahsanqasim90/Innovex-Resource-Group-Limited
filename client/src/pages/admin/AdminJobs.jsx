@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BriefcaseBusiness, CheckCircle2, ExternalLink, Eye, RadioTower, ShieldCheck, X, XCircle } from "lucide-react";
+import { BriefcaseBusiness, CheckCircle2, Copy, ExternalLink, Eye, RadioTower, ShieldCheck, X, XCircle } from "lucide-react";
 import { api } from "../../api/client.js";
 import { hasPermission } from "../../auth/permissions.js";
 import AdminSectionHero from "../../components/AdminSectionHero.jsx";
@@ -7,7 +7,7 @@ import StatusMessage from "../../components/StatusMessage.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { company } from "../../data/content.js";
 
-const empty = { reference: "", clientName: "", title: "", location: "", postcode: "", salary: "", type: "Temporary", shift: "", description: "", priority: "Medium", openings: 1, closingDate: "", vacancyStatus: "Open", isActive: true };
+const empty = { reference: "", clientName: "", title: "", location: "", postcode: "", salary: "", type: "Temporary", shift: "", description: "", requirements: [], priority: "Medium", openings: 1, closingDate: "", vacancyStatus: "Open", isActive: true };
 const lifecycleStatuses = ["Open", "Paused", "Closed", "Filled"];
 
 function lifecycleStatus(job) {
@@ -29,8 +29,17 @@ const toJobPayload = (job) => ({
   closingDate: job.closingDate ? String(job.closingDate).slice(0, 10) : null,
   vacancyStatus: lifecycleStatus(job),
   isActive: lifecycleStatus(job) === "Open",
-  requirements: Array.isArray(job.requirements) ? job.requirements : []
+  requirements: Array.isArray(job.requirements) ? job.requirements.map((item) => String(item).trim()).filter(Boolean) : []
 });
+
+function publicJobUrl(job) {
+  return `${company.siteUrl}/jobs/${job._id}`;
+}
+
+function isPubliclyAvailable(job) {
+  const closingDatePassed = job.closingDate && new Date(job.closingDate) < new Date();
+  return lifecycleStatus(job) === "Open" && job.isActive !== false && (!job.publicationStatus || job.publicationStatus === "Approved") && !closingDatePassed;
+}
 
 function dateLabel(value) {
   return value ? new Date(value).toLocaleDateString("en-GB") : "-";
@@ -45,6 +54,7 @@ export default function AdminJobs() {
   const [statusFilter, setStatusFilter] = useState("");
   const [status, setStatus] = useState(null);
   const [viewing, setViewing] = useState(null);
+  const [copiedJobId, setCopiedJobId] = useState("");
 
   const load = () => api("/jobs?admin=true").then(setJobs).catch((error) => setStatus({ type: "error", message: error.message }));
 
@@ -122,6 +132,17 @@ export default function AdminJobs() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  async function copyJobLink(job) {
+    try {
+      await navigator.clipboard.writeText(publicJobUrl(job));
+      setCopiedJobId(job._id);
+      setStatus({ message: `${job.title} JD link copied.` });
+      window.setTimeout(() => setCopiedJobId((current) => current === job._id ? "" : current), 2500);
+    } catch {
+      setStatus({ type: "error", message: "The JD link could not be copied. Open the JD and copy it from the browser address bar." });
+    }
+  }
+
   return (
     <div className="workspace-pro-suite vacancies-admin-pro">
       <AdminSectionHero icon={BriefcaseBusiness} eyebrow="Vacancy management" title="Vacancies" description="Create, publish and manage every live role with a clear vacancy lifecycle." aside={<div className="workspace-hero-count"><RadioTower size={18} /><span><small>OPEN ROLES</small><strong>{stats.open}</strong></span></div>} />
@@ -155,7 +176,7 @@ export default function AdminJobs() {
           </label>
           <label>
             <span>Postcode <small>(important for distance matching)</small></span>
-            <input placeholder="e.g. SN25 1UZ" value={form.postcode} onChange={(e) => setForm({ ...form, postcode: e.target.value })} />
+            <input placeholder="e.g. SN25 1UZ" value={form.postcode} onChange={(e) => setForm({ ...form, postcode: e.target.value.toUpperCase() })} required />
           </label>
           <label>
             <span>Salary</span>
@@ -179,7 +200,7 @@ export default function AdminJobs() {
           </label>
           <label>
             <span>Closing date</span>
-            <input type="date" value={form.closingDate || ""} onChange={(e) => setForm({ ...form, closingDate: e.target.value })} />
+            <input type="date" value={form.closingDate || ""} onChange={(e) => setForm({ ...form, closingDate: e.target.value })} required />
           </label>
           <label className="admin-job-check">
             <span>Vacancy status</span>
@@ -189,6 +210,10 @@ export default function AdminJobs() {
         <label className="admin-job-description">
           <span>Description</span>
           <textarea placeholder="Add role overview, responsibilities, requirements and benefits..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
+        </label>
+        <label className="admin-job-description">
+          <span>Key requirements <small>(one per line)</small></span>
+          <textarea rows="6" placeholder={"Level 3 qualification\nValid driving licence\nTwo years' residential care experience"} value={(form.requirements || []).join("\n")} onChange={(e) => setForm({ ...form, requirements: e.target.value.split(/\r?\n/) })} required />
         </label>
         <div className="admin-job-submit-row">
           <button className="button">{editing ? "Update Job" : "Create Job"}</button>
@@ -234,7 +259,9 @@ export default function AdminJobs() {
                   <td className="admin-job-actions">
                     {hasPermission(user, "jobs.approve") && job.publicationStatus === "Pending Approval" && <div className="publication-actions"><button className="icon-action approve" title="Approve and publish" onClick={() => updatePublication(job, "Approved")}><CheckCircle2 size={16} /></button><button className="icon-action reject" title="Return for changes" onClick={() => updatePublication(job, "Rejected")}><XCircle size={16} /></button></div>}
                     <button className="button small secondary" type="button" onClick={() => setViewing(job)}><Eye size={14} /> View</button>
-                    <a className="icon-action" href={`${company.siteUrl}/jobs/${job._id}`} target="_blank" rel="noreferrer" title="Open the live listing on the website"><ExternalLink size={16} /></a>
+                    {isPubliclyAvailable(job)
+                      ? <><a className="button small secondary job-jd-action" href={publicJobUrl(job)} target="_blank" rel="noreferrer" title="Open the live JD on the website"><ExternalLink size={14} /> Open JD</a><button className="icon-action" type="button" onClick={() => copyJobLink(job)} title="Copy JD link" aria-label={`Copy JD link for ${job.title}`}><Copy size={15} /></button></>
+                      : <span className="job-jd-offline" title="Approve and open this vacancy before sharing its public JD link">JD offline</span>}
                     {hasPermission(user, "jobs.edit") && <button className="button small" onClick={() => edit(job)}>Edit</button>}
                     {hasPermission(user, "jobs.edit") && <select className="job-lifecycle-select" aria-label={`Update ${job.title} status`} value={lifecycleStatus(job)} onChange={(event) => updateLifecycle(job, event.target.value)}>{lifecycleStatuses.map((value) => <option key={value}>{value}</option>)}</select>}
                     {hasPermission(user, "jobs.delete") && <button className="button small danger-lite" onClick={() => remove(job._id)}>Archive</button>}
@@ -265,7 +292,7 @@ export default function AdminJobs() {
               <div><span>Status</span><strong>{lifecycleStatus(viewing)}</strong></div>
               <div><span>Publication</span><strong>{viewing.publicationStatus || "Approved (legacy)"}</strong></div>
             </div>
-            <a className="job-view-link" href={`${company.siteUrl}/jobs/${viewing._id}`} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Open the live listing on the website</a>
+            {isPubliclyAvailable(viewing) ? <div className="job-view-link-row"><a className="job-view-link" href={publicJobUrl(viewing)} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Open live JD</a><button className="job-view-copy-link" type="button" onClick={() => copyJobLink(viewing)}><Copy size={15} /> {copiedJobId === viewing._id ? "Copied" : "Copy JD link"}</button></div> : <p className="job-view-offline-note">This JD is not public yet. Approve the vacancy and set its status to Open before sharing it.</p>}
             <section className="job-view-description">
               <span className="eyebrow">Description</span>
               <p>{viewing.description || "No description added yet."}</p>

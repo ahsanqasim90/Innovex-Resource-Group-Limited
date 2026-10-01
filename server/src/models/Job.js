@@ -175,6 +175,7 @@ jobSchema.pre("validate", function normalizeVacancy() {
   }
   let salary = String(this.salary || "").replace(/\s+/g, " ").trim();
   if (/^\d[\d,]*(?:\.\d+)?$/.test(salary)) salary = `£${salary} per annum`;
+  else if (!/(?:£|\bGBP\b|\bPKR\b|\bTBC\b|\bcompetitive\b)/i.test(salary) && /^\d[\d,.]*(?:\s*[-–]\s*\d[\d,.]*)?(?:\s*k)?\b/i.test(salary)) salary = `£${salary}`;
   salary = salary.replace(/\bper annum\b/i, "per annum").replace(/\bper hour\b/i, "per hour").replace(/\bpa\b/i, "per annum");
   this.salary = salary;
 });

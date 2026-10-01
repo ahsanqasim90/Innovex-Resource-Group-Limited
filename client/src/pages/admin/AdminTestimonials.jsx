@@ -2,31 +2,46 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, Clock3, MessageSquareQuote, Star, Trash2, XCircle } from "lucide-react";
 import { api } from "../../api/client.js";
 import AdminSectionHero from "../../components/AdminSectionHero.jsx";
+import StatusMessage from "../../components/StatusMessage.jsx";
 
 export default function AdminTestimonials() {
   const [items, setItems] = useState([]);
+  const [notice, setNotice] = useState(null);
   const approved = items.filter((item) => item.status === "Approved").length;
   const pending = items.filter((item) => !item.status || item.status === "Pending").length;
   const averageRating = items.length ? (items.reduce((sum, item) => sum + Number(item.rating || 0), 0) / items.length).toFixed(1) : "0.0";
-  const load = () => api("/testimonials?admin=true").then(setItems).catch(() => {});
+  const load = () => api("/testimonials?admin=true")
+    .then((data) => { setItems(data); setNotice(null); })
+    .catch((error) => setNotice({ type: "error", message: `Testimonials could not be loaded: ${error.message}` }));
   useEffect(() => {
     load();
   }, []);
 
   async function update(item, status) {
-    await api(`/testimonials/${item._id}`, { method: "PUT", body: { ...item, status } });
-    load();
+    try {
+      await api(`/testimonials/${item._id}`, { method: "PUT", body: { ...item, status } });
+      setNotice({ message: `${item.name}'s testimonial was ${status.toLowerCase()}.` });
+      load();
+    } catch (error) {
+      setNotice({ type: "error", message: `Testimonial could not be updated: ${error.message}` });
+    }
   }
 
   async function remove(id) {
     if (!confirm("Delete this testimonial?")) return;
-    await api(`/testimonials/${id}`, { method: "DELETE" });
-    load();
+    try {
+      await api(`/testimonials/${id}`, { method: "DELETE" });
+      setNotice({ message: "Testimonial deleted." });
+      load();
+    } catch (error) {
+      setNotice({ type: "error", message: `Testimonial could not be deleted: ${error.message}` });
+    }
   }
 
   return (
     <div className="workspace-pro-suite testimonials-admin-pro">
       <AdminSectionHero icon={MessageSquareQuote} eyebrow="Website reputation" title="Testimonials" description="Moderate client and candidate feedback before it appears on the public website." aside={<div className="workspace-hero-count"><Star size={18} /><span><small>REVIEWS</small><strong>{items.length}</strong></span></div>} />
+      <StatusMessage status={notice} />
       <section className="testimonial-admin-stats">
         <article><span><MessageSquareQuote size={18} /></span><div><small>All feedback</small><strong>{items.length}</strong></div></article>
         <article><span><Clock3 size={18} /></span><div><small>Awaiting decision</small><strong>{pending}</strong></div></article>

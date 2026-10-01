@@ -4,6 +4,7 @@ import { api } from "../../api/client.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { hasPermission } from "../../auth/permissions.js";
 import StatusMessage from "../../components/StatusMessage.jsx";
+import EmailProgressPanel from "../../components/EmailProgressPanel.jsx";
 
 const interests = ["Recruitment", "Training", "Website Development", "SEO", "Reg 44", "Business Growth", "General"];
 const subscriberTypes = ["Corporate", "Individual", "Sole trader", "Ordinary partnership"];
@@ -87,6 +88,7 @@ export default function AdminNewsletterCentre() {
   const [audience, setAudience] = useState(null);
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [sendReport, setSendReport] = useState(null);
   const [search, setSearch] = useState("");
 
   const compliance = useMemo(() => [
@@ -151,28 +153,51 @@ export default function AdminNewsletterCentre() {
 
   // The server sends in time-limited batches (serverless requests stop after about a minute),
   // so the browser keeps asking until the campaign is complete, paused or stops making progress.
-  async function releaseCampaign(campaignId, { retryFailed = false } = {}) {
+  async function releaseCampaign(campaignId, { retryFailed = false, expectedTotal = 0 } = {}) {
     setBusy(true);
     let released = 0;
     let stalled = 0;
+    const startedAt = new Date();
+    setSendReport({ running: true, done: 0, total: Number(expectedTotal || 0), sent: 0, remaining: Number(expectedTotal || 0), startedAt });
     try {
       for (let round = 0; round < 80; round += 1) {
         // Only the first request retries earlier failures; later batches carry on with the untouched recipients.
         const result = await api(`/newsletters/campaigns/${campaignId}/send`, { method: "POST", body: { retryFailed: retryFailed && round === 0 } });
         released += Number(result.sent || 0);
+        const totals = result.campaign?.totals || {};
+        const total = Number(totals.eligible || expectedTotal || (Number(totals.sent || 0) + Number(result.remaining || 0)));
+        const remaining = Number(result.remaining || 0);
+        const report = {
+          running: !result.done && !result.stopReason,
+          done: Math.max(total - remaining, 0),
+          total,
+          sent: Number(totals.sent || released),
+          remaining,
+          failed: Number(totals.failed || 0),
+          skipped: Number(totals.suppressed || 0),
+          problems: Boolean(result.stopReason || totals.failed),
+          summary: result.message,
+          startedAt,
+          finishedLabel: result.stopReason ? "Paused" : result.done ? "Completed" : undefined
+        };
+        setSendReport(report);
         if (result.done || result.stopReason) {
           setStatus({ type: result.stopReason ? "error" : undefined, message: result.message });
           break;
         }
         stalled = result.sent || result.failed ? 0 : stalled + 1;
         if (stalled >= 2) {
-          setStatus({ type: "error", message: `Sending stopped making progress after ${released} email(s). Use Resume sending in Campaign history to continue.` });
+          const message = `Sending stopped making progress after ${released} email(s). Use Resume sending in Campaign history to continue.`;
+          setStatus({ type: "error", message });
+          setSendReport((current) => current ? { ...current, running: false, problems: true, summary: message, finishedLabel: "Stopped" } : null);
           break;
         }
         setStatus({ message: `Sending… ${result.campaign?.totals?.sent ?? released} sent so far, ${result.remaining} still to go. Please keep this page open.` });
       }
     } catch (error) {
-      setStatus({ type: "error", message: `${error.message} Open Campaign history and use Resume sending to continue; anyone already emailed is not emailed again.` });
+      const message = `${error.message} Open Campaign history and use Resume sending to continue; anyone already emailed is not emailed again.`;
+      setStatus({ type: "error", message });
+      setSendReport((current) => current ? { ...current, running: false, problems: true, summary: message, finishedLabel: "Stopped" } : null);
     } finally {
       setCampaign({ ...blankCampaign, senderEmail: senders[0]?.address || "" });
       setAudience(null);
@@ -189,12 +214,12 @@ export default function AdminNewsletterCentre() {
     setAudience(estimate);
     if (!estimate.eligible) return setStatus({ type: "error", message: "No legally eligible recipients match this audience." });
     if (!window.confirm(`Release this newsletter to ${estimate.eligible} eligible recipient(s)? ${estimate.blocked} non-compliant record(s) will be suppressed automatically.`)) return;
-    await releaseCampaign(saved._id);
+    await releaseCampaign(saved._id, { expectedTotal: estimate.eligible });
   }
 
   async function resumeCampaign(item) {
     if (!window.confirm(`Resume sending "${item.internalName}"? Recipients who already received it will not be emailed again.`)) return;
-    await releaseCampaign(item._id, { retryFailed: true });
+    await releaseCampaign(item._id, { retryFailed: true, expectedTotal: item.totals?.eligible || 0 });
   }
 
   function editCampaign(item) {
@@ -249,6 +274,10 @@ export default function AdminNewsletterCentre() {
         <button className={tab === "subscribers" ? "active" : ""} onClick={() => setTab("subscribers")}><UsersRound size={17} /> Subscribers</button>
         <button className={tab === "history" ? "active" : ""} onClick={() => setTab("history")}><Archive size={17} /> Campaign history</button>
       </nav>
+
+      <div className="newsletter-send-progress">
+        <EmailProgressPanel report={sendReport} title="Newsletter campaign" onClose={() => setSendReport(null)} />
+      </div>
 
       {tab === "compose" && <div className="newsletter-compose-layout">
         <section className="card newsletter-composer">

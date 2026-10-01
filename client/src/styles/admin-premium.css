@@ -500,4 +500,16 @@
 .outreach-send-report-grid strong { font-size: 18px; color: #064f5e; }
 .outreach-send-report-grid .ok strong { color: #1a8f5f; }
 .outreach-send-report-grid .bad strong { color: #b03025; }
+.outreach-send-report-grid .pending strong { color: #9a6500; }
 .outreach-send-report p { margin: 0; font-size: 13px; color: #3d565c; }
+.outreach-progress-note { color: #5f747a; font-size: 12px; }
+.newsletter-send-progress:empty { display: none; }
+.newsletter-send-progress:not(:empty) { position: sticky; top: 76px; z-index: 12; margin: 0 0 16px; }
+
+/* Vacancy JD actions stay explicit and only advertise links that are actually public. */
+.job-jd-action { text-decoration: none; }
+.job-jd-offline { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 999px; color: #755a22; background: #fff3cf; font-size: .72rem; font-weight: 800; }
+.job-view-link-row { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.job-view-copy-link { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border: 1px solid #cfe1e5; border-radius: 999px; color: #355b64; background: #fff; font: inherit; font-size: .84rem; font-weight: 700; cursor: pointer; }
+.job-view-copy-link:hover { border-color: #8fc3cc; background: #f5fafb; }
+.job-view-offline-note { margin: 0; padding: 11px 14px; border: 1px solid #ecd8a5; border-radius: 11px; color: #755a22; background: #fff8e8; font-size: .84rem; }

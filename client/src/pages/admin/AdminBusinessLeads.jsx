@@ -23,6 +23,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { hasPermission } from "../../auth/permissions.js";
 import StatusMessage from "../../components/StatusMessage.jsx";
 import SubmitButton from "../../components/SubmitButton.jsx";
+import EmailProgressPanel from "../../components/EmailProgressPanel.jsx";
 
 const categories = [
   "Care Home",
@@ -190,6 +191,7 @@ export default function AdminBusinessLeads() {
   const [importing, setImporting] = useState(false);
   const [importReport, setImportReport] = useState(null);
   const [sending, setSending] = useState(false);
+  const [sendReport, setSendReport] = useState(null);
   const [importCategory, setImportCategory] = useState("Care Home");
   const [outreach, setOutreach] = useState(emailTemplate);
   const [campaignPreset, setCampaignPreset] = useState(businessTemplatePresets[0].label);
@@ -325,6 +327,8 @@ export default function AdminBusinessLeads() {
     event.preventDefault();
     if (sending) return;
     setSending(true);
+    const startedAt = new Date();
+    setSendReport({ running: true, done: 0, total: selectedIds.length, sent: 0, remaining: selectedIds.length, startedAt });
     try {
       const result = await sendOutreachInBatches({
         path: "/business-leads/outreach",
@@ -336,14 +340,34 @@ export default function AdminBusinessLeads() {
           message: outreach.message,
           fromEmail: selectedSenderEmail
         },
-        onProgress: ({ done, total, sent }) => setStatus({ message: `Sending… ${done} of ${total} processed (${sent} sent). Please keep this page open.` })
+        onProgress: ({ done, total, sent }) => {
+          setStatus({ message: `Sending… ${done} of ${total} processed (${sent} sent, ${Math.max(total - done, 0)} remaining).` });
+          setSendReport({ running: true, done, total, sent, remaining: Math.max(total - done, 0), startedAt });
+        }
       });
-      setStatus({ type: outreachHadProblems(result) ? "error" : undefined, message: summariseOutreach(result, "business email") });
-      setSelectedIds(result.unsent);
+      const summary = summariseOutreach(result, "business email");
+      setStatus({ type: outreachHadProblems(result) ? "error" : undefined, message: summary });
+      setSendReport({
+        running: false,
+        done: result.total - result.unsent.length,
+        total: result.total,
+        sent: result.sent,
+        remaining: result.unsent.length,
+        archived: result.archived,
+        skipped: result.skipped.length,
+        failed: result.failed.length,
+        problems: outreachHadProblems(result),
+        summary,
+        finishedLabel: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+      });
       await load(pagination.page);
+      // load() clears the table selection, so restore only the recipients that
+      // still need attention after the refreshed data has arrived.
+      setSelectedIds(result.unsent);
       loadStats();
     } catch (error) {
       setStatus({ type: "error", message: error.message });
+      setSendReport((current) => current ? { ...current, running: false, problems: true, summary: error.message, finishedLabel: "Stopped" } : null);
     } finally {
       setSending(false);
     }
@@ -634,6 +658,7 @@ export default function AdminBusinessLeads() {
               <label><span>Email subject</span><input placeholder="A clear, professional subject" value={outreach.subject} onChange={(e) => setOutreach({ ...outreach, subject: e.target.value })} required /></label>
               <label><span>Email message</span><textarea rows="8" value={outreach.message} onChange={(e) => setOutreach({ ...outreach, message: e.target.value })} required /><small>{outreach.message.length.toLocaleString()} characters</small></label>
             </div>
+            <EmailProgressPanel report={sendReport} title="Business email campaign" onClose={() => setSendReport(null)} />
             <div className="outreach-compose-footer">
               <span>{selectedCount ? `Ready to email ${selectedCount} compan${selectedCount === 1 ? "y" : "ies"}.` : "Select companies from the table to enable sending."}</span>
               <button className={`button${sending ? " is-loading" : ""}`} type="submit" disabled={sending || !canSend || !selectedCount || !selectedSenderEmail} title={canSend ? undefined : "Your account does not have permission to send bulk emails"}>{sending && <span className="button-spinner" aria-hidden="true" />}<Send size={17} /><span>{sending ? "Sending emails..." : "Send Business Emails"}</span></button>
