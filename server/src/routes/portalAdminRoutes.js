@@ -88,4 +88,21 @@ router.patch("/:id/status", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.delete("/:id", async (req, res, next) => {
+  try {
+    const account = await PortalAccount.findById(req.params.id);
+    if (!account) return res.status(404).json({ message: "Portal account not found" });
+    await PortalSession.deleteMany({ account: account._id });
+    await PortalAccount.deleteOne({ _id: account._id });
+    await logActivity(req, {
+      module: "Portals",
+      action: "Portal access deleted",
+      entityType: "PortalAccount",
+      entityId: account._id,
+      summary: `${account.type} portal access deleted for ${account.email}`
+    });
+    res.json({ message: `Portal access deleted for ${account.email}` });
+  } catch (error) { next(error); }
+});
+
 export default router;

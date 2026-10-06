@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BriefcaseBusiness, Building2, Copy, ExternalLink, Handshake, KeyRound, Send, ShieldCheck, UserRoundCheck, UsersRound } from "lucide-react";
+import { BriefcaseBusiness, Building2, Copy, ExternalLink, Handshake, KeyRound, Send, ShieldCheck, Trash2, UserRoundCheck, UsersRound } from "lucide-react";
 import { api } from "../../api/client.js";
 import AdminSectionHero from "../../components/AdminSectionHero.jsx";
 import StatusMessage from "../../components/StatusMessage.jsx";
@@ -88,6 +88,16 @@ export default function AdminPortals() {
     } catch (error) { setStatus({ type: "error", message: error.message }); }
   }
 
+  async function deleteAccount(account) {
+    const confirmed = window.confirm(`Delete ${account.type.toLowerCase()} portal access for ${account.name}?\n\nThey will be signed out immediately. Their linked CRM record and recruitment history will not be deleted.`);
+    if (!confirmed) return;
+    try {
+      const result = await api(`/portal-admin/${account._id}`, { method: "DELETE" });
+      setStatus({ message: result.message });
+      await load();
+    } catch (error) { setStatus({ type: "error", message: error.message }); }
+  }
+
   return <div className="portal-admin-page">
     <AdminSectionHero icon={KeyRound} eyebrow="Secure collaboration" title="Candidate, Client & Partner Portals" description="Control external access, partner vacancy visibility and recruitment collaboration without exposing the internal CRM." aside={<div className="workspace-hero-count"><UsersRound size={18} /><span><small>ACTIVE PORTALS</small><strong>{data.accounts.filter((account) => account.status === "Active").length}</strong></span></div>} />
     <StatusMessage status={status} />
@@ -117,7 +127,7 @@ export default function AdminPortals() {
 
     <section className="portal-account-register">
       <header><div><small>ACCESS REGISTER</small><h2>External portal accounts</h2></div><strong>{data.accounts.length}</strong></header>
-      <div><div className="portal-account-head"><span>Person</span><span>Portal</span><span>Linked record</span><span>Status</span><span>Last sign-in</span><span /></div>{data.accounts.map((account) => <article key={account._id}><span><strong>{account.name}</strong><small>{account.email}</small></span><span><b className={`portal-kind ${account.type.toLowerCase()}`}>{account.type}</b></span><span>{account.candidate?.name || account.clientAccount?.name || account.partner?.name || "Record unavailable"}</span><span><b className={`portal-access-status ${account.status.toLowerCase()}`}>{account.status}</b></span><span>{account.lastLoginAt ? new Date(account.lastLoginAt).toLocaleDateString("en-GB") : "Never"}</span><span>{account.status === "Active" ? <button onClick={() => changeStatus(account, "Suspended")}>Suspend</button> : account.status === "Suspended" ? <button onClick={() => changeStatus(account, "Active")}>Reactivate</button> : <small>Invitation pending</small>}</span></article>)}</div>
+      <div><div className="portal-account-head"><span>Person</span><span>Portal</span><span>Linked record</span><span>Status</span><span>Last sign-in</span><span>Actions</span></div>{data.accounts.map((account) => <article key={account._id}><span><strong>{account.name}</strong><small>{account.email}</small></span><span><b className={`portal-kind ${account.type.toLowerCase()}`}>{account.type}</b></span><span>{account.candidate?.name || account.clientAccount?.name || account.partner?.name || "Record unavailable"}</span><span><b className={`portal-access-status ${account.status.toLowerCase()}`}>{account.status}</b></span><span>{account.lastLoginAt ? new Date(account.lastLoginAt).toLocaleDateString("en-GB") : "Never"}</span><span className="portal-account-actions">{account.status === "Active" ? <button onClick={() => changeStatus(account, "Suspended")}>Suspend</button> : account.status === "Suspended" ? <button onClick={() => changeStatus(account, "Active")}>Reactivate</button> : <small>Invitation pending</small>}<button className="danger" onClick={() => deleteAccount(account)} title={`Delete ${account.name} portal access`}><Trash2 />Delete</button></span></article>)}</div>
       {!data.accounts.length && <div className="automation-empty"><KeyRound /><strong>No portal accounts</strong><span>Invite a candidate, client or partner to start secure collaboration.</span></div>}
     </section>
   </div>;
