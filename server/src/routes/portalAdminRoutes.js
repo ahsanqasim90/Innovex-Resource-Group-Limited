@@ -8,6 +8,7 @@ import PortalAccount from "../models/PortalAccount.js";
 import PortalSession from "../models/PortalSession.js";
 import { protect, requirePermission } from "../middleware/auth.js";
 import { sendSystemEmail } from "../services/emailService.js";
+import { portalInvitationEmail } from "../services/portalEmailTemplates.js";
 import { logActivity } from "../services/activityLogService.js";
 import { tokenHash } from "../utils/authSecurity.js";
 import { requireFields, validateEmail } from "../utils.js";
@@ -51,7 +52,8 @@ router.post("/invite", async (req, res, next) => {
     account.name = req.body.name || account.name; account.status = "Invited"; account.invitationTokenHash = tokenHash(token); account.invitationExpiresAt = new Date(Date.now() + 7 * 86400000); account.invitedBy = req.user._id; account.sessionVersion += 1;
     await account.save(); await PortalSession.updateMany({ account: account._id, revokedAt: null }, { revokedAt: new Date() });
     const url = `${process.env.CLIENT_URL || "http://localhost:5173"}/portal/activate?workspace=${encodeURIComponent(req.organization.slug)}&token=${token}`;
-    const delivery = await sendSystemEmail({ to: account.email, subject: `Your ${req.organization.name} ${type.toLowerCase()} portal`, text: `Activate your secure portal within 7 days: ${url}`, html: `<p>Hello ${account.name},</p><p>You have been invited to a secure ${type.toLowerCase()} portal.</p><p><a href="${url}">Activate secure portal</a></p><p>This link expires in 7 days.</p>` }).then(() => "Sent").catch(() => "Link created");
+    const invitationEmail = portalInvitationEmail({ accountName: account.name, organizationName: req.organization.name, type, activationUrl: url });
+    const delivery = await sendSystemEmail({ to: account.email, ...invitationEmail }).then(() => "Sent").catch(() => "Link created");
     await logActivity(req, { module: "Portals", action: "Portal invitation created", entityType: "PortalAccount", entityId: account._id, summary: `${type} portal invitation created for ${account.email}` });
     res.status(201).json({ message: delivery === "Sent" ? "Secure invitation emailed" : "Invitation created; copy the secure link", invitationUrl: url, delivery, account: { id: account._id, type, email: account.email, status: account.status, invitationExpiresAt: account.invitationExpiresAt } });
   } catch (error) { next(error); }
