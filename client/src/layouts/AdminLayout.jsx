@@ -28,7 +28,7 @@ const navigationGroups = [
       item("/admin/automations", "Automations", Workflow, "automations.view"),
       item("/admin/compliance", "Compliance Passport", ShieldCheck, "compliance.view", { featured: true }),
       item("/admin/reports", "Recruitment Analytics", BarChart3, "reports.view"),
-      item("/admin/portals", "Candidate & Client Portals", KeyRound, "portals.manage"),
+      item("/admin/portals", "External Portals", KeyRound, "portals.manage"),
       item("/admin/jobs", "Vacancies", Briefcase, "jobs.view"),
       item("/admin/applications", "Applications", FileText, "applications.view"),
       item("/admin/talent-pool", "Talent Pool", UsersRound, "talentPool.view"),

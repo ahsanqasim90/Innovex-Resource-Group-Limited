@@ -97,7 +97,7 @@ export const permissionGroups = [
       ["exports.manage", "Data Exports"],
       ["archive.manage", "Archive & Retention"],
       ["reports.view", "Advanced Recruitment Reports"],
-      ["portals.manage", "Candidate & Client Portals"],
+      ["portals.manage", "Candidate, Client & Partner Portals"],
       ["integrations.manage", "API & Webhook Integrations"]
     ]
   },

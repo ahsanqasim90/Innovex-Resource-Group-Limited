@@ -113,6 +113,19 @@ const pipelineSchema = new mongoose.Schema({
   vacancyEmailFrom: { type: String, trim: true, lowercase: true }
 });
 
+const partnerShareSchema = new mongoose.Schema(
+  {
+    partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", required: true },
+    sharedAt: { type: Date, default: Date.now },
+    sharedBy: {
+      user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      name: { type: String, trim: true },
+      email: { type: String, trim: true, lowercase: true }
+    }
+  },
+  { _id: false }
+);
+
 const jobSchema = new mongoose.Schema(
   {
     reference: { type: String, trim: true, uppercase: true, index: true },
@@ -133,6 +146,7 @@ const jobSchema = new mongoose.Schema(
     matchFeedback: [matchFeedbackSchema],
     matchRuns: [matchRunSchema],
     pipeline: [pipelineSchema],
+    partnerShares: [partnerShareSchema],
     priority: { type: String, enum: ["High", "Medium", "Low"], default: "Medium" },
     openings: { type: Number, min: 1, max: 1000, default: 1 },
     assignedRecruiters: [{ type: mongoose.Schema.Types.ObjectId, ref: "User", select: false }],
@@ -161,6 +175,7 @@ jobSchema.add({ clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "Cli
 
 jobSchema.index({ title: "text", location: "text", description: "text" });
 jobSchema.index({ organization: 1, title: 1, location: 1, clientName: 1, closingDate: 1 });
+jobSchema.index({ organization: 1, "partnerShares.partner": 1, isActive: 1, closingDate: 1 });
 
 jobSchema.pre("validate", function normalizeVacancy() {
   this.title = String(this.title || "").replace(/\s+/g, " ").trim();

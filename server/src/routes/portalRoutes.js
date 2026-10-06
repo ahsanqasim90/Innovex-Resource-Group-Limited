@@ -13,21 +13,75 @@ import Interview from "../models/Interview.js";
 import Invoice from "../models/Invoice.js";
 import Job from "../models/Job.js";
 import OfferLetter from "../models/OfferLetter.js";
+import Partner from "../models/Partner.js";
 import PortalAccount from "../models/PortalAccount.js";
 import PortalSession from "../models/PortalSession.js";
 import RecruitmentSubmission from "../models/RecruitmentSubmission.js";
 import SchedulingRequest from "../models/SchedulingRequest.js";
 import { protectPortal } from "../middleware/portalAuth.js";
+import { uploadCv } from "../middleware/upload.js";
 import { tokenHash } from "../utils/authSecurity.js";
 import { requireFields, validateEmail } from "../utils.js";
+import { secureDocumentMeta } from "../services/documentIntelligenceService.js";
 import { sendInterviewConfirmationEmail } from "../services/emailService.js";
 import { generateOfferLetterPdf } from "../services/hrPdfService.js";
+import { notifyRecruitmentReviewersOfPartnerSubmission } from "../services/portalNotificationService.js";
 
 const router = express.Router();
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: true, legacyHeaders: false, message: { message: "Too many portal attempts. Please wait and try again." } });
 const cookieName = () => process.env.NODE_ENV === "production" ? "__Host-innovex_portal" : "innovex_portal";
 
-function publicAccount(account) { return { id: account._id, type: account.type, name: account.name, email: account.email, candidateId: account.candidate, clientAccountId: account.clientAccount }; }
+function publicAccount(account) { return { id: account._id, type: account.type, name: account.name, email: account.email, candidateId: account.candidate, clientAccountId: account.clientAccount, partnerId: account.partner }; }
+
+const partnerStageLabels = {
+  "Pending admin review": "Under Innovex review",
+  "Changes requested": "More information required",
+  "Admin rejected": "Rejected by Innovex",
+  "Client review": "Submitted to client",
+  "Interview requested": "Interview requested",
+  "Interview scheduled": "Interview scheduled",
+  "Client accepted": "Accepted by client",
+  "Client rejected": "Rejected by client",
+  "Offer stage": "Offer stage",
+  Hired: "Hired",
+  Withdrawn: "Withdrawn"
+};
+
+function partnerStatus(stage) {
+  return partnerStageLabels[stage] || "Under Innovex review";
+}
+
+function clean(value, max = 500) {
+  return String(value || "").trim().slice(0, max);
+}
+
+function submissionReference() {
+  const stamp = new Date().toISOString().slice(2, 10).replace(/-/g, "");
+  return `ATS-${stamp}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+}
+
+function partnerSubmissionView(item) {
+  const updates = (item.timeline || [])
+    .filter((entry) => ["Submission created", "Stage changed", "Client decision"].includes(entry.type))
+    .map((entry) => ({ status: entry.toStage ? partnerStatus(entry.toStage) : "Submitted", note: entry.note || "", createdAt: entry.createdAt }));
+  return {
+    _id: item._id,
+    reference: item.reference,
+    job: item.job,
+    candidateName: item.candidateName,
+    email: item.email,
+    phone: item.phone,
+    currentRole: item.currentRole,
+    experienceYears: item.experienceYears,
+    recruiterSummary: item.recruiterSummary,
+    status: partnerStatus(item.stage),
+    outcomeReason: item.outcomeReason,
+    cv: item.cv ? { originalName: item.cv.originalName, size: item.cv.size, received: Boolean(item.cv.originalName) } : null,
+    updates,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
+  };
+}
 
 async function issueSession(req, res, account) {
   const jti = crypto.randomUUID(); const csrf = crypto.randomBytes(24).toString("hex"); const maxAge = 8 * 60 * 60 * 1000;
@@ -58,7 +112,8 @@ router.post("/invitation/:token/activate", limiter, async (req, res, next) => {
 router.post("/login", limiter, async (req, res, next) => {
   try {
     requireFields(req.body, ["email", "password"]); validateEmail(req.body.email);
-    const account = await PortalAccount.findOne({ email: String(req.body.email).toLowerCase(), status: "Active" }).select("+password");
+    const requestedType = ["Candidate", "Client", "Partner"].includes(req.body.type) ? req.body.type : undefined;
+    const account = await PortalAccount.findOne({ email: String(req.body.email).toLowerCase(), status: "Active", ...(requestedType ? { type: requestedType } : {}) }).select("+password");
     if (!account || !(await account.matchPassword(req.body.password))) return res.status(401).json({ message: "Invalid portal email or password" });
     const csrfToken = await issueSession(req, res, account); account.lastLoginAt = new Date(); await account.save();
     res.json({ account: publicAccount(account), csrfToken });
@@ -77,12 +132,106 @@ router.get("/dashboard", protectPortal, async (req, res, next) => {
       const [applications, interviews, passport, schedulingRequests, offers] = await Promise.all([Application.find({ email: candidate.email }).select("job status createdAt updatedAt").populate("job", "title location salary type shift description requirements postcode +clientName").sort({ createdAt: -1 }).lean(), Interview.find({ candidateEmail: candidate.email }).select("jobTitle clientName careHomeAddress careHomePostcode careHomeContactName careHomeContactPhone interviewInstructions interviewDate interviewTime interviewType interviewStatus candidateSelected feedback").sort({ interviewDate: 1 }).lean(), CompliancePassport.findOne({ candidate: candidate._id }).select("overallStatus checks.type checks.label checks.required checks.status checks.expiresAt checks.verifiedAt consentCapturedAt updatedAt").lean(), SchedulingRequest.find({ candidateEmail: candidate.email, status: "Sent", expiresAt: { $gt: new Date() } }).select("jobTitle clientName interviewType location instructions timezone slots expiresAt").sort({ expiresAt: 1 }).lean(), OfferLetter.find({ candidateEmail: candidate.email, status: { $in: ["Sent", "Accepted", "Declined", "Withdrawn"] } }).select("offerNumber roleTitle department employmentType startDate startDateText workLocation salaryType salaryAmount hoursPerWeek probationPeriod offerExpiryDate offerExpiryText conditions benefits status sentAt acceptance.status acceptance.signedAt acceptance.declinedAt documentHash").sort({ sentAt: -1 }).lean()]);
       return res.json({ type: "Candidate", candidate, applications: applications.map((item) => ({ ...item, job: item.job ? redactClientName(item.job) : item.job })), interviews: interviews.map((item) => redactClientName(item)), schedulingRequests: schedulingRequests.map((item) => redactClientName(item)), offers, compliance: passport || { overallStatus: "Red", checks: [] } });
     }
+    if (account.type === "Partner") {
+      const partner = await Partner.findOne({ _id: account.partner, isActive: true }).select("name serviceProvided location contactEmail").lean();
+      if (!partner) return res.status(404).json({ message: "Partner profile not found" });
+      const jobs = await Job.find({
+        "partnerShares.partner": partner._id,
+        isActive: true,
+        publicationStatus: "Approved",
+        vacancyStatus: "Open",
+        $or: [{ closingDate: null }, { closingDate: { $exists: false } }, { closingDate: { $gte: new Date() } }]
+      }).select("reference title location salary type shift description requirements postcode openings priority closingDate").sort({ priority: 1, closingDate: 1, createdAt: -1 }).lean();
+      const submissions = await RecruitmentSubmission.find({ partner: partner._id })
+        .select("reference job candidateName email phone currentRole experienceYears recruiterSummary stage outcomeReason cv.originalName cv.size timeline.type timeline.toStage timeline.note timeline.createdAt createdAt updatedAt")
+        .populate("job", "reference title location")
+        .sort({ updatedAt: -1 })
+        .limit(500)
+        .lean();
+      return res.json({ type: "Partner", partner, jobs, submissions: submissions.map(partnerSubmissionView) });
+    }
     const client = await ClientAccount.findById(account.clientAccount).select("name domain website status primaryContact contacts address").lean();
     if (!client) return res.status(404).json({ message: "Client profile not found" });
     const jobs = await Job.find({ clientAccount: client._id }).select("reference title location vacancyStatus publicationStatus openings closingDate createdAt").sort({ createdAt: -1 }).lean();
     const jobIds = jobs.map((job) => job._id);
     const [submissions, invoices, terms] = await Promise.all([RecruitmentSubmission.find({ job: { $in: jobIds }, stage: { $nin: ["Pending admin review", "Changes requested", "Admin rejected"] } }).select("reference job candidateName location currentRole experienceYears recruiterSummary stage interview timeline createdAt updatedAt").populate("job", "reference title location").sort({ updatedAt: -1 }).lean(), Invoice.find({ clientAccount: client._id }).select("invoiceNumber issueDate dueDate status currency total amountPaid balanceDue").sort({ issueDate: -1 }).lean(), ClientTerms.find({ clientAccount: client._id }).select("reference status effectiveDate expiryDate clientName createdAt updatedAt").sort({ createdAt: -1 }).lean()]);
     res.json({ type: "Client", client, jobs, submissions, invoices, terms });
+  } catch (error) { next(error); }
+});
+
+router.post("/partner/submissions", protectPortal, uploadCv.single("cv"), async (req, res, next) => {
+  try {
+    if (req.portalAccount.type !== "Partner") return res.status(403).json({ message: "Recruitment partner portal required" });
+    requireFields(req.body, ["job", "candidateName", "email", "phone", "recruiterSummary"]);
+    validateEmail(req.body.email);
+    if (req.body.consentConfirmed !== "true") return res.status(400).json({ message: "Confirm candidate consent before submission" });
+    if (!req.file) return res.status(400).json({ message: "Candidate CV is required" });
+
+    const partner = await Partner.findOne({ _id: req.portalAccount.partner, isActive: true });
+    if (!partner) return res.status(404).json({ message: "Active partner profile not found" });
+    const job = await Job.findOne({
+      _id: req.body.job,
+      "partnerShares.partner": partner._id,
+      isActive: true,
+      publicationStatus: "Approved",
+      vacancyStatus: "Open",
+      $or: [{ closingDate: null }, { closingDate: { $exists: false } }, { closingDate: { $gte: new Date() } }]
+    });
+    if (!job) return res.status(404).json({ message: "This vacancy is no longer available to your organisation" });
+
+    const email = clean(req.body.email).toLowerCase();
+    const duplicate = await RecruitmentSubmission.findOne({ job: job._id, email, stage: { $nin: ["Admin rejected", "Client rejected", "Withdrawn"] } }).select("reference stage").lean();
+    if (duplicate) return res.status(409).json({ message: `This candidate is already in the pipeline for this vacancy (${duplicate.reference})` });
+
+    const portalActor = { name: req.portalAccount.name, email: req.portalAccount.email, role: `Partner portal · ${partner.name}` };
+    const cv = await secureDocumentMeta(req.file, null, { extract: false });
+    cv.uploadedBy = portalActor;
+    let candidate = await Candidate.findOne({ email });
+    if (!candidate) {
+      candidate = await Candidate.create({
+        name: clean(req.body.candidateName),
+        email,
+        phone: clean(req.body.phone),
+        city: clean(req.body.location),
+        desiredRole: clean(req.body.currentRole || job.title),
+        experience: req.body.experienceYears ? `${Number(req.body.experienceYears)} years` : "",
+        visaStatus: clean(req.body.rightToWork),
+        availability: clean(req.body.noticePeriod),
+        payExpectation: clean(req.body.expectedSalary),
+        status: "Submitted",
+        source: `Recruitment partner · ${partner.name}`,
+        lawfulBasis: "Consent",
+        cv
+      });
+    }
+
+    const submission = await RecruitmentSubmission.create({
+      reference: submissionReference(),
+      job: job._id,
+      candidate: candidate._id,
+      partner: partner._id,
+      portalAccount: req.portalAccount._id,
+      candidateName: clean(req.body.candidateName),
+      email,
+      phone: clean(req.body.phone),
+      location: clean(req.body.location),
+      currentRole: clean(req.body.currentRole),
+      experienceYears: req.body.experienceYears === "" ? undefined : Number(req.body.experienceYears),
+      currentSalary: clean(req.body.currentSalary),
+      expectedSalary: clean(req.body.expectedSalary),
+      noticePeriod: clean(req.body.noticePeriod),
+      rightToWork: clean(req.body.rightToWork),
+      linkedinUrl: clean(req.body.linkedinUrl, 1000),
+      recruiterSummary: clean(req.body.recruiterSummary, 5000),
+      consentConfirmed: true,
+      consentConfirmedAt: new Date(),
+      submittedBy: portalActor,
+      cv,
+      timeline: [{ type: "Submission created", toStage: "Pending admin review", note: `Submitted securely by ${partner.name}`, actor: portalActor }]
+    });
+    await ActivityLog.create({ actor: portalActor, module: "Recruitment ATS", action: "Partner candidate submitted", entityType: "RecruitmentSubmission", entityId: submission._id, summary: `${partner.name} submitted ${submission.candidateName} for ${job.title}`, ipAddress: req.ip, userAgent: req.get("user-agent") || "" });
+    await notifyRecruitmentReviewersOfPartnerSubmission(submission, job, partner).catch(() => 0);
+    res.status(201).json({ message: `${submission.candidateName} submitted to Innovex for review`, submission: partnerSubmissionView({ ...submission.toObject(), job: { _id: job._id, reference: job.reference, title: job.title, location: job.location } }) });
   } catch (error) { next(error); }
 });
 

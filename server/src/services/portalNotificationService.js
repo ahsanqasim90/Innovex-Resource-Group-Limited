@@ -1,5 +1,6 @@
 import PortalNotification from "../models/PortalNotification.js";
 import User from "../models/User.js";
+import { hasPermission } from "../config/permissions.js";
 
 export async function notifyPortalMembersOfVacancy(job, actorUser) {
   if (!job?._id) return 0;
@@ -21,4 +22,22 @@ export async function notifyPortalMembersOfVacancy(job, actorUser) {
 
   await PortalNotification.insertMany(notifications, { ordered: false });
   return notifications.length;
+}
+
+export async function notifyRecruitmentReviewersOfPartnerSubmission(submission, job, partner) {
+  if (!submission?._id || !job?._id || !partner?._id) return 0;
+  const members = await User.find({ isActive: true }).select("_id name role permissions").lean();
+  const reviewers = members.filter((member) => hasPermission(member, "recruitmentPipeline.review"));
+  if (!reviewers.length) return 0;
+  await PortalNotification.insertMany(reviewers.map((reviewer) => ({
+    user: reviewer._id,
+    type: "partner_candidate_submitted",
+    title: "New partner candidate awaiting review",
+    message: `${partner.name} submitted ${submission.candidateName} for ${job.title} (${submission.reference}).`,
+    link: "/admin/recruitment-ats",
+    entityType: "RecruitmentSubmission",
+    entityId: submission._id,
+    actor: { name: partner.name }
+  })), { ordered: false });
+  return reviewers.length;
 }

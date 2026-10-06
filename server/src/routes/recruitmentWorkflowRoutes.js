@@ -49,7 +49,7 @@ function submissionReference() {
 async function visibleSubmission(id, user, includeCv = false) {
   const query = RecruitmentSubmission.findOne({ _id: id, ...accessFilter(user) });
   if (includeCv) query.select("+cv.data +cv.extractedText");
-  return query.populate("job", "title location salary type shift isActive closingDate reference clientName priority openings clientAccount");
+  return query.populate("job", "title location salary type shift isActive closingDate reference clientName priority openings clientAccount").populate("partner", "name contactEmail serviceProvided");
 }
 
 // Fires the first time a candidate reaches "Client review" - emails the client's
@@ -144,6 +144,7 @@ router.get("/overview", async (req, res, next) => {
       RecruitmentSubmission.find(filter)
         .select("-cv.data")
         .populate("job", "title location salary type shift isActive closingDate reference clientName priority openings")
+        .populate("partner", "name contactEmail serviceProvided")
         .sort({ updatedAt: -1 })
         .limit(500)
         .lean(),

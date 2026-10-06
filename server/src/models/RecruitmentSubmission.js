@@ -7,6 +7,7 @@ export const RECRUITMENT_STAGES = [
   "Client review",
   "Interview requested",
   "Interview scheduled",
+  "Client accepted",
   "Client rejected",
   "Offer stage",
   "Hired",
@@ -61,6 +62,8 @@ const recruitmentSubmissionSchema = new mongoose.Schema(
     reference: { type: String, required: true, index: true },
     job: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true, index: true },
     candidate: { type: mongoose.Schema.Types.ObjectId, ref: "Candidate" },
+    partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner", index: true },
+    portalAccount: { type: mongoose.Schema.Types.ObjectId, ref: "PortalAccount", index: true },
     candidateName: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true, index: true },
     phone: { type: String, required: true, trim: true, index: true },
@@ -98,6 +101,7 @@ const recruitmentSubmissionSchema = new mongoose.Schema(
 recruitmentSubmissionSchema.index({ job: 1, email: 1 });
 recruitmentSubmissionSchema.index({ candidateName: "text", email: "text", phone: "text", recruiterSummary: "text", reference: "text" });
 recruitmentSubmissionSchema.index({ "submittedBy.user": 1, stage: 1, createdAt: -1 });
+recruitmentSubmissionSchema.index({ partner: 1, stage: 1, updatedAt: -1 });
 recruitmentSubmissionSchema.index({ organization: 1, reference: 1 }, { unique: true });
 
 export default mongoose.model("RecruitmentSubmission", recruitmentSubmissionSchema);

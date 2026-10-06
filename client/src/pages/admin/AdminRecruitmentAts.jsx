@@ -47,7 +47,7 @@ const boardColumns = [
   { key: "internal", label: "Internal review", stages: ["Pending admin review", "Changes requested"], tone: "amber" },
   { key: "client", label: "Client review", stages: ["Client review"], tone: "blue" },
   { key: "interview", label: "Interview", stages: ["Interview requested", "Interview scheduled"], tone: "violet" },
-  { key: "offer", label: "Offer stage", stages: ["Offer stage"], tone: "teal" },
+  { key: "offer", label: "Accepted / offer", stages: ["Client accepted", "Offer stage"], tone: "teal" },
   { key: "hired", label: "Hired", stages: ["Hired"], tone: "green" }
 ];
 
@@ -58,6 +58,7 @@ const reviewerStages = [
   "Client review",
   "Interview requested",
   "Interview scheduled",
+  "Client accepted",
   "Client rejected",
   "Offer stage",
   "Hired",
@@ -88,7 +89,7 @@ function useAtsModalControls(onClose) {
 }
 
 function StagePill({ stage }) {
-  const tone = stage === "Hired" ? "green" : stage.includes("rejected") || stage === "Withdrawn" ? "red" : stage.includes("Interview") ? "violet" : stage === "Client review" ? "blue" : stage === "Offer stage" ? "teal" : "amber";
+  const tone = stage === "Hired" ? "green" : stage.includes("rejected") || stage === "Withdrawn" ? "red" : stage.includes("Interview") ? "violet" : stage === "Client review" ? "blue" : ["Client accepted", "Offer stage"].includes(stage) ? "teal" : "amber";
   return <span className={`ats-stage-pill ${tone}`}>{stage}</span>;
 }
 
@@ -114,7 +115,7 @@ function CandidateCard({ item, onOpen }) {
         <span>{item.reference}</span>
         <span>{dateLabel(item.updatedAt)}</span>
       </div>
-      <div className="ats-card-owner"><span className="ats-mini-avatar">{initials(item.submittedBy?.name)}</span><span>{item.submittedBy?.name || "Recruiter"}</span></div>
+      <div className="ats-card-owner"><span className="ats-mini-avatar">{initials(item.partner?.name || item.submittedBy?.name)}</span><span>{item.partner?.name || item.submittedBy?.name || "Recruiter"}</span></div>
     </button>
   );
 }
@@ -229,8 +230,8 @@ function CandidateDetail({ item, canReview, onClose, onUpdated }) {
             {item.interview?.date && <section className="ats-detail-panel ats-interview-panel"><div className="ats-panel-title"><CalendarDays size={18} /><h3>Interview details</h3></div><p><strong>{dateLabel(item.interview.date)}</strong> at {item.interview.time || "time TBC"}</p><span>{item.interview.format}{item.interview.locationOrLink ? ` · ${item.interview.locationOrLink}` : ""}</span></section>}
           </main>
           <aside>
-            <section className="ats-detail-panel"><div className="ats-panel-title"><UserCheck size={18} /><h3>Ownership &amp; CV</h3></div><div className="ats-owner-profile"><span className="ats-avatar">{initials(item.submittedBy?.name)}</span><span><strong>{item.submittedBy?.name}</strong><small>{item.submittedBy?.email}</small></span></div><button className="button full" type="button" onClick={() => setCvReviewOpen(true)}><FileCheck2 size={16} /> Review CV in portal</button><button className="button secondary full" type="button" onClick={() => downloadFile(`/recruitment-workflow/${item._id}/cv`, item.cv?.originalName || "candidate-cv")}><Download size={16} /> Download original</button></section>
-            {canReview && <section className="ats-detail-panel ats-review-panel"><div className="ats-panel-title"><ShieldCheck size={18} /><h3>Review action</h3></div><label className="ats-field"><span>Move candidate to</span><select value={stage} onChange={(event) => setStage(event.target.value)}>{reviewerStages.map((value) => <option key={value}>{value}</option>)}</select></label>{needsNote && <label className="ats-field"><span>Feedback / reason *</span><textarea rows="4" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Give the recruiter clear, actionable feedback..." /></label>}{needsInterview && <div className="ats-interview-fields"><label className="ats-field"><span>Date *</span><input type="date" value={interview.interviewDate} onChange={(event) => setInterview({ ...interview, interviewDate: event.target.value })} /></label><label className="ats-field"><span>Time</span><input type="time" value={interview.interviewTime} onChange={(event) => setInterview({ ...interview, interviewTime: event.target.value })} /></label><label className="ats-field"><span>Format</span><select value={interview.interviewFormat} onChange={(event) => setInterview({ ...interview, interviewFormat: event.target.value })}><option>Video</option><option>Telephone</option><option>In person</option></select></label><label className="ats-field"><span>Link / location</span><input value={interview.locationOrLink} onChange={(event) => setInterview({ ...interview, locationOrLink: event.target.value })} /></label></div>}<button type="button" className="button full" disabled={saving || stage === item.stage} onClick={updateStage}>{saving ? "Updating..." : "Confirm stage update"}</button></section>}
+            <section className="ats-detail-panel"><div className="ats-panel-title"><UserCheck size={18} /><h3>Ownership &amp; CV</h3></div><div className="ats-owner-profile"><span className="ats-avatar">{initials(item.partner?.name || item.submittedBy?.name)}</span><span><strong>{item.partner?.name || item.submittedBy?.name}</strong><small>{item.partner ? `Submitted by ${item.submittedBy?.name} · ${item.submittedBy?.email}` : item.submittedBy?.email}</small></span></div><button className="button full" type="button" onClick={() => setCvReviewOpen(true)}><FileCheck2 size={16} /> Review CV in portal</button><button className="button secondary full" type="button" onClick={() => downloadFile(`/recruitment-workflow/${item._id}/cv`, item.cv?.originalName || "candidate-cv")}><Download size={16} /> Download original</button></section>
+            {canReview && <section className="ats-detail-panel ats-review-panel"><div className="ats-panel-title"><ShieldCheck size={18} /><h3>Review action</h3></div><label className="ats-field"><span>Move candidate to</span><select value={stage} onChange={(event) => setStage(event.target.value)}>{reviewerStages.map((value) => <option key={value}>{value}</option>)}</select></label><label className="ats-field"><span>Feedback / reason{needsNote ? " *" : ""}</span><textarea rows="4" required={needsNote} value={note} onChange={(event) => setNote(event.target.value)} placeholder={item.partner ? "This update will be visible in the partner portal..." : "Add clear, actionable feedback..."} /></label>{needsInterview && <div className="ats-interview-fields"><label className="ats-field"><span>Date *</span><input type="date" value={interview.interviewDate} onChange={(event) => setInterview({ ...interview, interviewDate: event.target.value })} /></label><label className="ats-field"><span>Time</span><input type="time" value={interview.interviewTime} onChange={(event) => setInterview({ ...interview, interviewTime: event.target.value })} /></label><label className="ats-field"><span>Format</span><select value={interview.interviewFormat} onChange={(event) => setInterview({ ...interview, interviewFormat: event.target.value })}><option>Video</option><option>Telephone</option><option>In person</option></select></label><label className="ats-field"><span>Link / location</span><input value={interview.locationOrLink} onChange={(event) => setInterview({ ...interview, locationOrLink: event.target.value })} /></label></div>}<button type="button" className="button full" disabled={saving || stage === item.stage || (needsNote && !note.trim())} onClick={updateStage}>{saving ? "Updating..." : "Confirm stage update"}</button></section>}
             <section className="ats-detail-panel"><div className="ats-panel-title"><Clock3 size={18} /><h3>Activity timeline</h3></div><div className="ats-timeline">{[...(item.timeline || [])].reverse().map((event) => <article key={event._id || `${event.createdAt}-${event.toStage}`}><span /><div><strong>{event.toStage || event.type}</strong><small>{event.actor?.name || "System"} · {dateLabel(event.createdAt, true)}</small>{event.note && <p>{event.note}</p>}</div></article>)}</div></section>
           </aside>
         </div>

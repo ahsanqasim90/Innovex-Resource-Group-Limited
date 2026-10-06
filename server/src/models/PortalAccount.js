@@ -2,12 +2,13 @@ import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
 const portalAccountSchema = new mongoose.Schema({
-  type: { type: String, enum: ["Candidate", "Client"], required: true, index: true },
+  type: { type: String, enum: ["Candidate", "Client", "Partner"], required: true, index: true },
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, trim: true, lowercase: true, index: true },
   password: { type: String, select: false, default: "" },
   candidate: { type: mongoose.Schema.Types.ObjectId, ref: "Candidate" },
   clientAccount: { type: mongoose.Schema.Types.ObjectId, ref: "ClientAccount" },
+  partner: { type: mongoose.Schema.Types.ObjectId, ref: "Partner" },
   status: { type: String, enum: ["Invited", "Active", "Suspended"], default: "Invited", index: true },
   invitationTokenHash: { type: String, select: false },
   invitationExpiresAt: Date,
