@@ -17,6 +17,7 @@ export default function AdminPortals() {
   const [data, setData] = useState(emptyData);
   const [type, setType] = useState("Candidate");
   const [subjectId, setSubjectId] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [partnerId, setPartnerId] = useState("");
   const [sharedJobIds, setSharedJobIds] = useState([]);
   const [status, setStatus] = useState(null);
@@ -45,18 +46,25 @@ export default function AdminPortals() {
   function chooseType(nextType) {
     setType(nextType);
     setSubjectId("");
+    setInviteEmail("");
+  }
+
+  function chooseSubject(nextSubjectId) {
+    setSubjectId(nextSubjectId);
+    setInviteEmail(subjectEmail(type, options.find((item) => item._id === nextSubjectId)));
   }
 
   async function invite(event) {
     event.preventDefault();
     const subject = options.find((item) => item._id === subjectId);
-    const email = subjectEmail(type, subject);
+    const email = inviteEmail.trim();
     if (!subject || !email) return setStatus({ type: "error", message: `Select a ${type.toLowerCase()} record with a valid email address.` });
     try {
       const result = await api("/portal-admin/invite", { method: "POST", body: { type, subjectId, name: subject.name, email } });
       setLatestLink(result.invitationUrl);
       setStatus({ message: result.message });
       setSubjectId("");
+      setInviteEmail("");
       load();
     } catch (error) { setStatus({ type: "error", message: error.message }); }
   }
@@ -92,7 +100,8 @@ export default function AdminPortals() {
           <button type="button" className={type === "Client" ? "active" : ""} onClick={() => chooseType("Client")}><Building2 />Client</button>
           <button type="button" className={type === "Partner" ? "active" : ""} onClick={() => chooseType("Partner")}><Handshake />Partner</button>
         </div></label>
-        <label><span>{type} record</span><select value={subjectId} onChange={(event) => setSubjectId(event.target.value)} required><option value="">Select {type.toLowerCase()}</option>{options.map((item) => <option value={item._id} key={item._id}>{item.name} · {subjectEmail(type, item) || "No email"}</option>)}</select></label>
+        <label><span>{type} record</span><select value={subjectId} onChange={(event) => chooseSubject(event.target.value)} required><option value="">Select {type.toLowerCase()}</option>{options.map((item) => <option value={item._id} key={item._id}>{item.name} · {subjectEmail(type, item) || "Email to be entered"}</option>)}</select></label>
+        <label><span>Invitation email</span><input type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder={`Enter ${type.toLowerCase()} contact email`} required /></label>
         <button className="button"><Send />Send secure invitation</button>
       </form>
       {latestLink && <div className="portal-link-result"><div><strong>Latest activation link</strong><span>Email delivery may depend on SMTP configuration. Copy it securely if needed.</span></div><button onClick={() => navigator.clipboard.writeText(latestLink)}><Copy />Copy link</button><a href={latestLink} target="_blank" rel="noreferrer"><ExternalLink />Open</a></div>}
