@@ -4420,12 +4420,15 @@ tbody tr:hover td {
   white-space: nowrap;
 }
 .postcode-role-options small {
+  white-space: nowrap;
   border-radius: 999px;
   padding: 3px 8px;
   color: var(--teal);
   background: var(--mint);
   font-weight: 800;
 }
+.postcode-role-source-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 11px 13px; border: 1px solid #cfe3e6; border-radius: 12px; color: #45656c; background: #fff; font-size: .8rem; }
+.postcode-role-source-note button { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 8px 12px; color: #fff; background: var(--teal); cursor: pointer; font-weight: 800; }
 .postcode-role-empty { margin: 14px 0 0; color: var(--muted); }
 .postcode-radius-banner {
   grid-column: 1 / -1;

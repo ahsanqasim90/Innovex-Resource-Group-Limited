@@ -1,6 +1,7 @@
 import express from "express";
 import Candidate from "../models/Candidate.js";
 import CandidateActivity from "../models/CandidateActivity.js";
+import CvUpload from "../models/CvUpload.js";
 import EmailLog from "../models/EmailLog.js";
 import { dailyLimitReason, hasReachedDailyLimit, mailboxDailyLimit, mailboxSentToday } from "../services/mailboxLimitService.js";
 import Job from "../models/Job.js";
@@ -151,7 +152,31 @@ function postcodeConditions(value = "") {
   const prefixes = postcodePrefixes(value);
   return prefixes.flatMap((prefix) => {
     const expression = new RegExp(`^\\s*${escapeRegex(prefix)}`, "i");
-    return [{ postcodePrefix: expression }, { postcode: expression }, { city: expression }];
+    const area = prefix.match(/^[A-Z]+/)?.[0] || "";
+    const cityAliases = {
+      SO: ["Southampton", "Eastleigh"],
+      BH: ["Bournemouth", "Poole", "Christchurch"]
+    }[area] || [];
+    return [
+      { postcodePrefix: expression },
+      { postcode: expression },
+      { city: expression },
+      ...cityAliases.map((city) => ({ city: new RegExp(`^\\s*${escapeRegex(city)}`, "i") }))
+    ];
+  });
+}
+
+function cvUploadLocationConditions(prefixes = []) {
+  return prefixes.flatMap((prefix) => {
+    const area = String(prefix).match(/^[A-Z]+/)?.[0] || "";
+    const aliases = {
+      SO: ["Southampton", "Eastleigh"],
+      BH: ["Bournemouth", "Poole", "Christchurch"]
+    }[area] || [];
+    return [
+      { location: new RegExp(`\\b${escapeRegex(prefix)}`, "i") },
+      ...aliases.map((city) => ({ location: new RegExp(`\\b${escapeRegex(city)}\\b`, "i") }))
+    ];
   });
 }
 
@@ -167,15 +192,23 @@ function normalizeRole(value = "") {
 // often stored with a trailing pipe/dash or inconsistent spacing. Keep the raw
 // candidate record intact, but use one canonical label for role filters.
 export function canonicalRoleLabel(value = "") {
-  return String(value)
+  const cleaned = String(value)
     .normalize("NFKC")
     .replace(/\s+/g, " ")
     .replace(/[\s|,;:/\\\-\u2013\u2014]+$/g, "")
     .trim();
+  const normalized = normalizeRole(cleaned);
+  if (["hca", "health care assistant", "healthcare assistant"].includes(normalized)) return "Healthcare Assistant";
+  if (["support worker", "support workers"].includes(normalized)) return "Support Worker";
+  return cleaned;
 }
 
 export function exactRolePattern(value = "") {
-  const tokens = normalizeRole(canonicalRoleLabel(value)).split(/\s+/).filter(Boolean);
+  const normalized = normalizeRole(canonicalRoleLabel(value));
+  if (normalized === "healthcare assistant") {
+    return /^\s*(?:hca|health[^a-z0-9]+care[^a-z0-9]+assistant|healthcare[^a-z0-9]+assistant)(?:[^a-z0-9]+)?\s*$/i;
+  }
+  const tokens = normalized.split(/\s+/).filter(Boolean);
   if (!tokens.length) return null;
   return new RegExp(`^\\s*${tokens.map(escapeRegex).join("[^a-z0-9]+")}(?:[^a-z0-9]+)?\\s*$`, "i");
 }
@@ -638,6 +671,7 @@ router.get("/role-options", async (req, res, next) => {
     if (!prefixes.length) return res.json({ postcodes: [], roles: [], total: 0 });
     const radiusMiles = Math.min(Math.max(Number(req.query.radiusMiles || 0), 0), 100);
     let matchConditions = postcodeConditions(req.query.postcode);
+    let cvLocationPrefixes = prefixes;
     let radiusMeta = null;
 
     if (radiusMiles > 0) {
@@ -645,6 +679,7 @@ router.get("/role-options", async (req, res, next) => {
       if (origin) {
         const radiusOutcodes = await nearbyOutcodes(req.query.postcode, radiusMiles);
         const areaFallback = areaFallbackOutcodes(req.query.postcode, radiusMiles);
+        cvLocationPrefixes = [...new Set([...radiusOutcodes.map((item) => item.outcode), ...areaFallback])];
         matchConditions = [
           ...outcodeConditions(radiusOutcodes),
           ...areaConditions(areaFallback)
@@ -666,45 +701,70 @@ router.get("/role-options", async (req, res, next) => {
       }
     }
 
-    const match = {
-      $or: matchConditions,
-      desiredRole: { $type: "string", $ne: "" }
-    };
-    if (req.query.status) match.status = req.query.status;
-    if (req.query.visaStatus) match.visaStatus = new RegExp(escapeRegex(req.query.visaStatus), "i");
-    if (req.query.availability) match.availability = new RegExp(escapeRegex(req.query.availability), "i");
-
-    const rawRoles = await Candidate.aggregate([
+    const candidateMatch = { desiredRole: { $type: "string", $ne: "" } };
+    if (req.query.status) candidateMatch.status = req.query.status;
+    if (req.query.visaStatus) candidateMatch.visaStatus = new RegExp(escapeRegex(req.query.visaStatus), "i");
+    if (req.query.availability) candidateMatch.availability = new RegExp(escapeRegex(req.query.availability), "i");
+    const cvMatch = { desiredRole: { $type: "string", $ne: "" } };
+    const mappedCvStatus = { Available: "New", Contacted: "Contacted", Shortlisted: "Shortlisted" }[req.query.status];
+    if (req.query.status) cvMatch.status = mappedCvStatus || "__not_applicable__";
+    if (req.query.visaStatus || req.query.availability) cvMatch._id = null;
+    const rolePipeline = (match) => [
       { $match: match },
-      {
-        $project: {
-          role: { $trim: { input: "$desiredRole" } },
-          normalizedRole: { $toLower: { $trim: { input: "$desiredRole" } } }
-        }
-      },
+      { $project: { role: { $trim: { input: "$desiredRole" } }, normalizedRole: { $toLower: { $trim: { input: "$desiredRole" } } } } },
       { $match: { normalizedRole: { $ne: "" } } },
       { $group: { _id: "$normalizedRole", label: { $first: "$role" }, count: { $sum: 1 } } },
       { $sort: { count: -1, label: 1 } }
+    ];
+    const [candidateAllRows, candidateLocalRows, cvAllRows, cvLocalRows] = await Promise.all([
+      Candidate.aggregate(rolePipeline(candidateMatch)),
+      Candidate.aggregate(rolePipeline({ ...candidateMatch, $or: matchConditions })),
+      CvUpload.aggregate(rolePipeline(cvMatch)),
+      CvUpload.aggregate(rolePipeline({ ...cvMatch, $or: cvUploadLocationConditions(cvLocationPrefixes) }))
     ]);
-
-    // Merge dirty variants such as "Senior RGN", "senior rgn" and
-    // "Senior RGN |" so every real role is shown once with the correct count.
-    const groupedRoles = new Map();
-    rawRoles.forEach(({ label, count }) => {
-      const cleanedLabel = canonicalRoleLabel(label);
-      const key = normalizeRole(cleanedLabel);
-      if (!key) return;
-      const current = groupedRoles.get(key);
-      if (current) current.count += count;
-      else groupedRoles.set(key, { key, label: cleanedLabel, count });
-    });
-    const roles = [...groupedRoles.values()].sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
+    const groupRoles = (rows) => {
+      const grouped = new Map();
+      rows.forEach(({ label, count }) => {
+        const cleanedLabel = canonicalRoleLabel(label);
+        const key = normalizeRole(cleanedLabel);
+        if (!key) return;
+        const current = grouped.get(key);
+        if (current) current.count += count;
+        else grouped.set(key, { key, label: cleanedLabel, count });
+      });
+      return grouped;
+    };
+    const candidateAll = groupRoles(candidateAllRows);
+    const candidateLocal = groupRoles(candidateLocalRows);
+    const cvAll = groupRoles(cvAllRows);
+    const cvLocal = groupRoles(cvLocalRows);
+    const roleKeys = [...new Set([...candidateAll.keys(), ...cvAll.keys()])];
+    const roles = roleKeys.map((key) => {
+      const candidateRole = candidateAll.get(key);
+      const cvRole = cvAll.get(key);
+      const candidateCount = candidateLocal.get(key)?.count || 0;
+      const cvUploadCount = cvLocal.get(key)?.count || 0;
+      const candidateTotal = candidateRole?.count || 0;
+      const cvUploadTotal = cvRole?.count || 0;
+      return {
+        key,
+        label: candidateRole?.label || cvRole?.label || key,
+        count: candidateCount + cvUploadCount,
+        totalCount: candidateTotal + cvUploadTotal,
+        candidateCount,
+        cvUploadCount,
+        candidateTotal,
+        cvUploadTotal
+      };
+    }).sort((left, right) => right.count - left.count || right.totalCount - left.totalCount || left.label.localeCompare(right.label));
 
     res.json({
       postcode: prefixes.join(", "),
       postcodes: prefixes,
       roles,
       total: roles.reduce((sum, role) => sum + role.count, 0),
+      totalOverall: roles.reduce((sum, role) => sum + role.totalCount, 0),
+      localRoleCount: roles.filter((role) => role.count > 0).length,
       radiusMeta
     });
   } catch (error) {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Download, Eye, FileArchive, ScanSearch, Search, UsersRound } from "lucide-react";
 import { api, downloadFile } from "../../api/client.js";
 import AdminSectionHero from "../../components/AdminSectionHero.jsx";
@@ -8,8 +9,9 @@ import StatusMessage from "../../components/StatusMessage.jsx";
 const isReleased = (item) => ["Clean", "Validated"].includes(item.cv?.scanStatus);
 
 export default function AdminCvs() {
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState([]);
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState(() => searchParams.get("role") || "");
   const [search, setSearch] = useState("");
   const [reviewing, setReviewing] = useState(null);
   const [notice, setNotice] = useState(null);

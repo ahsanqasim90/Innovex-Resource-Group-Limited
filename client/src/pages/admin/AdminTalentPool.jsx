@@ -166,6 +166,7 @@ function fromCandidate(candidate) {
 export default function AdminTalentPool() {
   const { user: currentUser } = useAuth();
   const canSend = hasPermission(currentUser, "talentPool.send");
+  const canViewCvUploads = hasPermission(currentUser, "cvs.view");
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState([]);
   const [stats, setStats] = useState({});
@@ -557,6 +558,9 @@ export default function AdminTalentPool() {
   }
 
   const visibleRoles = postcodeRoles.filter((item) => !roleQuery.trim() || cleanRole(item.label).toLowerCase().includes(roleQuery.trim().toLowerCase()));
+  const selectedCvUploadRole = selectedPostcodeRoles.length === 1
+    ? postcodeRoles.find((item) => item.label === selectedPostcodeRoles[0] && item.cvUploadTotal > 0)
+    : null;
 
   const summaryCards = [
     { label: "Total candidates", value: stats.total || 0, Icon: Database, tone: "primary" },
@@ -909,7 +913,7 @@ export default function AdminTalentPool() {
                   <span>
                     {loadingPostcodeRoles
                       ? "Checking candidate roles..."
-                      : `${postcodeRoles.length} role${postcodeRoles.length === 1 ? "" : "s"} in this area. ${selectedPostcodeRoles.length ? `${selectedPostcodeRoles.length} selected, the list below is filtered.` : "Tick the roles you want and the list below updates straight away."}`}
+                      : `${postcodeRoles.length} roles across Talent Pool and CV Uploads; ${postcodeRoles.filter((item) => item.count > 0).length} have profiles in this area. ${selectedPostcodeRoles.length ? `${selectedPostcodeRoles.length} selected, the Talent Pool list below is filtered.` : "Every role is shown with local and overall profile counts."}`}
                   </span>
                 </div>
                 {!!postcodeRoles.length && (
@@ -940,9 +944,17 @@ export default function AdminTalentPool() {
                         onChange={() => togglePostcodeRole(item.label)}
                       />
                       <span>{cleanRole(item.label)}</span>
-                      <small title="Candidates with this role in the area">{Number(item.count).toLocaleString()}</small>
+                      <small title={`${Number(item.count).toLocaleString()} local profiles; ${Number(item.totalCount || item.count).toLocaleString()} overall across Talent Pool and CV Uploads`}>
+                        {Number(item.count).toLocaleString()} local · {Number(item.totalCount || item.count).toLocaleString()} total
+                      </small>
                     </label>
                   ))}
+                </div>
+              )}
+              {canViewCvUploads && selectedCvUploadRole && (
+                <div className="postcode-role-source-note">
+                  <span><strong>{Number(selectedCvUploadRole.cvUploadTotal).toLocaleString()}</strong> matching direct CV upload{selectedCvUploadRole.cvUploadTotal === 1 ? "" : "s"} are stored in Candidate Intake.</span>
+                  <button type="button" onClick={() => navigate(`/admin/cv-uploads?role=${encodeURIComponent(selectedCvUploadRole.label)}`)}>Review CV uploads</button>
                 </div>
               )}
               {!loadingPostcodeRoles && postcodeRoles.length > 0 && !visibleRoles.length && (
