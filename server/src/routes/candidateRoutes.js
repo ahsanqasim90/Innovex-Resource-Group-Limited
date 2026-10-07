@@ -163,6 +163,23 @@ function normalizeRole(value = "") {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+// Imports arrive from several job boards and spreadsheets, so the same role is
+// often stored with a trailing pipe/dash or inconsistent spacing. Keep the raw
+// candidate record intact, but use one canonical label for role filters.
+export function canonicalRoleLabel(value = "") {
+  return String(value)
+    .normalize("NFKC")
+    .replace(/\s+/g, " ")
+    .replace(/[\s|,;:/\\\-\u2013\u2014]+$/g, "")
+    .trim();
+}
+
+export function exactRolePattern(value = "") {
+  const tokens = normalizeRole(canonicalRoleLabel(value)).split(/\s+/).filter(Boolean);
+  if (!tokens.length) return null;
+  return new RegExp(`^\\s*${tokens.map(escapeRegex).join("[^a-z0-9]+")}(?:[^a-z0-9]+)?\\s*$`, "i");
+}
+
 function cleanEmail(value = "") {
   return String(value).replace(/\s+/g, "").trim().toLowerCase();
 }
@@ -533,7 +550,7 @@ router.get("/", async (req, res, next) => {
     if (searchConditions.length) filter.$and = [...(filter.$and || []), ...searchConditions];
     const roles = selectedRoles(req.query.roles);
     if (roles.length) {
-      filter.desiredRole = { $in: roles.map((role) => new RegExp(`^\\s*${escapeRegex(role)}\\s*$`, "i")) };
+      filter.desiredRole = { $in: roles.map(exactRolePattern).filter(Boolean) };
     } else if (req.query.role) {
       filter.desiredRole = new RegExp(escapeRegex(req.query.role), "i");
     }
@@ -657,7 +674,7 @@ router.get("/role-options", async (req, res, next) => {
     if (req.query.visaStatus) match.visaStatus = new RegExp(escapeRegex(req.query.visaStatus), "i");
     if (req.query.availability) match.availability = new RegExp(escapeRegex(req.query.availability), "i");
 
-    const roles = await Candidate.aggregate([
+    const rawRoles = await Candidate.aggregate([
       { $match: match },
       {
         $project: {
@@ -667,14 +684,26 @@ router.get("/role-options", async (req, res, next) => {
       },
       { $match: { normalizedRole: { $ne: "" } } },
       { $group: { _id: "$normalizedRole", label: { $first: "$role" }, count: { $sum: 1 } } },
-      { $sort: { count: -1, label: 1 } },
-      { $limit: 100 }
+      { $sort: { count: -1, label: 1 } }
     ]);
+
+    // Merge dirty variants such as "Senior RGN", "senior rgn" and
+    // "Senior RGN |" so every real role is shown once with the correct count.
+    const groupedRoles = new Map();
+    rawRoles.forEach(({ label, count }) => {
+      const cleanedLabel = canonicalRoleLabel(label);
+      const key = normalizeRole(cleanedLabel);
+      if (!key) return;
+      const current = groupedRoles.get(key);
+      if (current) current.count += count;
+      else groupedRoles.set(key, { key, label: cleanedLabel, count });
+    });
+    const roles = [...groupedRoles.values()].sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
 
     res.json({
       postcode: prefixes.join(", "),
       postcodes: prefixes,
-      roles: roles.map(({ _id, label, count }) => ({ key: _id, label, count })),
+      roles,
       total: roles.reduce((sum, role) => sum + role.count, 0),
       radiusMeta
     });

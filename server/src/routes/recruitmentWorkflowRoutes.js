@@ -17,7 +17,6 @@ import { tokenHash } from "../utils/authSecurity.js";
 import { requireFields, validateEmail } from "../utils.js";
 
 const router = express.Router();
-const SHARED_STAGES = RECRUITMENT_STAGES.filter((stage) => !["Pending admin review", "Changes requested", "Admin rejected"].includes(stage));
 const ADMIN_ONLY_STAGES = new Set(RECRUITMENT_STAGES.filter((stage) => stage !== "Withdrawn"));
 
 // ATS uses submit/review actions, not generic create/edit/approve permissions.
@@ -34,7 +33,9 @@ function isReviewer(user) {
 
 function accessFilter(user) {
   if (isReviewer(user)) return {};
-  return { $or: [{ "submittedBy.user": user._id }, { stage: { $in: SHARED_STAGES } }] };
+  // Recruiters work in a private pipeline. Moving a submission to a client or
+  // interview stage must never make it visible to every other recruiter.
+  return { "submittedBy.user": user._id };
 }
 
 function clean(value, max = 500) {
@@ -162,6 +163,7 @@ router.get("/overview", async (req, res, next) => {
       vacancies,
       stages: RECRUITMENT_STAGES,
       canReview: isReviewer(req.user),
+      scope: isReviewer(req.user) ? "all" : "mine",
       stats: {
         visible: submissions.length,
         activeVacancies: vacancies.length,

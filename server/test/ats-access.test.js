@@ -32,8 +32,11 @@ test('ATS honours view, submit and review independently through its real routes'
   member.permissions = ['recruitmentPipeline.view'];
   const response = await fetch(`${base}/overview`);
   assert.equal(response.status, 200, 'view access must not require the nonexistent approve permission');
-  assert.equal((await response.json()).canReview, false);
-  assert.ok(queries.at(-1).$or, 'readers retain the existing record visibility filter');
+  const memberOverview = await response.json();
+  assert.equal(memberOverview.canReview, false);
+  assert.equal(memberOverview.scope, 'mine');
+  assert.equal(String(queries.at(-1)['submittedBy.user']), member._id, 'recruiters only see submissions they uploaded');
+  assert.equal(queries.at(-1).$or, undefined, 'later workflow stages must not expose submissions to other recruiters');
   assert.equal((await fetch(`${base}/507f1f77bcf86cd799439012/cv-review`)).status, 404, 'CV reading passes permission checks, then finds no fixture record');
   assert.equal((await fetch(base, { method: 'POST' })).status, 403);
   assert.equal((await fetch(`${base}/507f1f77bcf86cd799439012/stage`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stage: 'Hired' }) })).status, 403);
@@ -44,7 +47,9 @@ test('ATS honours view, submit and review independently through its real routes'
   member.permissions = ['recruitmentPipeline.review'];
   const reviewer = await fetch(`${base}/overview`);
   assert.equal(reviewer.status, 200);
-  assert.equal((await reviewer.json()).canReview, true);
+  const reviewerOverview = await reviewer.json();
+  assert.equal(reviewerOverview.canReview, true);
+  assert.equal(reviewerOverview.scope, 'all');
   assert.deepEqual(queries.at(-1), {});
   assert.equal((await fetch(`${base}/507f1f77bcf86cd799439012/security-scan`, { method: 'POST' })).status, 404, 'review permission reaches record lookup without requiring edit');
   member.permissions = [];

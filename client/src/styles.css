@@ -8132,6 +8132,7 @@ tbody tr:hover td {
 .ats-toolbar-top nav span { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 20px; color: #56747a; background: #eef4f5; font-size: .67rem; }
 .ats-toolbar-actions button { display: flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid #d9e5e7; border-radius: 11px; color: #4e6b72; background: #fff; cursor: pointer; font-weight: 800; }
 .ats-toolbar-actions button.active { color: #08695f; border-color: #9cd4cc; background: #edf9f6; }
+.ats-owner-scope { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid #bfe2dc; border-radius: 11px; color: #08695f; background: #edf9f6; font-size: .73rem; font-weight: 850; }
 .ats-filters { display: flex; align-items: center; gap: 10px; padding: 14px 22px; border-bottom: 1px solid #edf2f3; background: #fbfcfc; }
 .ats-filters label { display: flex; align-items: center; gap: 8px; min-width: min(350px,35vw); padding: 0 12px; border: 1px solid #dce7e9; border-radius: 11px; color: #799096; background: #fff; }
 .ats-filters input,.ats-filters select { width: 100%; min-height: 39px; padding: 0; border: 0; outline: 0; background: transparent; font-size: .8rem; }

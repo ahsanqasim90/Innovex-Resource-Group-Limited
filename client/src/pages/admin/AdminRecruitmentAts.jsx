@@ -245,7 +245,7 @@ function CandidateDetail({ item, canReview, onClose, onUpdated }) {
 export default function AdminRecruitmentAts() {
   const { user } = useAuth();
   const canSubmit = hasPermission(user, "recruitmentPipeline.submit");
-  const [data, setData] = useState({ submissions: [], vacancies: [], stats: {}, canReview: false });
+  const [data, setData] = useState({ submissions: [], vacancies: [], stats: {}, canReview: false, scope: "mine" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState("pipeline");
@@ -275,7 +275,7 @@ export default function AdminRecruitmentAts() {
     const query = search.trim().toLowerCase();
     return data.submissions.filter((item) => {
       const searchable = `${item.candidateName} ${item.email} ${item.phone} ${item.reference} ${item.job?.title}`.toLowerCase();
-      return (!query || searchable.includes(query)) && (!vacancy || item.job?._id === vacancy) && (!mine || item.submittedBy?.user === user?.id);
+      return (!query || searchable.includes(query)) && (!vacancy || item.job?._id === vacancy) && (!mine || String(item.submittedBy?.user || "") === String(user?.id || ""));
     });
   }, [data.submissions, mine, search, user?.id, vacancy]);
 
@@ -299,7 +299,13 @@ export default function AdminRecruitmentAts() {
       <section className="ats-workspace">
         <div className="ats-toolbar-top">
           <nav><button className={tab === "pipeline" ? "active" : ""} onClick={() => setTab("pipeline")}>Candidate pipeline <span>{data.submissions.length}</span></button><button className={tab === "vacancies" ? "active" : ""} onClick={() => setTab("vacancies")}>Active vacancies <span>{data.vacancies.length}</span></button></nav>
-          <div className="ats-toolbar-actions"><button type="button" className={mine ? "active" : ""} onClick={() => setMine((value) => !value)}><CircleUserRound size={16} /> My submissions</button></div>
+          <div className="ats-toolbar-actions">
+            {data.canReview ? (
+              <button type="button" className={mine ? "active" : ""} onClick={() => setMine((value) => !value)}><CircleUserRound size={16} /> {mine ? "Showing my submissions" : "Show my submissions"}</button>
+            ) : (
+              <span className="ats-owner-scope"><CircleUserRound size={16} /> Private view: your submissions only</span>
+            )}
+          </div>
         </div>
         <div className="ats-filters">
           <label><Search size={17} /><input placeholder="Search candidate, reference or role..." value={search} onChange={(event) => setSearch(event.target.value)} /></label>

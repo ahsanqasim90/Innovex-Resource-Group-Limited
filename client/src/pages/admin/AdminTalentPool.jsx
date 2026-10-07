@@ -201,6 +201,7 @@ export default function AdminTalentPool() {
   const [selectedPostcodeRoles, setSelectedPostcodeRoles] = useState([]);
   const [postcodeRoleMeta, setPostcodeRoleMeta] = useState(null);
   const [loadingPostcodeRoles, setLoadingPostcodeRoles] = useState(false);
+  const [rolesExpanded, setRolesExpanded] = useState(false);
 
   const selectedCount = selectedIds.length;
   // The add / import / outreach tools sit above the table, so they start collapsed to keep the
@@ -269,6 +270,7 @@ export default function AdminTalentPool() {
   useEffect(() => {
     const postcode = filters.postcode.trim();
     setSelectedPostcodeRoles([]);
+    setRolesExpanded(false);
     if (!validPostcodePrefixes(postcode).length) {
       setPostcodeRoles([]);
       setPostcodeRoleMeta(null);
@@ -920,11 +922,16 @@ export default function AdminTalentPool() {
                     )}
                     <button type="button" onClick={() => applyRoles(visibleRoles.map((item) => item.label))}>{roleQuery.trim() ? "Select shown" : "Select all"}</button>
                     <button type="button" disabled={!selectedPostcodeRoles.length} onClick={() => applyRoles([])}>Clear</button>
+                    {postcodeRoles.length > 12 && (
+                      <button type="button" aria-expanded={rolesExpanded} onClick={() => setRolesExpanded((value) => !value)}>
+                        {rolesExpanded ? "Compact view" : "Show every role"}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
               {!loadingPostcodeRoles && visibleRoles.length > 0 && (
-                <div className="postcode-role-options">
+                <div className={`postcode-role-options${rolesExpanded ? " expanded" : ""}`}>
                   {visibleRoles.map((item) => (
                     <label className={selectedPostcodeRoles.includes(item.label) ? "selected" : ""} key={item.key} title={item.label}>
                       <input
