@@ -43,7 +43,7 @@ CI runs the server tests, production frontend build and dependency audit from `.
 
 ## iPhone app
 
-The Expo-based iOS app lives in `mobile/`. It securely opens the same live Innovex workspace, preserving the existing tenant, permission, MFA and session behaviour while native screens are introduced module by module.
+The Expo-based iOS and Android app lives in `mobile/`. It securely opens the same live Innovex workspace, preserving the existing tenant, permission, MFA and session behaviour while native screens are introduced module by module. Android preview builds produce a directly installable APK.
 
 ```bash
 npm install --prefix mobile

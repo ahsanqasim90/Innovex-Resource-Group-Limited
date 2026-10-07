@@ -24,3 +24,13 @@ npx eas-cli build --platform ios --profile preview
 ```
 
 An Apple Developer membership and registered iPhone are required for an installable preview or TestFlight/App Store build. Do not commit Apple certificates or provisioning profiles.
+
+## Android APK
+
+The same app supports Android. The `preview` EAS profile produces a directly installable APK, so Play Store registration is not required for private testing:
+
+```text
+npx eas-cli build --platform android --profile preview
+```
+
+The production profile produces the store-ready release format.
