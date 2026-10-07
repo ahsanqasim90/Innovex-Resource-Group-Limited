@@ -8,6 +8,8 @@
     "install:all": "npm install --prefix server && npm install --prefix client",
     "vercel-build": "npm run build --prefix client -- --configLoader runner",
     "build": "npm run build --prefix client",
+    "mobile:start": "npm start --prefix mobile",
+    "mobile:typecheck": "npm run typecheck --prefix mobile",
     "test": "npm test --prefix server",
     "start": "npm start --prefix server",
     "migrate:tenant-indexes": "npm run migrate:tenant-indexes --prefix server",

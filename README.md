@@ -41,6 +41,18 @@ npm audit
 
 CI runs the server tests, production frontend build and dependency audit from `.github/workflows/ci.yml`.
 
+## iPhone app
+
+The Expo-based iOS app lives in `mobile/`. It securely opens the same live Innovex workspace, preserving the existing tenant, permission, MFA and session behaviour while native screens are introduced module by module.
+
+```bash
+npm install --prefix mobile
+npm run mobile:typecheck
+npm run mobile:start
+```
+
+Install Expo Go on the iPhone and scan the development server's QR code to test it. TestFlight and App Store builds use EAS and require an Apple Developer membership.
+
 ## Multi-tenant deployment
 
 Requests resolve the workspace from `X-Workspace-Slug` or a subdomain under `BASE_DOMAIN`. Tenant-scoped Mongoose queries, aggregates and distinct operations automatically add the organisation boundary. Do not use tenant-bypass options in application routes.

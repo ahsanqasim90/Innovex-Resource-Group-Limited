@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Innovex Workspace",
+    "slug": "innovex-workspace",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "innovex",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#063f4f"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "uk.co.innovexresourcegroup.workspace",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Innovex uses the camera when you choose to capture candidate documents or evidence.",
+        "NSPhotoLibraryUsageDescription": "Innovex uses your photo library only when you choose a file to upload.",
+        "NSFaceIDUsageDescription": "Use Face ID to securely reopen your Innovex workspace."
+      }
+    },
+    "plugins": [],
+    "extra": {
+      "webBaseUrl": "https://www.innovexresourcegroup.co.uk"
+    }
+  }
+}
