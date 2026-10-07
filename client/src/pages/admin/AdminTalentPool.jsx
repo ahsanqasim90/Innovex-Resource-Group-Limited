@@ -292,6 +292,10 @@ export default function AdminTalentPool() {
         const data = await api(`/candidates/role-options?${query.toString()}`);
         setPostcodeRoles(data.roles || []);
         setPostcodeRoleMeta(data.radiusMeta || null);
+        // The role picker already reacts to these filters. Keep the table on
+        // the exact same filter state so old role results cannot remain visible
+        // after a postcode/status change.
+        await load(1, filters, []);
       } catch (error) {
         setPostcodeRoles([]);
         setPostcodeRoleMeta(null);
@@ -565,6 +569,9 @@ export default function AdminTalentPool() {
     // role groups. One-off imported job titles remain available through search
     // or the explicit Show all action instead of overwhelming the screen.
     return Boolean(roleSearch || rolesExpanded || item.count > 0 || item.totalCount >= 10);
+  }).sort((left, right) => {
+    const priority = (item) => item.key === "support worker" ? 2 : item.key === "healthcare assistant" ? 1 : 0;
+    return priority(right) - priority(left) || right.count - left.count || right.totalCount - left.totalCount || left.label.localeCompare(right.label);
   });
   const selectedCvUploadRole = selectedPostcodeRoles.length === 1
     ? postcodeRoles.find((item) => item.label === selectedPostcodeRoles[0] && item.cvUploadTotal > 0)

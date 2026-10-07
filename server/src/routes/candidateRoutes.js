@@ -716,11 +716,14 @@ router.get("/role-options", async (req, res, next) => {
       { $group: { _id: "$normalizedRole", label: { $first: "$role" }, count: { $sum: 1 } } },
       { $sort: { count: -1, label: 1 } }
     ];
-    const [candidateAllRows, candidateLocalRows, cvAllRows, cvLocalRows] = await Promise.all([
+    const [candidateAllRows, candidateLocalProfiles, cvAllRows, cvLocalProfiles] = await Promise.all([
       Candidate.aggregate(rolePipeline(candidateMatch)),
-      Candidate.aggregate(rolePipeline({ ...candidateMatch, $or: matchConditions })),
+      // Use the same Mongoose find path as the results table for local counts.
+      // This prevents aggregate-only scoping differences from making a role
+      // disappear while candidates for that role are visible below.
+      Candidate.find({ ...candidateMatch, $or: matchConditions }).select("desiredRole").lean(),
       CvUpload.aggregate(rolePipeline(cvMatch)),
-      CvUpload.aggregate(rolePipeline({ ...cvMatch, $or: cvUploadLocationConditions(cvLocationPrefixes) }))
+      CvUpload.find({ ...cvMatch, $or: cvUploadLocationConditions(cvLocationPrefixes) }).select("desiredRole").lean()
     ]);
     const groupRoles = (rows) => {
       const grouped = new Map();
@@ -735,9 +738,9 @@ router.get("/role-options", async (req, res, next) => {
       return grouped;
     };
     const candidateAll = groupRoles(candidateAllRows);
-    const candidateLocal = groupRoles(candidateLocalRows);
+    const candidateLocal = groupRoles(candidateLocalProfiles.map((profile) => ({ label: profile.desiredRole, count: 1 })));
     const cvAll = groupRoles(cvAllRows);
-    const cvLocal = groupRoles(cvLocalRows);
+    const cvLocal = groupRoles(cvLocalProfiles.map((profile) => ({ label: profile.desiredRole, count: 1 })));
     const roleKeys = [...new Set([...candidateAll.keys(), ...cvAll.keys()])];
     const roles = roleKeys.map((key) => {
       const candidateRole = candidateAll.get(key);
