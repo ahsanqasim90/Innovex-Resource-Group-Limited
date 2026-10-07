@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import express from 'express';
+import mongoose from 'mongoose';
 import ats from '../src/routes/recruitmentWorkflowRoutes.js';
 import { protect } from '../src/middleware/auth.js';
 import Submission from '../src/models/RecruitmentSubmission.js';
 import Job from '../src/models/Job.js';
+
+test('ATS route registers the Partner model before populating partner submissions', () => {
+  assert.equal(mongoose.model('Partner').modelName, 'Partner');
+});
 
 // Exercise the real ATS routing and permission chain; authentication and DB
 // records are substituted so these regressions never access production data.

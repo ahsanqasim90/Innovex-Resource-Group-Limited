@@ -3,6 +3,7 @@ import express from "express";
 import Candidate from "../models/Candidate.js";
 import ClientAccount from "../models/ClientAccount.js";
 import Job from "../models/Job.js";
+import Partner from "../models/Partner.js";
 import PortalAccount from "../models/PortalAccount.js";
 import PortalSession from "../models/PortalSession.js";
 import RecruitmentSubmission, { RECRUITMENT_STAGES } from "../models/RecruitmentSubmission.js";
@@ -50,7 +51,9 @@ function submissionReference() {
 async function visibleSubmission(id, user, includeCv = false) {
   const query = RecruitmentSubmission.findOne({ _id: id, ...accessFilter(user) });
   if (includeCv) query.select("+cv.data +cv.extractedText");
-  return query.populate("job", "title location salary type shift isActive closingDate reference clientName priority openings clientAccount").populate("partner", "name contactEmail serviceProvided");
+  return query
+    .populate("job", "title location salary type shift isActive closingDate reference clientName priority openings clientAccount")
+    .populate({ path: "partner", select: "name contactEmail serviceProvided", model: Partner });
 }
 
 // Fires the first time a candidate reaches "Client review" - emails the client's
@@ -145,7 +148,7 @@ router.get("/overview", async (req, res, next) => {
       RecruitmentSubmission.find(filter)
         .select("-cv.data")
         .populate("job", "title location salary type shift isActive closingDate reference clientName priority openings")
-        .populate("partner", "name contactEmail serviceProvided")
+        .populate({ path: "partner", select: "name contactEmail serviceProvided", model: Partner })
         .sort({ updatedAt: -1 })
         .limit(500)
         .lean(),
