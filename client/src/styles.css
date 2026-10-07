@@ -4425,6 +4425,7 @@ tbody tr:hover td {
   padding: 3px 8px;
   color: var(--teal);
   background: var(--mint);
+  font-size: .7rem;
   font-weight: 800;
 }
 .postcode-role-source-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 11px 13px; border: 1px solid #cfe3e6; border-radius: 12px; color: #45656c; background: #fff; font-size: .8rem; }

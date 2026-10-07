@@ -557,7 +557,15 @@ export default function AdminTalentPool() {
       : [...selectedPostcodeRoles, role]);
   }
 
-  const visibleRoles = postcodeRoles.filter((item) => !roleQuery.trim() || cleanRole(item.label).toLowerCase().includes(roleQuery.trim().toLowerCase()));
+  const roleSearch = roleQuery.trim().toLowerCase();
+  const visibleRoles = postcodeRoles.filter((item) => {
+    const matchesSearch = !roleSearch || cleanRole(item.label).toLowerCase().includes(roleSearch);
+    if (!matchesSearch) return false;
+    // Keep the default panel useful: local roles plus established high-volume
+    // role groups. One-off imported job titles remain available through search
+    // or the explicit Show all action instead of overwhelming the screen.
+    return Boolean(roleSearch || rolesExpanded || item.count > 0 || item.totalCount >= 10);
+  });
   const selectedCvUploadRole = selectedPostcodeRoles.length === 1
     ? postcodeRoles.find((item) => item.label === selectedPostcodeRoles[0] && item.cvUploadTotal > 0)
     : null;
@@ -913,7 +921,7 @@ export default function AdminTalentPool() {
                   <span>
                     {loadingPostcodeRoles
                       ? "Checking candidate roles..."
-                      : `${postcodeRoles.length} roles across Talent Pool and CV Uploads; ${postcodeRoles.filter((item) => item.count > 0).length} have profiles in this area. ${selectedPostcodeRoles.length ? `${selectedPostcodeRoles.length} selected, the Talent Pool list below is filtered.` : "Every role is shown with local and overall profile counts."}`}
+                      : `${postcodeRoles.filter((item) => item.count > 0).length} local roles; ${postcodeRoles.length} overall across Talent Pool and CV Uploads. ${selectedPostcodeRoles.length ? `${selectedPostcodeRoles.length} selected, the Talent Pool list below is filtered.` : "Local and established high-volume roles are shown first; search finds every imported title."}`}
                   </span>
                 </div>
                 {!!postcodeRoles.length && (
@@ -926,16 +934,16 @@ export default function AdminTalentPool() {
                     )}
                     <button type="button" onClick={() => applyRoles(visibleRoles.map((item) => item.label))}>{roleQuery.trim() ? "Select shown" : "Select all"}</button>
                     <button type="button" disabled={!selectedPostcodeRoles.length} onClick={() => applyRoles([])}>Clear</button>
-                    {postcodeRoles.length > 12 && (
+                    {!roleSearch && (postcodeRoles.length > visibleRoles.length || rolesExpanded) ? (
                       <button type="button" aria-expanded={rolesExpanded} onClick={() => setRolesExpanded((value) => !value)}>
-                        {rolesExpanded ? "Compact view" : "Show every role"}
+                        {rolesExpanded ? "Show focused roles" : `Show all ${postcodeRoles.length}`}
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 )}
               </div>
               {!loadingPostcodeRoles && visibleRoles.length > 0 && (
-                <div className={`postcode-role-options${rolesExpanded ? " expanded" : ""}`}>
+                <div className="postcode-role-options">
                   {visibleRoles.map((item) => (
                     <label className={selectedPostcodeRoles.includes(item.label) ? "selected" : ""} key={item.key} title={item.label}>
                       <input
@@ -945,7 +953,7 @@ export default function AdminTalentPool() {
                       />
                       <span>{cleanRole(item.label)}</span>
                       <small title={`${Number(item.count).toLocaleString()} local profiles; ${Number(item.totalCount || item.count).toLocaleString()} overall across Talent Pool and CV Uploads`}>
-                        {Number(item.count).toLocaleString()} local · {Number(item.totalCount || item.count).toLocaleString()} total
+                        {item.count > 0 ? `${Number(item.count).toLocaleString()} local` : `${Number(item.totalCount || 0).toLocaleString()} total`}
                       </small>
                     </label>
                   ))}

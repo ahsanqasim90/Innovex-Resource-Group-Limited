@@ -445,8 +445,7 @@
 .talent-pool-page .postcode-role-picker-actions button:disabled { opacity: .45; cursor: default; }
 .postcode-role-find { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid #cddadf; border-radius: 999px; background: #fff; color: #5b727a; }
 .postcode-role-find input { border: 0; outline: 0; padding: 7px 0; width: 130px; font: inherit; background: transparent; }
-.talent-pool-page .postcode-role-options { max-height: 300px; overflow: auto; padding: 2px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
-.talent-pool-page .postcode-role-options.expanded { max-height: none; overflow: visible; }
+.talent-pool-page .postcode-role-options { max-height: 340px; overflow: auto; padding: 2px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 @media (max-width: 640px) { .talent-toast { right: 16px; bottom: 16px; } }
 
 /* Vacancies: quick "View" modal with description and a direct link to the live listing */
