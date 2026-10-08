@@ -555,20 +555,54 @@ export default function AdminTalentPool() {
     load(1, filters, next);
   }
 
-  function togglePostcodeRole(role) {
-    applyRoles(selectedPostcodeRoles.includes(role)
-      ? selectedPostcodeRoles.filter((item) => item !== role)
-      : [...selectedPostcodeRoles, role]);
+  function togglePostcodeRole(roleOption) {
+    const role = roleOption.label;
+    if (selectedPostcodeRoles.includes(role)) {
+      applyRoles(selectedPostcodeRoles.filter((item) => item !== role));
+      return;
+    }
+
+    const localTalentCount = Number(roleOption.candidateCount || 0);
+    const nationwideTalentCount = Number(roleOption.candidateTotal || 0);
+    const cvUploadCount = Number(roleOption.cvUploadTotal || 0);
+
+    // "Show all" includes nationwide roles for discovery. If a role has no
+    // Talent Pool candidates in the selected postcode, keeping the postcode
+    // active would guarantee an empty table. Open its nationwide results
+    // instead so the count on the card always leads to visible records.
+    if (!localTalentCount && nationwideTalentCount) {
+      const location = validPostcodePrefixes(filters.postcode).join(", ");
+      const nextFilters = { ...filters, postcode: "", radiusMiles: "", role };
+      setFilters(nextFilters);
+      setPostcodeRoles([]);
+      setSelectedPostcodeRoles([]);
+      setRoleQuery("");
+      setRolesExpanded(false);
+      setStatus({
+        message: `No ${cleanRole(role)} candidates were found in ${location}. Showing ${nationwideTalentCount.toLocaleString()} nationwide Talent Pool candidate${nationwideTalentCount === 1 ? "" : "s"}.`
+      });
+      load(1, nextFilters, []);
+      return;
+    }
+
+    // A role sourced only from Candidate Intake cannot be rendered in the
+    // Talent Pool table because it has a different workflow and record type.
+    if (!localTalentCount && cvUploadCount && canViewCvUploads) {
+      navigate(`/admin/cv-uploads?role=${encodeURIComponent(role)}`);
+      return;
+    }
+
+    applyRoles([...selectedPostcodeRoles, role]);
   }
 
   const roleSearch = roleQuery.trim().toLowerCase();
   const visibleRoles = postcodeRoles.filter((item) => {
     const matchesSearch = !roleSearch || cleanRole(item.label).toLowerCase().includes(roleSearch);
     if (!matchesSearch) return false;
-    // Keep the default panel useful: local roles plus established high-volume
-    // role groups. One-off imported job titles remain available through search
-    // or the explicit Show all action instead of overwhelming the screen.
-    return Boolean(roleSearch || rolesExpanded || item.count > 0 || item.totalCount >= 10);
+    // The collapsed picker must mirror the table below. Nationwide and CV-only
+    // roles stay available through search / Show all, but are not presented as
+    // if candidates for them exist in the selected postcode.
+    return Boolean(roleSearch || rolesExpanded || item.candidateCount > 0);
   }).sort((left, right) => {
     const priority = (item) => item.key === "support worker" ? 2 : item.key === "healthcare assistant" ? 1 : 0;
     return priority(right) - priority(left) || right.count - left.count || right.totalCount - left.totalCount || left.label.localeCompare(right.label);
@@ -928,7 +962,7 @@ export default function AdminTalentPool() {
                   <span>
                     {loadingPostcodeRoles
                       ? "Checking candidate roles..."
-                      : `${postcodeRoles.filter((item) => item.count > 0).length} local roles; ${postcodeRoles.length} overall across Talent Pool and CV Uploads. ${selectedPostcodeRoles.length ? `${selectedPostcodeRoles.length} selected, the Talent Pool list below is filtered.` : "Local and established high-volume roles are shown first; search finds every imported title."}`}
+                      : `${postcodeRoles.filter((item) => item.candidateCount > 0).length} roles have Talent Pool candidates in this area; ${postcodeRoles.length} known roles overall. ${selectedPostcodeRoles.length ? `${selectedPostcodeRoles.length} selected, and the list below shows the same local candidates.` : "Use Show all to find nationwide or Candidate Intake roles."}`}
                   </span>
                 </div>
                 {!!postcodeRoles.length && (
@@ -939,7 +973,7 @@ export default function AdminTalentPool() {
                         <input placeholder="Find a role" value={roleQuery} onChange={(event) => setRoleQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }} />
                       </label>
                     )}
-                    <button type="button" onClick={() => applyRoles(visibleRoles.map((item) => item.label))}>{roleQuery.trim() ? "Select shown" : "Select all"}</button>
+                    <button type="button" onClick={() => applyRoles(visibleRoles.filter((item) => item.candidateCount > 0).map((item) => item.label))}>{roleQuery.trim() ? "Select local matches" : "Select local"}</button>
                     <button type="button" disabled={!selectedPostcodeRoles.length} onClick={() => applyRoles([])}>Clear</button>
                     {!roleSearch && (postcodeRoles.length > visibleRoles.length || rolesExpanded) ? (
                       <button type="button" aria-expanded={rolesExpanded} onClick={() => setRolesExpanded((value) => !value)}>
@@ -956,11 +990,15 @@ export default function AdminTalentPool() {
                       <input
                         type="checkbox"
                         checked={selectedPostcodeRoles.includes(item.label)}
-                        onChange={() => togglePostcodeRole(item.label)}
+                        onChange={() => togglePostcodeRole(item)}
                       />
                       <span>{cleanRole(item.label)}</span>
-                      <small title={`${Number(item.count).toLocaleString()} local profiles; ${Number(item.totalCount || item.count).toLocaleString()} overall across Talent Pool and CV Uploads`}>
-                        {item.count > 0 ? `${Number(item.count).toLocaleString()} local` : `${Number(item.totalCount || 0).toLocaleString()} total`}
+                      <small title={`${Number(item.candidateCount || 0).toLocaleString()} local Talent Pool candidates; ${Number(item.cvUploadCount || 0).toLocaleString()} local Candidate Intake records; ${Number(item.candidateTotal || 0).toLocaleString()} nationwide Talent Pool candidates`}>
+                        {item.candidateCount > 0
+                          ? `${Number(item.candidateCount).toLocaleString()} local`
+                          : item.candidateTotal > 0
+                            ? `${Number(item.candidateTotal).toLocaleString()} nationwide`
+                            : `${Number(item.cvUploadTotal || 0).toLocaleString()} CV upload${Number(item.cvUploadTotal || 0) === 1 ? "" : "s"}`}
                       </small>
                     </label>
                   ))}
